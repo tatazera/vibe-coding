@@ -1,0 +1,14 @@
+require 'sketchup.rb'
+require 'extensions.rb'
+
+stand1_ext = SketchupExtension.new(
+  "STAND1_Memorial",
+  "STAND1_Memorial/core"
+)
+
+stand1_ext.version     = "6.0.0"
+stand1_ext.creator     = "Stand1 Produções"
+stand1_ext.copyright   = "2025, Stand1 Produções"
+stand1_ext.description = "Gera Memorial Descritivo em PDF/TXT a partir de Componentes do modelo SketchUp, com identidade visual Stand1. Dimensões reais por peça (escala acumulada, rotação ignorada), altura pelo eixo vertical."
+
+Sketchup.register_extension(stand1_ext, true)
