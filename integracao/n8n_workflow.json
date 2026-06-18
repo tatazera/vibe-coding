@@ -1,0 +1,155 @@
+{
+  "name": "Stand1 — WhatsApp → Dashboard",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stand1-wpp",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-evolution",
+      "name": "Receber Evolution API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "notes": "Configure este webhook na Evolution API como URL de destino para o grupo do WhatsApp"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.data.key.remoteJid }}",
+              "rightValue": "={{ $env.WHATSAPP_GROUP_ID }}",
+              "operator": { "type": "string", "operation": "equals" }
+            },
+            {
+              "leftValue": "={{ $json.body.data.messageType }}",
+              "rightValue": "conversation",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-group",
+      "name": "Filtrar grupo certo",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "notes": "Só processa mensagens do grupo configurado. Defina WHATSAPP_GROUP_ID nas variáveis de ambiente do n8n (ex: 5511999999999-1234567890@g.us)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-haiku-4-5-20251001\",\n  \"max_tokens\": 512,\n  \"system\": \"Você é um assistente que extrai informações de mensagens de WhatsApp de um grupo de uma empresa de montagem de stands chamada Stand1 Produções.\\n\\nResponda APENAS com um JSON válido, sem markdown, sem explicações.\\n\\nCampos a extrair:\\n- nome: nome do projeto/cliente + evento + ano (ex: CHOCOLAT BAHIA 2026). Se não encontrar, use o nome do cliente em maiúsculas.\\n- solic: nome de quem enviou a mensagem ou solicitou o projeto\\n- prior: prioridade do projeto — \\\"Alta\\\", \\\"Média\\\" ou \\\"Nula\\\" (padrão Nula)\\n- prazo: data de entrega no formato YYYY-MM-DD se mencionada, senão string vazia\\n- nota: observações livres relevantes da mensagem\\n\\nExemplo de saída:\\n{\\\"nome\\\":\\\"CHOCOLAT BAHIA 2026\\\",\\\"solic\\\":\\\"Francine\\\",\\\"prior\\\":\\\"Alta\\\",\\\"prazo\\\":\\\"\\\",\\\"nota\\\":\\\"Entrega urgente, confirmar m²\\\"}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Mensagem recebida de {{ $json.body.data.pushName || 'WhatsApp' }}:\\n\\n{{ $json.body.data.message.conversation }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-extract",
+      "name": "Claude — Extrair dados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 300],
+      "notes": "Usa claude-haiku (mais barato) para extrair nome, prioridade, prazo e observações da mensagem bruta"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = items[0].json.content[0].text.trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(raw);\n} catch(e) {\n  // tenta extrair JSON de dentro do texto caso Claude tenha adicionado texto\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : { nome: 'PROJETO SEM NOME', prior: 'Nula', solic: '', prazo: '', nota: raw };\n}\n\nconst wppData = $('Receber Evolution API').first().json.body.data;\nconst msgId = wppData.key?.id || ('wpp_' + Date.now());\n\nreturn [{\n  json: {\n    id:    'wpp_' + msgId,\n    who:   wppData.pushName || 'WhatsApp',\n    solic: parsed.solic || wppData.pushName || '',\n    nome:  (parsed.nome || 'PROJETO SEM NOME').toUpperCase().trim(),\n    prior: parsed.prior || 'Nula',\n    prazo: parsed.prazo || '',\n    nota:  parsed.nota  || '',\n    msg:   wppData.message?.conversation || '',\n    time:  new Date().toLocaleString('pt-BR', { timeZone: 'America/Bahia' })\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Montar payload Stand1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [930, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $env.DOMAIN }}/api/entradas",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.BRIDGE_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "post-bridge",
+      "name": "Enviar para Bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1160, 300],
+      "notes": "POST para o servidor bridge — dashboard faz polling e busca as entradas pendentes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $env.DOMAIN }}/wpp/message/sendText/Stand1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.EVOLUTION_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $('Receber Evolution API').first().json.body.data.key.remoteJid }}\",\n  \"text\": \"✅ *Stand1 Produções*\\n\\nEntrada registrada:\\n📋 *{{ $('Montar payload Stand1').first().json.nome }}*\\n⚡ Prioridade: {{ $('Montar payload Stand1').first().json.prior }}\\n\\n_Projeto adicionado à fila de análise._\"\n}",
+        "options": {}
+      },
+      "id": "wpp-confirm",
+      "name": "Confirmar no WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1390, 300],
+      "notes": "Manda mensagem de confirmação de volta no grupo do WhatsApp"
+    }
+  ],
+  "connections": {
+    "Receber Evolution API": {
+      "main": [[{ "node": "Filtrar grupo certo", "type": "main", "index": 0 }]]
+    },
+    "Filtrar grupo certo": {
+      "main": [[{ "node": "Claude — Extrair dados", "type": "main", "index": 0 }]]
+    },
+    "Claude — Extrair dados": {
+      "main": [[{ "node": "Montar payload Stand1", "type": "main", "index": 0 }]]
+    },
+    "Montar payload Stand1": {
+      "main": [[{ "node": "Enviar para Bridge", "type": "main", "index": 0 }]]
+    },
+    "Enviar para Bridge": {
+      "main": [[{ "node": "Confirmar no WhatsApp", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bahia"
+  },
+  "staticData": null,
+  "tags": ["stand1", "whatsapp"]
+}

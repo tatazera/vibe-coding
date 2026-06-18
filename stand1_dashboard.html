@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stand1 — Gestão de Projetos</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --g:linear-gradient(135deg,#FF4D8D 0%,#C84FBF 50%,#4DA8F0 100%);
+    --pink:#FF4D8D;--magenta:#C84FBF;--cyan:#4DA8F0;
+    --s1:#1A2DB8;--s1h:#141F8F;--s1l:#E9EBFA;
+    --wpp:#25D366;
+    --bg:#ffffff;--bg2:#f5f6fb;--bg3:#f4f6f9;
+    --text:#1a1a18;--text2:#6b6b75;--text3:#9c9aa6;
+    --border:rgba(20,20,40,0.12);--border2:rgba(20,20,40,0.20);
+    --radius-md:8px;--radius-lg:12px;
+    --font:'Segoe UI',-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1e1f27;--bg2:#262838;--bg3:#15161c;
+      --text:#e4e4ea;--text2:#a8a9b6;--text3:#777889;
+      --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2);
+      --s1:#4DA8F0;--s1h:#3a8fd8;--s1l:#1a2a3a;
+    }
+  }
+  body{font-family:var(--font);background:var(--bg3);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+  .wrap{max-width:1200px;margin:0 auto;background:var(--bg);min-height:100vh;box-shadow:0 0 0 0.5px var(--border)}
+
+  /* TOPBAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;background:var(--g);box-shadow:0 2px 14px rgba(200,79,191,.30)}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-box{width:42px;height:42px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .brand-box img{width:34px;height:34px;object-fit:contain}
+  .brand-name{font-size:15px;font-weight:700;color:#fff;letter-spacing:.3px}
+  .brand-sub{font-size:10.5px;color:rgba(255,255,255,.82);margin-top:1px}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .btn-wpp{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+  .btn-novo{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#fff;color:var(--s1);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s}
+  .btn-wpp:hover{background:rgba(255,255,255,.30)}
+  .btn-novo:hover{opacity:.88}
+  .notif{background:var(--wpp);color:#fff;border-radius:50%;width:17px;height:17px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 22px}
+  .stat{border-radius:var(--radius-lg);padding:13px 15px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .stat:hover{transform:translateY(-1px)}
+  .st0{background:var(--g);box-shadow:0 4px 16px rgba(200,79,191,.25)}.st1{background:#F1EFF5}.st2{background:var(--s1l)}.st3{background:#FDE9F3}
+  .sn{font-size:24px;font-weight:700;margin-bottom:2px}
+  .sl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:4px}
+  .st0 .sn,.st0 .sl{color:#fff}
+  .st1 .sn,.st1 .sl{color:#6b5f6e}
+  .st2 .sn,.st2 .sl{color:var(--s1)}
+  .st3 .sn,.st3 .sl{color:#B03079}
+  @media(prefers-color-scheme:dark){
+    .st1{background:#2c2933}.st1 .sn,.st1 .sl{color:#b8b9c6}
+    .st2{background:#1a2a3a}.st2 .sn,.st2 .sl{color:#85B7EB}
+    .st3{background:#2e1a28}.st3 .sn,.st3 .sl{color:#F08BC0}
+  }
+
+  /* TABS */
+  .tabs-row{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding:0 22px}
+  .tabs{display:flex}
+  .tab{padding:10px 14px;font-size:13px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:color .15s}
+  .tab.on{color:var(--magenta);border-bottom-color:var(--magenta);font-weight:700}
+  .tab:hover:not(.on){color:var(--text)}
+  .pill-n{background:var(--g);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+  .view-toggle{display:flex;gap:4px;padding:6px 0;flex-shrink:0}
+  .vbtn{width:30px;height:28px;display:flex;align-items:center;justify-content:center;border:1px solid var(--border2);border-radius:var(--radius-md);background:transparent;cursor:pointer;color:var(--text2);font-size:15px;transition:all .15s}
+  .vbtn.on{background:var(--s1);color:#fff;border-color:var(--s1)}
+  .vbtn:hover:not(.on){background:var(--bg2)}
+
+  /* PANELS */
+  .panel{padding:16px 22px;display:none}
+  .panel.on{display:block}
+
+  /* TOOLBAR */
+  .toolbar{display:flex;align-items:center;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+  .fbtn{font-size:12px;padding:5px 12px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s}
+  .fbtn.on{background:var(--s1);color:#fff;border-color:var(--s1)}
+  .fbtn:hover:not(.on){background:var(--bg2);color:var(--text)}
+  /* filtro projetista */
+  .fbtn.on-tc{background:#E9EBFA;color:#1A2DB8;border-color:#1A2DB8}
+  .fbtn.on-fg{background:#EAF3DE;color:#3B6D11;border-color:#3B6D11}
+  .fbtn.on-gb{background:#FDE9F3;color:#B03079;border-color:#B03079}
+  .srch{flex:1;min-width:140px;font-size:13px;padding:6px 12px;border:1px solid var(--border2);border-radius:20px;background:var(--bg2);color:var(--text);outline:none}
+  .srch:focus{border-color:var(--magenta);box-shadow:0 0 0 3px rgba(200,79,191,.12)}
+
+  /* GRID / CARDS */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s}
+  .card:hover{border-color:var(--magenta);box-shadow:0 4px 18px rgba(200,79,191,.10)}
+  .card-accent{height:3px;width:100%;flex-shrink:0}
+  .ac-fila{background:#B4B2BF}.ac-andamento{background:var(--g)}.ac-concluido{background:#4DA8F0}
+  .card-top{padding:12px 14px 10px;border-bottom:1px solid var(--border);flex:1}
+  .card-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.35;margin-bottom:7px}
+  .card-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+  .card-meta{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+  .meta-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+  .meta-row i{font-size:12px;flex-shrink:0;color:var(--text3)}
+  .card-obs{font-size:11px;color:var(--text2);background:var(--bg2);border-radius:var(--radius-md);padding:7px 9px;margin-bottom:8px;line-height:1.45;border-left:2px solid var(--magenta)}
+  .card-body{padding:10px 14px}
+  .card-actions{display:flex;gap:5px;flex-wrap:wrap}
+
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:760px}
+  .tbl th{text-align:left;font-size:10px;font-weight:700;color:var(--s1);padding:8px 10px;border-bottom:2px solid var(--border);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;background:var(--bg2)}
+  .tbl td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:var(--bg2)}
+  .tbl-actions{display:flex;gap:4px}
+
+  /* BUTTONS */
+  .act-btn,.tbl-btn{font-size:11px;font-weight:500;padding:5px 9px;border-radius:var(--radius-md);border:1px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;gap:3px;color:var(--text2);white-space:nowrap;transition:all .15s}
+  .act-btn i,.tbl-btn i{font-size:12px}
+  .act-btn:hover,.tbl-btn:hover{background:var(--bg2)}
+  .act-start,.tb-start{background:var(--s1)!important;color:#fff!important;border-color:var(--s1)!important}
+  .act-done,.tb-done{background:#EAF3DE!important;color:#3B6D11!important;border-color:#c0dd97!important}
+  .act-pause,.tb-pause{background:#F1EFF5!important;color:#6b5f6e!important}
+  .act-edit,.tb-edit{color:var(--s1)!important;border-color:#b5c0f4!important}
+  .act-del,.tb-del{color:#B03079!important;border-color:#f4c0dd!important}
+  @media(prefers-color-scheme:dark){
+    .act-done,.tb-done{background:#1a2e1a!important;color:#97C459!important;border-color:#3B6D11!important}
+    .act-pause,.tb-pause{background:#2c2933!important;color:#b8b9c6!important}
+  }
+
+  /* BADGES */
+  .badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;display:inline-flex;align-items:center;gap:3px}
+  .b-fila{background:#F1EFF5;color:#6b5f6e}
+  .b-and{background:var(--s1l);color:var(--s1)}
+  .b-ok{background:#EAF3DE;color:#3B6D11}
+  .b-alta{background:#FDE9F3;color:#B03079}
+  .b-media{background:#FAEEDA;color:#854F0B}
+  .b-wpp{background:#E1F5EE;color:#0F6E56;font-size:10px}
+  /* prazo badges */
+  .b-vencido{background:#FAECE7;color:#993C1D;font-weight:700}
+  .b-hoje{background:#FDE9F3;color:#B03079;font-weight:700}
+  .b-urgente{background:#FAEEDA;color:#854F0B}
+  .b-prazo{background:#F1EFF5;color:#6b5f6e}
+  @media(prefers-color-scheme:dark){
+    .b-fila{background:#2c2933;color:#b8b9c6}
+    .b-and{background:#1a2a3a;color:#85B7EB}
+    .b-ok{background:#1a2e1a;color:#97C459}
+    .b-alta{background:#2e1a28;color:#F08BC0}
+    .b-media{background:#2e2518;color:#EF9F27}
+    .b-wpp{background:#0d2e20;color:#5DCAA5}
+    .b-vencido{background:#2e1a14;color:#F0997B}
+    .b-hoje{background:#2e1a28;color:#F08BC0}
+    .b-urgente{background:#2e2518;color:#EF9F27}
+  }
+
+  /* AVATARS */
+  .av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+  .av-t{background:var(--s1l);color:var(--s1)}
+  .av-f{background:#EAF3DE;color:#3B6D11}
+  .av-g{background:#FDE9F3;color:#B03079}
+  .av-s{background:#F1EFF5;color:#6b5f6e}
+  .resp-cell{display:flex;align-items:center;gap:6px}
+  .resp-click{cursor:pointer;border-radius:8px;padding:2px 5px 2px 2px;transition:background .15s}
+  .resp-click:hover{background:var(--bg2)}
+
+  /* BALANCEAMENTO: mini pill de carga */
+  .carga-pill{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--bg2);color:var(--text3);margin-left:4px;white-space:nowrap}
+
+  /* HISTÓRICO */
+  .hist-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #odoo-sync-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:6px 4px;margin-bottom:8px}
+  .badge-click{cursor:pointer;transition:opacity .15s}
+  .badge-click:hover{opacity:.8}
+  .inline-pop{position:absolute;z-index:9999;background:var(--bg);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:6px;min-width:160px}
+  .pop-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:13px;cursor:pointer;transition:background .12s}
+  .pop-item:hover{background:var(--bg2)}
+  .pop-item i{font-size:14px;width:16px}
+  .pop-concluir{color:#27ae60;font-weight:600}
+  .hist-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+  .hist-name{font-size:14px;font-weight:700;color:var(--text)}
+  .hist-date{font-size:11px;color:var(--text2);white-space:nowrap;margin-left:12px;text-align:right}
+  .hist-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+  .hm{background:var(--bg2);border-radius:var(--radius-md);padding:7px 10px}
+  .hm-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+  .hm-v{font-size:12px;font-weight:700;color:var(--text)}
+  .section-label{font-size:10px;font-weight:700;color:var(--s1);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+  .hist-log{margin-bottom:12px}
+  .log-item{display:flex;align-items:flex-start;gap:8px;font-size:11px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border)}
+  .log-item:last-child{border-bottom:none}
+  .log-dot{width:6px;height:6px;border-radius:50%;background:#B4B2BF;flex-shrink:0;margin-top:4px}
+  .log-dot.blue{background:var(--s1)}
+  .log-dot.green{background:#4DA8F0}
+  .hist-actions{display:flex;gap:8px}
+  .btn-reabrir{padding:7px 14px;background:var(--s1);color:#fff;border:none;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+  .btn-reabrir:hover{background:var(--s1h)}
+  .btn-arquivar{padding:7px 12px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-md);font-size:12px;cursor:pointer}
+  .btn-arquivar:hover{background:var(--bg2)}
+
+  /* ENTRADAS */
+  .ent-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px}
+  .ent-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .ent-who{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--text)}
+  .wpp-tag{background:var(--wpp);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700}
+  .ent-time{font-size:11px;color:var(--text2)}
+  .ent-msg{font-size:12px;color:var(--text2);background:var(--bg2);border-radius:var(--radius-md);padding:9px 11px;margin-bottom:10px;border-left:3px solid var(--wpp);line-height:1.55}
+  .ent-extracted{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .ext-item{background:var(--bg2);border-radius:var(--radius-md);padding:7px 9px}
+  .ext-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+  .ext-v{font-size:12px;font-weight:700;color:var(--text)}
+  .ent-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn-criar{padding:7px 14px;background:var(--s1);color:#fff;border:none;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px}
+  .btn-criar:hover{background:var(--s1h)}
+  .btn-sec{padding:7px 12px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-md);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px}
+  .btn-sec:hover{background:var(--bg2)}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:48px 20px;color:var(--text2);font-size:13px}
+  .empty i{font-size:36px;display:block;margin-bottom:10px;color:var(--text3)}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--bg);border-radius:var(--radius-lg);border:1px solid var(--border);width:100%;max-width:480px;position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(200,79,191,.22)}
+  .modal-header{display:flex;align-items:center;justify-content:space-between;padding:15px 20px;background:var(--g)}
+  .modal-title{font-size:15px;font-weight:700;color:#fff}
+  .modal-close{width:30px;height:30px;background:rgba(255,255,255,.18);border:none;cursor:pointer;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-md)}
+  .modal-close:hover{background:rgba(255,255,255,.32)}
+  .modal-body{padding:20px 22px}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-group{margin-bottom:14px}
+  .form-label{font-size:12px;color:var(--text2);margin-bottom:5px;display:block;font-weight:700}
+  .form-input,.form-select,.form-textarea{width:100%;font-size:13px;padding:8px 11px;border:1px solid var(--border2);border-radius:var(--radius-md);background:var(--bg);color:var(--text);outline:none;font-family:var(--font);transition:border-color .15s}
+  .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--magenta);box-shadow:0 0 0 3px rgba(200,79,191,.12)}
+  .form-textarea{resize:vertical;min-height:70px;line-height:1.5}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg-btn{font-size:12px;padding:5px 12px;border:1px solid var(--border2);border-radius:20px;background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font);transition:all .15s}
+  .seg-btn:hover{background:var(--bg2)}
+  .seg-btn.on-fila{background:#F1EFF5;color:#6b5f6e;border-color:#9b909e}
+  .seg-btn.on-andamento{background:var(--s1l);color:var(--s1);border-color:var(--s1)}
+  .seg-btn.on-concluido{background:#EAF3DE;color:#3B6D11;border-color:#3B6D11}
+  .seg-btn.on-Alta{background:#FDE9F3;color:#B03079;border-color:#B03079}
+  .seg-btn.on-Média{background:#FAEEDA;color:#854F0B;border-color:#854F0B}
+  .seg-btn.on-Nula{background:#F1EFF5;color:#6b5f6e;border-color:#B4B2BF}
+  .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;padding:14px 22px;border-top:1px solid var(--border);background:var(--bg2)}
+  .btn-salvar{padding:9px 20px;background:var(--s1);color:#fff;border:none;border-radius:var(--radius-md);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .btn-salvar:hover{background:var(--s1h)}
+  .btn-cancelar{padding:9px 15px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:var(--radius-md);font-size:13px;cursor:pointer}
+  .btn-cancelar:hover{background:var(--bg)}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e1f27;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 4px 18px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px}
+  #toast.show{opacity:1}
+
+  @media(max-width:600px){
+    .stats{grid-template-columns:1fr 1fr}
+    .form-row{grid-template-columns:1fr}
+    .hist-meta{grid-template-columns:1fr 1fr}
+    .ent-extracted{grid-template-columns:1fr 1fr}
+    .top-actions .btn-wpp span:not(.notif){display:none}
+  }
+
+  /* CONFIGURAÇÕES */
+  .btn-cfg{width:34px;height:34px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.30);border-radius:8px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0}
+  .btn-cfg:hover{background:rgba(255,255,255,.28)}
+  .cfg-section{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+  .cfg-section:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+  .cfg-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--s1);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .toggle-label{font-size:13px;color:var(--text)}
+  .toggle-sub{font-size:11px;color:var(--text3);margin-top:1px}
+  .toggle{position:relative;width:38px;height:22px;flex-shrink:0}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-track{position:absolute;inset:0;background:#ccc;border-radius:11px;cursor:pointer;transition:.2s}
+  .toggle input:checked + .toggle-track{background:var(--wpp)}
+  .toggle-track:before{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;left:3px;top:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .toggle input:checked + .toggle-track:before{transform:translateX(16px)}
+  .schema-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;font-family:'Courier New',monospace;font-size:11px;color:var(--text2);line-height:1.7;white-space:pre;overflow-x:auto;margin-top:8px}
+  .sim-area{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;font-size:12px;color:var(--text2);width:100%;min-height:80px;resize:vertical;font-family:'Courier New',monospace;outline:none;margin-bottom:8px}
+  .sim-area:focus{border-color:var(--wpp)}
+  .btn-sim{padding:7px 14px;background:var(--wpp);color:#fff;border:none;border-radius:var(--radius-md);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+  .btn-sim:hover{opacity:.88}
+  .poll-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-top:8px}
+  .poll-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
+  .poll-dot.on{background:var(--wpp);box-shadow:0 0 0 3px rgba(37,211,102,.2)}
+  .poll-dot.err{background:#E05B3A}
+
+  /* LOGIN */
+  #login-screen{position:fixed;inset:0;background:var(--bg3);display:flex;align-items:center;justify-content:center;z-index:999;padding:20px}
+  #login-screen.hidden{display:none}
+  .login-box{background:var(--bg);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 40px rgba(200,79,191,.18);width:100%;max-width:360px;overflow:hidden}
+  .login-header{background:var(--g);padding:24px 28px 20px;text-align:center}
+  .login-logo{width:52px;height:52px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;overflow:hidden}
+  .login-logo img{width:42px;height:42px;object-fit:contain}
+  .login-title{font-size:16px;font-weight:700;color:#fff}
+  .login-sub{font-size:12px;color:rgba(255,255,255,.75);margin-top:3px}
+  .login-body{padding:24px 28px}
+  .login-body .form-group{margin-bottom:14px}
+  .login-err{font-size:12px;color:#B03079;background:#FDE9F3;border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none}
+  .login-err.show{display:block}
+  .btn-login{width:100%;padding:11px;background:var(--s1);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+  .btn-login:hover{background:var(--s1h)}
+  .user-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:5px 12px 5px 7px;color:#fff;font-size:12px;font-weight:600}
+  .user-pill .av{width:20px;height:20px;font-size:8px;background:rgba(255,255,255,.25);color:#fff;flex-shrink:0}
+  .btn-logout{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;transition:background .15s}
+  .btn-logout:hover{background:rgba(255,255,255,.25)}
+  /* GERENCIAR USUÁRIOS */
+  .user-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px}
+  .user-row-info{flex:1;min-width:0}
+  .user-row-name{font-size:13px;font-weight:700;color:var(--text)}
+  .user-row-login{font-size:11px;color:var(--text3);margin-top:2px}
+  .badge-admin{background:var(--s1l);color:var(--s1);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+  .badge-viewer{background:#F1EFF5;color:#6b5f6e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+  .badge-proj{background:#EAF3DE;color:#3B6D11;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+  @media(prefers-color-scheme:dark){.badge-viewer{background:#2c2933;color:#b8b9c6}.badge-proj{background:#1e2e14;color:#8bc34a}}
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-header">
+      <div class="login-logo"><img id="loginLogo" alt="S1"></div>
+      <div class="login-title">Stand1 Produções</div>
+      <div class="login-sub">Gestão de Projetos — Acesso restrito</div>
+    </div>
+    <div class="login-body">
+      <div class="login-err" id="login-err">Usuário ou senha incorretos</div>
+      <div class="form-group">
+        <label class="form-label">Usuário</label>
+        <input class="form-input" id="login-user" type="text" placeholder="seu@usuario" autocomplete="username" onkeydown="if(event.key==='Enter')fazerLogin()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+      </div>
+      <button class="btn-login" onclick="fazerLogin()"><i class="ti ti-login" style="margin-right:6px"></i>Entrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="app-wrap" style="display:none">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-box"><img id="brandLogo" alt="S1"></div>
+      <div>
+        <div class="brand-name">Stand1 Produções</div>
+        <div class="brand-sub">Gestão de projetos</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn-cfg admin-only" id="btn-odoo-sync" onclick="syncOdooManual()" title="Buscar projetos do Odoo agora" style="display:none"><i class="ti ti-refresh"></i></button>
+      <button class="btn-cfg admin-only" onclick="abrirCfg()" title="Configurações / Integração WhatsApp"><i class="ti ti-settings"></i></button>
+      <button class="btn-novo admin-only" onclick="abrirModal(null)">
+        <i class="ti ti-plus"></i> Novo projeto
+      </button>
+      <div class="user-pill" id="user-pill">
+        <div class="av av-t" id="user-av">TC</div>
+        <span id="user-label">Tarcisio</span>
+      </div>
+      <button class="btn-logout" onclick="fazerLogout()" title="Sair"><i class="ti ti-logout"></i></button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat st0" onclick="goTab('projetos')">
+      <div class="sn" id="s-total">0</div>
+      <div class="sl"><i class="ti ti-layout-grid"></i> Ativos</div>
+    </div>
+    <div class="stat st1" onclick="setFiltroExt('fila')">
+      <div class="sn" id="s-fila">0</div>
+      <div class="sl"><i class="ti ti-clock"></i> Na fila</div>
+    </div>
+    <div class="stat st2" onclick="setFiltroExt('andamento')">
+      <div class="sn" id="s-and">0</div>
+      <div class="sl"><i class="ti ti-player-play"></i> Em andamento</div>
+    </div>
+    <div class="stat st3" onclick="setFiltroExt('alta')">
+      <div class="sn" id="s-alta">0</div>
+      <div class="sl"><i class="ti ti-alert-triangle"></i> Alta prioridade</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-row">
+    <div class="tabs">
+      <div class="tab on" id="tab-projetos" onclick="goTab('projetos')"><i class="ti ti-layout-kanban"></i> Projetos</div>
+      <div class="tab" id="tab-concluidos" onclick="goTab('concluidos')"><i class="ti ti-circle-check"></i> Concluídos</div>
+      <div class="tab" id="tab-excluidos" onclick="goTab('excluidos')"><i class="ti ti-trash"></i> Excluídos</div>
+      <div class="tab admin-only" id="tab-usuarios" onclick="goTab('usuarios')"><i class="ti ti-users"></i> Usuários</div>
+    </div>
+    <div class="view-toggle" id="view-toggle">
+      <button class="vbtn on" id="vbtn-card" onclick="setView('card')" title="Cards"><i class="ti ti-layout-grid"></i></button>
+      <button class="vbtn" id="vbtn-list" onclick="setView('list')" title="Lista"><i class="ti ti-list"></i></button>
+    </div>
+  </div>
+
+  <!-- PAINEL PROJETOS -->
+  <div class="panel on" id="panel-projetos">
+    <div class="toolbar">
+      <button class="fbtn on" id="fb-todos"     onclick="setFiltro(this,'todos')"><i class="ti ti-layout-grid"></i> Todos</button>
+      <button class="fbtn" id="fb-fila"          onclick="setFiltro(this,'fila')"><i class="ti ti-clock"></i> Na fila</button>
+      <button class="fbtn" id="fb-andamento"     onclick="setFiltro(this,'andamento')"><i class="ti ti-player-play"></i> Em andamento</button>
+      <button class="fbtn" id="fb-alta"          onclick="setFiltro(this,'alta')"><i class="ti ti-alert-triangle"></i> Alta</button>
+      <span id="fb-projetistas"></span>
+      <input class="srch" placeholder="Buscar projeto ou solicitante..." oninput="buscar(this.value)">
+    </div>
+    <div id="view-area"></div>
+  </div>
+
+  <!-- PAINEL CONCLUÍDOS -->
+  <div class="panel" id="panel-concluidos">
+    <div class="toolbar">
+      <input class="srch" placeholder="Buscar no histórico..." oninput="buscarHist(this.value)" style="max-width:320px">
+    </div>
+    <div id="hist-list"></div>
+  </div>
+
+  <!-- PAINEL EXCLUÍDOS -->
+  <div class="panel" id="panel-excluidos">
+    <div class="toolbar">
+      <input class="srch" placeholder="Buscar nos excluídos..." oninput="buscarExcl(this.value)" style="max-width:320px">
+    </div>
+    <div id="excluidos-list"></div>
+  </div>
+
+  <!-- PAINEL USUÁRIOS -->
+  <div class="panel admin-only" id="panel-usuarios">
+    <!-- Seção: Acesso ao dashboard -->
+    <div class="cfg-section-title" style="margin-bottom:10px"><i class="ti ti-lock"></i> Acesso ao dashboard</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;color:var(--text2)">Quem pode fazer login e acessar o dashboard</div>
+      <button class="btn-novo" onclick="abrirModalUsuario(null)" style="font-size:12px"><i class="ti ti-plus"></i> Novo usuário</button>
+    </div>
+    <div id="usuarios-list" style="margin-bottom:24px"></div>
+
+    <!-- Seção: Projetistas -->
+    <div class="cfg-section-title" style="margin-bottom:10px"><i class="ti ti-pencil-ruler"></i> Projetistas</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:13px;color:var(--text2)">Equipe técnica — aparecem nos filtros e na atribuição de projetos</div>
+      <button class="btn-novo" onclick="abrirModalProjetista(null)" style="font-size:12px"><i class="ti ti-plus"></i> Novo projetista</button>
+    </div>
+    <div id="projetistas-list"></div>
+  </div>
+
+  <!-- PAINEL ENTRADAS WHATSAPP -->
+
+</div><!-- /wrap -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Novo projeto</div>
+      <button class="modal-close" onclick="fecharModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome do projeto</label>
+        <input class="form-input" id="f-nome" placeholder="Ex: PETROBRAS CIOBA 2026">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Projetista responsável <span id="f-resp-carga" style="font-size:10px;color:var(--text3)"></span></label>
+          <select class="form-select" id="f-resp"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Solicitante</label>
+          <input class="form-input" id="f-solic" placeholder="Quem solicitou o projeto">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prazo de entrega</label>
+        <input class="form-input" type="date" id="f-prazo" style="max-width:200px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <div class="seg" id="seg-status">
+          <button class="seg-btn on-fila"    onclick="setSeg('status','fila',this)">Na fila</button>
+          <button class="seg-btn"            onclick="setSeg('status','andamento',this)">Em andamento</button>
+          <button class="seg-btn"            onclick="setSeg('status','concluido',this)">Concluído</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Prioridade</label>
+        <div class="seg" id="seg-prior">
+          <button class="seg-btn on-Nula"    onclick="setSeg('prior','Nula',this)">Nula</button>
+          <button class="seg-btn"            onclick="setSeg('prior','Média',this)">Média</button>
+          <button class="seg-btn"            onclick="setSeg('prior','Alta',this)">Alta</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Observações</label>
+        <textarea class="form-textarea" id="f-nota" placeholder="Anotações livres: revisões, pendências, instruções especiais..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-salvar" onclick="salvarProjeto()"><i class="ti ti-device-floppy"></i> Salvar projeto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIGURAÇÕES / INTEGRAÇÃO -->
+<div class="modal-overlay" id="cfg-overlay">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title"><i class="ti ti-brand-whatsapp" style="margin-right:6px"></i>Integração WhatsApp</div>
+      <button class="modal-close" onclick="fecharCfg()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto">
+
+      <!-- STATUS INTEGRAÇÃO -->
+      <div class="cfg-section">
+        <div class="cfg-section-title"><i class="ti ti-plug"></i> Status da integração</div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Ativar polling de entradas</div>
+            <div class="toggle-sub">Dashboard busca novas mensagens na URL configurada abaixo</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="cfg-poll-on" onchange="salvarCfg()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">URL do endpoint (n8n webhook output / servidor)</label>
+          <input class="form-input" id="cfg-url" placeholder="https://n8n.seusite.com/webhook/stand1/entradas" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Token de autenticação (Bearer)</label>
+          <input class="form-input" id="cfg-token" placeholder="Ex: s1_prod_xxxxx" type="password" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Intervalo de polling (segundos)</label>
+          <input class="form-input" id="cfg-interval" type="number" min="10" max="3600" value="30" style="max-width:120px" oninput="salvarCfg()">
+        </div>
+        <div class="poll-status" style="margin-top:10px">
+          <div class="poll-dot" id="poll-dot-cfg"></div>
+          <span id="poll-status-cfg">—</span>
+        </div>
+      </div>
+
+      <!-- SCHEMA -->
+      <div class="cfg-section">
+        <div class="cfg-section-title"><i class="ti ti-code"></i> Contrato de dados (payload JSON esperado)</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:6px">
+          O n8n deve enviar um array de objetos nesse formato para o endpoint — ou chamar <code style="font-size:11px;background:var(--bg2);padding:1px 5px;border-radius:4px">window.S1.receberEntrada(obj)</code> diretamente.
+        </div>
+        <div class="schema-box">[
+  {
+    "id":    "uuid-único",            // obrigatório
+    "who":   "Francine",             // remetente no WhatsApp
+    "solic": "Francine",             // solicitante do projeto
+    "nome":  "CLIENTE EVENTO 2026",  // nome do projeto
+    "prior": "Alta|Média|Nula",      // prioridade extraída
+    "obs":   "Júnior",               // responsável pelo desenho
+    "prazo": "2026-08-15",           // YYYY-MM-DD (opcional)
+    "nota":  "texto livre",          // observações (opcional)
+    "msg":   "mensagem original",    // texto bruto do WhatsApp
+    "time":  "11/06/2026, 14:30"     // data/hora da mensagem
+  }
+]</div>
+      </div>
+
+      <!-- SIMULAR ENTRADA -->
+      <div class="cfg-section">
+        <div class="cfg-section-title"><i class="ti ti-test-pipe"></i> Simular entrada WhatsApp</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">Cole um JSON válido (objeto ou array) para testar o fluxo sem precisar do WhatsApp conectado.</div>
+        <textarea class="sim-area" id="sim-json" placeholder='{"id":"teste-1","who":"Francine","solic":"Francine","nome":"TESTE EVENTO 2026","prior":"Alta","obs":"Júnior","msg":"Precisamos de projeto urgente para TESTE EVENTO 2026, alta prioridade, desenho com Júnior.","time":"11/06/2026, 10:00"}'></textarea>
+        <button class="btn-sim" onclick="simularEntrada()"><i class="ti ti-player-play"></i> Injetar como entrada WhatsApp</button>
+      </div>
+
+      <!-- INSTRUÇÕES -->
+      <div class="cfg-section">
+        <div class="cfg-section-title"><i class="ti ti-info-circle"></i> Como conectar</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.7">
+          <strong>Opção A — n8n + Evolution API (recomendado)</strong><br>
+          1. Configure a Evolution API para escutar o grupo do WhatsApp<br>
+          2. No n8n: Webhook → Filtrar mensagens → Claude API (extrair dados) → HTTP Request (POST para este dashboard ou escrever em JSON)<br>
+          3. Configure a URL acima para o n8n fazer polling ou use <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">window.S1.receberEntrada()</code> via script<br><br>
+          <strong>Opção B — postMessage (iframe/Electron)</strong><br>
+          Envie <code style="background:var(--bg2);padding:1px 5px;border-radius:3px">window.postMessage({type:'s1_entrada', data: [...]}, '*')</code> de qualquer página pai ou wrapper
+        </div>
+      </div>
+
+    </div>
+      <!-- ODOO -->
+      <div class="cfg-section">
+        <div class="cfg-section-title"><i class="ti ti-building"></i> Integração Odoo</div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Ativar polling do Odoo</div>
+            <div class="toggle-sub">Busca projetos "A fazer" e cria cards automaticamente</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="cfg-odoo-on" onchange="salvarCfg()"><span class="toggle-track"></span></label>
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">URL do Odoo</label>
+          <input class="form-input" id="cfg-odoo-url" placeholder="https://stand-1.odoo.com" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Banco de dados</label>
+          <input class="form-input" id="cfg-odoo-db" placeholder="stand-1" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Login (e-mail)</label>
+          <input class="form-input" id="cfg-odoo-login" placeholder="projeto@stand1.com.br" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <label class="form-label">Chave de API</label>
+          <input class="form-input" id="cfg-odoo-key" type="password" placeholder="Chave gerada no Odoo" oninput="salvarCfg()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Intervalo de polling (minutos)</label>
+          <input class="form-input" id="cfg-odoo-interval" type="number" min="1" max="60" value="5" style="max-width:100px" oninput="salvarCfg()">
+        </div>
+        <div class="poll-status" style="margin-top:10px">
+          <div class="poll-dot" id="poll-dot-odoo"></div>
+          <span id="poll-status-odoo">Odoo não configurado</span>
+        </div>
+        <button class="btn-sim" style="margin-top:10px;background:var(--s1)" onclick="testarOdoo()"><i class="ti ti-refresh"></i> Testar conexão Odoo</button>
+        <button class="btn-sim" style="margin-top:6px;background:#e74c3c" onclick="limparIgnoradosOdoo()"><i class="ti ti-trash"></i> Reimportar projetos excluídos do Odoo</button>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="fecharCfg()">Fechar</button>
+      <button class="btn-salvar" onclick="testarPoll()"><i class="ti ti-refresh"></i> Testar WhatsApp agora</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PROJETISTA -->
+<div class="modal-overlay" id="proj-modal-overlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title" id="proj-modal-title">Novo projetista</div>
+      <button class="modal-close" onclick="fecharModalProjetista()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input class="form-input" id="pf-nome" placeholder="Ex: Carlos">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Iniciais (2 letras)</label>
+        <input class="form-input" id="pf-ini" placeholder="Ex: CL" maxlength="3" style="max-width:100px">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Atribuição automática de projetos</label>
+        <div class="seg" id="pf-auto-seg">
+          <button class="seg-btn on-andamento" data-v="true" onclick="selAutoProj(true)">Sim — recebe projetos automáticos</button>
+          <button class="seg-btn" data-v="false" onclick="selAutoProj(false)">Não — só atribuição manual</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Projetos do WhatsApp são atribuídos apenas a projetistas com "Sim"</div>
+      </div>
+      <div id="pf-err" style="font-size:12px;color:#B03079;background:#FDE9F3;border-radius:8px;padding:8px 12px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="fecharModalProjetista()">Cancelar</button>
+      <button class="btn-salvar" onclick="salvarProjetista()"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUÁRIO -->
+<div class="modal-overlay" id="user-modal-overlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="user-modal-title">Novo usuário</div>
+      <button class="modal-close" onclick="fecharModalUsuario()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nome de exibição</label>
+        <input class="form-input" id="uf-nome" placeholder="Ex: Fagner">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Usuário (login)</label>
+        <input class="form-input" id="uf-usuario" placeholder="Ex: fagner@stand1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Senha</label>
+        <input class="form-input" id="uf-senha" type="password" placeholder="Mínimo 6 caracteres">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px" id="uf-senha-hint">Deixe em branco para não alterar a senha</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nível de acesso</label>
+        <div class="seg" id="uf-papel-seg">
+          <button class="seg-btn on-andamento" data-v="admin" onclick="selPapel('admin')">Admin — acesso total</button>
+          <button class="seg-btn" data-v="projetista" onclick="selPapel('projetista')">Projetista — editar, sem excluir</button>
+          <button class="seg-btn" data-v="viewer" onclick="selPapel('viewer')">Visualizador — só leitura</button>
+        </div>
+      </div>
+      <div id="uf-err" style="font-size:12px;color:#B03079;background:#FDE9F3;border-radius:8px;padding:8px 12px;display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancelar" onclick="fecharModalUsuario()">Cancelar</button>
+      <button class="btn-salvar" onclick="salvarUsuario()"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── AUTENTICAÇÃO ─────────────────────────────────────────────────────────────
+const USUARIOS = [
+  { usuario: 'stand1@tarcisio',  senha: 'stand123', nome: 'Tarcisio', papel: 'admin',      av: 'av-t', ini: 'TC' },
+  { usuario: 'stand1@fagner',    senha: 'stand123', nome: 'Fagner',   papel: 'projetista', av: 'av-f', ini: 'FG' },
+  { usuario: 'stand1@gabriel',   senha: 'stand123', nome: 'Gabriel',  papel: 'projetista', av: 'av-g', ini: 'GB' },
+  { usuario: 'stand1@francine',  senha: 'stand123', nome: 'Francine', papel: 'viewer',     av: 'av-s', ini: 'FR' },
+  { usuario: 'stand1@tayane',    senha: 'stand123', nome: 'Tayane',   papel: 'viewer',     av: 'av-s', ini: 'TA' },
+  { usuario: 'stand1@bruna',     senha: 'stand123', nome: 'Bruna',    papel: 'viewer',     av: 'av-s', ini: 'BR' },
+];
+
+let usuarioLogado = null;
+window._canEdit   = false;
+window._canDelete = false;
+
+function fazerLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const s = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-err');
+  const lista = lsUsuarios() || USUARIOS;
+  const match = lista.find(x => x.usuario === u && x.senha === s);
+  if (!match) {
+    err.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+  if (match.ativo === false) {
+    err.textContent = 'Acesso bloqueado — contate o administrador';
+    err.classList.add('show');
+    document.getElementById('login-pass').value = '';
+    return;
+  }
+  err.classList.remove('show');
+  usuarioLogado = match;
+  localStorage.setItem('s1_auth', JSON.stringify({ usuario: match.usuario, papel: match.papel, nome: match.nome, av: match.av, ini: match.ini }));
+  localStorage.setItem('s1_last_active', Date.now());
+  aplicarSessao(match);
+}
+
+function fazerLogout() {
+  localStorage.removeItem('s1_auth');
+  usuarioLogado = null;
+  document.getElementById('app-wrap').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+function aplicarSessao(u) {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-wrap').style.display = '';
+  document.getElementById('user-label').textContent = u.nome;
+  const av = document.getElementById('user-av');
+  av.className = 'av ' + u.av;
+  av.textContent = u.ini;
+  // controle de visibilidade por papel
+  const isAdmin      = u.papel === 'admin';
+  const canEdit      = u.papel === 'admin' || u.papel === 'projetista';
+  document.querySelectorAll('.admin-only').forEach(el => { el.style.display = isAdmin ? '' : 'none'; });
+  document.querySelectorAll('.editor-only').forEach(el => { el.style.display = canEdit ? '' : 'none'; });
+  document.querySelectorAll('.delete-only').forEach(el => { el.style.display = isAdmin ? '' : 'none'; });
+  window._canEdit   = canEdit;
+  window._canDelete = isAdmin;
+  window._canPrior  = true; // todos os papéis podem mudar prioridade
+  if (!window._s1Inited) { window._s1Inited = true; iniciar(); }
+}
+
+// tempo máximo de inatividade antes de deslogar (12 horas)
+const INATIVIDADE_MS = 12 * 60 * 60 * 1000;
+
+function registrarAtividade() {
+  if (usuarioLogado) localStorage.setItem('s1_last_active', Date.now());
+}
+
+function verificarSessao() {
+  let match = null;
+  const s = localStorage.getItem('s1_auth');
+  if (s) {
+    try {
+      const u = JSON.parse(s);
+      // checa inatividade
+      const last = parseInt(localStorage.getItem('s1_last_active') || '0');
+      if (last && (Date.now() - last) > INATIVIDADE_MS) {
+        localStorage.removeItem('s1_auth');
+      } else {
+        // procura nas duas listas (built-in + cadastrados), só por usuário
+        const todas = [...USUARIOS, ...(lsUsuarios() || [])];
+        match = todas.find(x => x.usuario === u.usuario) || null;
+      }
+    } catch(e) { console.warn('Erro ao ler sessão', e); }
+  }
+  if (match) {
+    usuarioLogado = match;
+    registrarAtividade();
+    // aplicarSessao FORA do try/catch para não cair no login se iniciar() falhar
+    aplicarSessao(match);
+  } else {
+    document.getElementById('login-screen').classList.remove('hidden');
+  }
+}
+
+// registra atividade do usuário (mantém sessão viva)
+['click','keydown','mousemove','scroll','touchstart'].forEach(ev =>
+  document.addEventListener(ev, () => {
+    if (usuarioLogado) {
+      // throttle: grava no máximo a cada 30s
+      const last = parseInt(localStorage.getItem('s1_last_active') || '0');
+      if (Date.now() - last > 30000) registrarAtividade();
+    }
+  }, { passive: true })
+);
+
+// ─── FIM AUTENTICAÇÃO ─────────────────────────────────────────────────────────
+
+// ─── GERENCIAR USUÁRIOS ───────────────────────────────────────────────────────
+let _editUsuarioId = null;
+let _papelSel = 'admin';
+
+function lsUsuarios() {
+  try { return JSON.parse(localStorage.getItem('s1_usuarios') || 'null'); } catch(e) { return null; }
+}
+function salvarLsUsuarios(lista) {
+  localStorage.setItem('s1_usuarios', JSON.stringify(lista));
+}
+function getUsuarios() {
+  const salvo = lsUsuarios();
+  if (salvo) return salvo;
+  // primeira vez: converte os USUARIOS hard-coded para o storage
+  const lista = USUARIOS.map((u, i) => ({ ...u, id: i + 1 }));
+  salvarLsUsuarios(lista);
+  return lista;
+}
+
+function renderUsuarios() {
+  const lista = getUsuarios();
+  const el = document.getElementById('usuarios-list');
+  if (!lista.length) { el.innerHTML = '<div class="empty"><i class="ti ti-users"></i>Nenhum usuário cadastrado</div>'; return; }
+  el.innerHTML = lista.map(u => {
+    const ehVoce = u.usuario === usuarioLogado.usuario;
+    const ativo  = u.ativo !== false;
+    return `
+    <div class="user-row" style="${ativo ? '' : 'opacity:.55'}">
+      <div class="av ${u.av}" style="width:36px;height:36px;font-size:13px;flex-shrink:0">${u.ini}</div>
+      <div class="user-row-info">
+        <div class="user-row-name">${u.nome} ${ehVoce ? '<span style="font-size:10px;color:var(--text3)">(você)</span>' : ''}</div>
+        <div class="user-row-login">${u.usuario}</div>
+      </div>
+      <span class="${u.papel === 'admin' ? 'badge-admin' : u.papel === 'projetista' ? 'badge-proj' : 'badge-viewer'}">${u.papel === 'admin' ? 'Admin' : u.papel === 'projetista' ? 'Projetista' : 'Visualizador'}</span>
+      ${ehVoce ? '' : `
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span style="font-size:11px;color:var(--text3)">Acesso</span>
+        <label class="toggle" title="${ativo ? 'Bloquear acesso' : 'Liberar acesso'}">
+          <input type="checkbox" ${ativo ? 'checked' : ''} onchange="toggleAtivoUsuario(${u.id}, this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>`}
+      <div style="display:flex;gap:5px">
+        <button class="act-btn act-edit" onclick="abrirModalUsuario(${u.id})"><i class="ti ti-pencil"></i></button>
+        ${ehVoce ? '' : `<button class="act-btn act-del" onclick="excluirUsuario(${u.id})"><i class="ti ti-trash"></i></button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleAtivoUsuario(id, valor) {
+  const lista = getUsuarios();
+  const idx = lista.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  lista[idx].ativo = valor;
+  salvarLsUsuarios(lista);
+  renderUsuarios();
+  toast(`${lista[idx].nome}: acesso ${valor ? 'liberado' : 'bloqueado'}`, valor ? 'ti-lock-open' : 'ti-lock');
+}
+
+function abrirModalUsuario(id) {
+  _editUsuarioId = id;
+  const isEdit = id !== null;
+  document.getElementById('user-modal-title').textContent = isEdit ? 'Editar usuário' : 'Novo usuário';
+  document.getElementById('uf-senha-hint').style.display = isEdit ? '' : 'none';
+  document.getElementById('uf-err').style.display = 'none';
+  if (isEdit) {
+    const u = getUsuarios().find(x => x.id === id);
+    document.getElementById('uf-nome').value = u.nome;
+    document.getElementById('uf-usuario').value = u.usuario;
+    document.getElementById('uf-senha').value = '';
+    selPapel(u.papel);
+  } else {
+    document.getElementById('uf-nome').value = '';
+    document.getElementById('uf-usuario').value = '';
+    document.getElementById('uf-senha').value = '';
+    selPapel('viewer');
+  }
+  document.getElementById('user-modal-overlay').classList.add('open');
+}
+
+function fecharModalUsuario() {
+  document.getElementById('user-modal-overlay').classList.remove('open');
+}
+
+function selPapel(v) {
+  _papelSel = v;
+  document.querySelectorAll('#uf-papel-seg .seg-btn').forEach(b => {
+    b.className = 'seg-btn' + (b.dataset.v === v ? ' on-andamento' : '');
+  });
+}
+
+function salvarUsuario() {
+  const nome = document.getElementById('uf-nome').value.trim();
+  const usuario = document.getElementById('uf-usuario').value.trim();
+  const senha = document.getElementById('uf-senha').value;
+  const err = document.getElementById('uf-err');
+  err.style.display = 'none';
+
+  if (!nome || !usuario) { err.textContent = 'Preencha nome e usuário'; err.style.display = ''; return; }
+
+  const lista = getUsuarios();
+  const isEdit = _editUsuarioId !== null;
+
+  if (!isEdit && !senha) { err.textContent = 'Informe uma senha'; err.style.display = ''; return; }
+  if (senha && senha.length < 6) { err.textContent = 'Senha deve ter no mínimo 6 caracteres'; err.style.display = ''; return; }
+
+  const duplicado = lista.find(x => x.usuario === usuario && x.id !== _editUsuarioId);
+  if (duplicado) { err.textContent = 'Esse nome de usuário já existe'; err.style.display = ''; return; }
+
+  const ini = nome.slice(0, 2).toUpperCase();
+  const avMap = { admin: 'av-t', projetista: 'av-f', viewer: 'av-s' };
+
+  if (isEdit) {
+    const idx = lista.findIndex(x => x.id === _editUsuarioId);
+    lista[idx].nome = nome;
+    lista[idx].usuario = usuario;
+    lista[idx].papel = _papelSel;
+    lista[idx].ini = ini;
+    lista[idx].av = avMap[_papelSel];
+    if (senha) lista[idx].senha = senha;
+    if (usuario === usuarioLogado.usuario) {
+      usuarioLogado = { ...lista[idx] };
+      localStorage.setItem('s1_auth', JSON.stringify({ usuario: lista[idx].usuario, papel: lista[idx].papel, nome: lista[idx].nome, av: lista[idx].av, ini: lista[idx].ini }));
+      document.getElementById('user-label').textContent = lista[idx].nome;
+    }
+  } else {
+    const newId = Math.max(0, ...lista.map(x => x.id)) + 1;
+    lista.push({ id: newId, nome, usuario, senha, papel: _papelSel, av: avMap[_papelSel], ini });
+  }
+
+  salvarLsUsuarios(lista);
+  fecharModalUsuario();
+  renderUsuarios();
+  renderProjetistas();
+  toast(isEdit ? 'Usuário atualizado' : 'Usuário criado!', 'ti-users');
+}
+
+function excluirUsuario(id) {
+  const lista = getUsuarios();
+  const u = lista.find(x => x.id === id);
+  if (!u) return;
+  if (!confirm(`Excluir o usuário "${u.nome}"?`)) return;
+  salvarLsUsuarios(lista.filter(x => x.id !== id));
+  renderUsuarios();
+  toast('Usuário excluído', 'ti-trash');
+}
+// ─── FIM GERENCIAR USUÁRIOS ───────────────────────────────────────────────────
+
+// ─── GERENCIAR PROJETISTAS ────────────────────────────────────────────────────
+let _editProjetistaId = null;
+let _autoProj = true;
+
+function renderProjetistas() {
+  const lista = getProjetistas();
+  const el = document.getElementById('projetistas-list');
+  if (!el) return;
+  el.innerHTML = lista.map(p => `
+    <div class="user-row">
+      <div class="av ${p.avCl}" style="width:36px;height:36px;font-size:13px;flex-shrink:0;background:${p.cor};color:${p.corTxt}">${p.ini}</div>
+      <div class="user-row-info">
+        <div class="user-row-name">${p.nome}</div>
+        <div class="user-row-login">${p.chave}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:11px;color:var(--text3)">Atribuição auto</span>
+        <label class="toggle" title="${p.auto ? 'Desativar atribuição automática' : 'Ativar atribuição automática'}">
+          <input type="checkbox" ${p.auto ? 'checked' : ''} onchange="toggleAutoProjetista(${p.id}, this.checked)">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="act-btn act-edit" onclick="abrirModalProjetista(${p.id})"><i class="ti ti-pencil"></i></button>
+        ${lista.length > 1 ? `<button class="act-btn act-del" onclick="excluirProjetista(${p.id})"><i class="ti ti-trash"></i></button>` : ''}
+      </div>
+    </div>`).join('');
+  renderFiltrosProjetista();
+  popularSelectResp();
+}
+
+function toggleAutoProjetista(id, valor) {
+  const lista = getProjetistas();
+  const idx = lista.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  lista[idx].auto = valor;
+  salvarProjetistas(lista);
+  toast(`${lista[idx].nome}: atribuição ${valor ? 'automática' : 'manual'}`, 'ti-refresh');
+}
+
+function renderFiltrosProjetista() {
+  const el = document.getElementById('fb-projetistas');
+  if (!el) return;
+  el.innerHTML = getProjetistas().map(p =>
+    `<button class="fbtn" id="fb-${p.id}" onclick="setFiltroProj(this,'${p.chave}')" style="margin-right:4px">
+      <span style="font-size:10px;font-weight:700">${p.ini}</span> ${p.nome}
+    </button>`
+  ).join('');
+}
+
+function popularSelectResp(valorAtual) {
+  const sel = document.getElementById('f-resp');
+  if (!sel) return;
+  const lista = getProjetistas();
+  sel.innerHTML = lista.map(p => `<option value="${p.chave}">${p.chave.split('. ')[0]}. ${p.nome}</option>`).join('');
+  if (valorAtual) sel.value = valorAtual;
+}
+
+function abrirModalProjetista(id) {
+  _editProjetistaId = id;
+  document.getElementById('proj-modal-title').textContent = id ? 'Editar projetista' : 'Novo projetista';
+  document.getElementById('pf-err').style.display = 'none';
+  if (id) {
+    const p = getProjetistas().find(x => x.id === id);
+    document.getElementById('pf-nome').value = p.nome;
+    document.getElementById('pf-ini').value = p.ini;
+    selAutoProj(p.auto);
+  } else {
+    document.getElementById('pf-nome').value = '';
+    document.getElementById('pf-ini').value = '';
+    selAutoProj(true);
+  }
+  document.getElementById('proj-modal-overlay').classList.add('open');
+}
+
+function fecharModalProjetista() {
+  document.getElementById('proj-modal-overlay').classList.remove('open');
+}
+
+function selAutoProj(v) {
+  _autoProj = v;
+  document.querySelectorAll('#pf-auto-seg .seg-btn').forEach(b => {
+    b.className = 'seg-btn' + (String(b.dataset.v) === String(v) ? ' on-andamento' : '');
+  });
+}
+
+function salvarProjetista() {
+  const nome = document.getElementById('pf-nome').value.trim();
+  const ini  = document.getElementById('pf-ini').value.trim().toUpperCase().slice(0, 3);
+  const err  = document.getElementById('pf-err');
+  err.style.display = 'none';
+  if (!nome || !ini) { err.textContent = 'Preencha nome e iniciais'; err.style.display = ''; return; }
+
+  const lista = getProjetistas();
+  if (_editProjetistaId) {
+    const idx = lista.findIndex(x => x.id === _editProjetistaId);
+    lista[idx].nome = nome;
+    lista[idx].ini  = ini;
+    lista[idx].auto = _autoProj;
+  } else {
+    const newId   = Math.max(0, ...lista.map(x => x.id)) + 1;
+    const num     = newId;
+    const cor     = CORES_DISP[(newId - 1) % CORES_DISP.length];
+    const chave   = `${num}. ${nome.toUpperCase()}`;
+    lista.push({ id: newId, nome, chave, ini, avCl: cor.avCl, cor: cor.cor, corTxt: cor.corTxt, auto: _autoProj });
+  }
+  salvarProjetistas(lista);
+  fecharModalProjetista();
+  renderProjetistas();
+  toast(_editProjetistaId ? 'Projetista atualizado' : 'Projetista adicionado!', 'ti-pencil-ruler');
+}
+
+function excluirProjetista(id) {
+  const lista = getProjetistas();
+  const p = lista.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Excluir o projetista "${p.nome}"? Projetos atribuídos a ele não serão alterados.`)) return;
+  salvarProjetistas(lista.filter(x => x.id !== id));
+  renderProjetistas();
+  toast('Projetista removido', 'ti-trash');
+}
+// ─── FIM GERENCIAR PROJETISTAS ────────────────────────────────────────────────
+
+var LOGO_B64='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAA7hklEQVR42u19eZxcRbX/91TV7WWWTGYm+0ogEEhAwhIIAZwMmwoIKvTwxKfIoigi/BAeIIs9Dcoqi6goiKhPfQ+nXVDZCYRh3xL2QCBkJ/tkMnt336pzfn/c2z09ySRkJjuPy6c+3fRMpuvWPXXO93zPUsD/oSuZTCpBUgHAjB//auTS7/3insVn3TLroa9fdkT+dyTRoP8vrQn9X7lRSYqiFDEIePein18yqoMuKnM0AsRoZ5dZxbmf//SDxut/9eyDzZJo0EjXMQHyqQDs4ldDIqETDQ1MRHLVZ0/b51t7HfTjMbHqr6CzFU4sCzEMIgrREqxoa17ycuvyi0/+18/SBOAviYSuS6fdpwKwi97bzJqkrm1MWQB484xrfj8U3ulDInEPLusskTKiCQCYBApsoaPG9y3mtK753Xlv//3C5+fObfukawP6RD74ZFLXpoIH3/CFb+93cOXo68eVDToBnAGzdUSkSQSAyhsIgATMwkpB4JXp5e1N772wYsElp8y490EAmFmTNHlh+lQAdlo7n1SUSjEAfP7zn4/eNGjq5buZsh+WR2JR2IyzIKWJKHj4668EI9AGBGE4bWI6m8thcVvzPT+b/0Lyl6/NWCZJUUA98t/xqQDsRFdhhyZrYu82nfT90Vk6u1RFJsD3wWIdgTTR5t9uoA0IiMTV8rZ1K+e2r7y89p8/+33BU/iEmIVdXgCSyaSqRz0oRfzYd6/Z5wCp+M0glBwO1wlwzkGgAKL+3CqLQCBWU9TACJa0rX34sYVvX3nOC397LQ8wd3WQSJ+IXQ/gtf+85qI9YgN/Uk467vwOq0kpkFJCQK8qf3MEAACB4YTFkGJEY3pdR7u/oG3dbd966u7rZjU3t0hDg0bdrqsNdkUBoIZEQuVdu3tOOmvCsQP3vHVMvPx4+DmwOKdIbRMyh0WCvx2JYPG6NfNeXrbogsTTv3t4VwaJu5QANCQadF26Lq9y1aunXPndPUorrxtYVjYAXW3OkSgNvU3viUUgSqw2MdPRlcGCjua7fv/aKz+6Zf7jq3ZFkLjLCIAkEprSaVd1yPgBdw8+7ojDBgy7ckT5oGkQH9b6ThFptb3mIgCLsCYilJTQmtbm5W+tWfyTox7+9S+LtIHDLmAWaOff9QmdSCRAdXXuoUtvPvUz6+i6EVbtSV4EyGUcA0r1Bd5vVUEQELGF8QyEsKS97fG3li244oTGe1/dVUDiTisAAhBqkppCu/rCl3544YEjx9weyeUAm2WGgiJSO8NcnbBoIkYkptu7Ou3C1qY7zn/23mTj6tXtgcuYYALJpwKw2eq+QVNo6xu/dcO03TJ8yRhd/mWoHDsINJTqv3alIiGTQNKo+PP+PycGO0VGw4thTUfLnJdWLbjixEfv+ufObBZ2KgEIfHqAUilOnn121Tdp7x8NYu/7ZRGjkMsxQ9SWb3kVgjkWBTAToCAAlA6WQ7qfUd6y9MWNFBEmOGU8Y3MOH3as+fP/Lpp9eerlR5YqEO5LnLpTmYWdRgCK3ag3z73l/N2sd0W5Z4Yj1wUHdgpqq8B7gYAgDtrT0AawDjAGyHW5gPzT1L0qBCjKo74+YQMHZgMCoiWqqb1t9fudq2+e9vdbfg4gIzVJQzuJNqCdY9cHTN4vT/nuZ2rM0CsnVQ6tg58DOGsBrQFFea6+/48dYAhrECESp3WZltWrsu3XOIUFVRy7bOjAyiNhLdi3VgRGaw+iBJS3ESwFTRCQS8HTo97xS/BvRCDinFKeRsRgcVvz7Kc/WvjDr8+897H/8xpAAHqqKGr36hn1XxvvVfy6QkfLkG13rEWREBG2nNNhiEDgVCRqsn4WSzPt9zzy0TtXn9+YXpH/nTdPufw7YwdWJwfEBwzjbFYcSLSIUgWQELwKAFgLEoEofDy0IwHDiWJyiJSYlkwn5q9bc/OstsW3LH1ywup6pGRHsog7QgBIEg0qD/JuPfr03U+o3uvGPQdWnUrsw7Jzmqhb3Qtt4TTFAVrDi2NZ19rXX1/94aUnPPzbx/NmZ/qQSYKGRMAqTvuPEcfuvm/94JKB34qXlALWtyyiFYEK2EApCAPS2QUlfgAdNokRJK8uGBCHSLkn1uH+Ve/VfeVfv0gXA95PvAAkk0l1zTXXsIjgrGknlV84dvJZI2MDrq6Ol1cj0xYEbgo+vfRjilL4dcciROSUFzWdfi67mruuP+L3V920FOjqLZpXjEFmnnD+MftWjb150NBhk2EAa32nRelgZgxRGuQY0tEFyXZACQJ4KghMhuqeO4sADKuiEQNmLG9vf+LlliVXfumhu18SCO1o93C7CUCRpHvPn3hZYkJl5bVVJeW7wzmwzTjSSpPQVjAsAhZ2iqIaysPy9rXPzWlbccExD/xyNoHwl02gcIEQEum8dvLm/8fVlw2pGnplaeWgGLRyTiR0FUJBIwXu7IK0tkJ1dYGgAEMQxaCQLVRQhGicmlqbF7y7bsVlRz74i3T+u3YGboC2x67Pu3a/+dJ39/ksBv55r0EjD4AWINvpmJQiFYRrt3Q5GMKKRBCJ69auzrWL1q1Nfub+G34JQPqCvBsSCX3aX//qRAQP1Jwx+cDhe908fNSYY1BZCgBWLBsCICpYQhLArWsF1jVDWwsYCJRyMBHTkcvJ6s7OW25/+G8/+VnLG+t2tnjBthQAkm4mj176xtVfmqAr76iIlYxCtt3CiYLOu/XUz90eBmwZwkrY6IgGM5ZlOv44Y8UbV50xI71YRAj19dSPBS+eP9764sVnjxs06obSPcYN4hIl4pQo4UAERAGawJkM3Mo1zst0aSCG1Znml97Nrf5BzV9ufX59gusT6wUIQEg0KP3X0xyLIH3KeZOmV4y9u4qi05QiOJd1WpQuOFG0If9WzMkRerpb0oPQYYi4wHx4JVjV3jJ3Xuuayw//5633r2/X+30/yWS4Y4n/tNvxY6dOnXLtqBFjvx4dOxKIKet81lpArBQrpYG2LtX8ztyWxW2rb5j89+tvAeBLTdKgMeV2xpwB2roPv4ddi75+6hWXj4tVXjIgVl7GfoYFoCKUl7e6/f0uATGrSEy3Zzv8dbnsDT94/X9vSs+Z0y6JBl2ffkdS2HpqtgdRNf2imhFjht9WvdfeB2BoJdgjpzqdxsIlWPLhB397ZPEbV3z7lfvfV0S479RTd+qAEG3tBTrjwgsHfr+penp1lut3Kx+yP/wcmMUpTbr767ifD53ylI5TWmuYCJa2rHn8jdXLf3jizF/N2tZqViCEhrSiujoHIDr3hB+eP3Tsbj+sGDm8uvn9D99e9NHSyw+YccuD24L7FxFCXVph4juCOZMoDaBuK9znFgtAQ6JBJwBQus597wtf2uuS0Uc/spvvjYPNBX40kSZRBHCBW5d+CAAFtp41AEQiqtk2Ny3vbL960v03/goAtqeabUgk9GnptBMA/zvpuNGHjznooPMevv6xB4BOSYqqT9Vja2qfjQl13undknumLdoNyW5wNeuU5FljVFlqUCw+Cn7OWiFlSFRg51UPLl2U9FX6AyYvGjfO5fBhtulP/175xhWXPPPPJVsA8rYqobUttE+xB3WPvFs+/Zx/nz68wzu1VbLzMlP3+u9xF3/lBfAGmVLbXgCSSKq8hL9wdurY6iZ13p7lVV+CtWCbY6WgCnJJCJiy3nI2ZNMzEBEwxGltNEwUza591lvty5M1/7p9pynWSCKp6hOTaCunifcQrnnX/eWrQ5d1XV+WkbEYPwJobodb3YTFsdzvTls2479euf/+pv4KH/VHKlOpFP828f3Bx0VG3T6Sy08nVgC3OkuitGii9SMl0o9ZCRhCQDSm2nPtbUtc6/UT/37dzQDszp5ksaW7PhVqs0fuuGvvz7xtLx5uo+egLA7ee5STshKIMMzyNYT5a9SSdas+mNny4ffPePTXjxYXxmwTAZBkUqlUiu89+dzdvhjZ/dHqSMVeaG13rBTIiA44ceqnV5//dyJgcfAixpHgo2zrP97tWn7p5x+7c97HMXm7+pXXaAfJv0puOOfNiw/1B/ywPFIRdxOGOho+kChHSsQBzKB4FGKdVS/NMy0rluHFlvkXff7JX9/eVyGgPqklCOpGHRa7efIXnh9bOnQy23afBB7xlgZsABaCwHdakUa0BCszaz94N7f2gtqHbntkW6DqnelqSCR0YmKDUIr4NxckP3MCj2oYvlYmYPfhsHsMdpqgyQXhaFEAeQbc0gV+bwl46SqOKCVWiX6+adHRNTNvf7IvuYiqD5NUBJIv7/2ZSSNN+WR0ZRx87ZGvAVYAU7+HMCBCTnslukNyuXlty+/8/qsPTq196LZHJNGgk0iq0NbLJ03dC4Tq0mlH1xI/98WrLv7yktJnh9v4BD5sb8d7jxTNpMmGN248kCi4D5aDZ74FPW8lDCuFLLNBXMpj8QMAILFq4mbvRtPXSQ+PDY6JGIEDKcXAFgVwBCyAIg9aa70s2/TQW9klV3z+sbveCFB1YqejTrcqyEvVuRRSeOBb107bf4V3zaiBQ4/GnkPBY6uYQBrZXACgtQdEPPCqZsjrHwLLmqG1BkU8kGOANIkjMlb8vk5kszVAYuJ5BABjj54y3YsPIDjHYIEwQ1zfBxyDHaAccda5rtdaFvxo5L+vOuHzj931hiQatABEn0Bbn0wmFQFC6Tr3t3vvm7L0ot89M31lyXOjdt/raJ66l+PdhojyRSHnAGhQJAoRQGYtBB59A7SsGdpEAvib44BTcwxyjKpIWXtf57PZGuApPAUAyLW0NyPnAzmGGOpTrtz6HiBIWZiYmd8x/+8HNt50rSRFzXrgXE3pOv8TuOshNUlDqZRNyNuRiy5q/MXER9Z8raKkqgSHTxY3ooxhSausHxDmnoFoD3bxMuD1BaCmDigiQCuItYDkYXPofCqGVn1n2DZbAFbPmSMA8N7zs+bsocfCKFIB6ucQAFJfHz8gYsBZHlda/aU5R132I0rTDZiD3CetK0dwP+8INabsH76dHFN72mP3jI4MPRajB8BNHOqUIq06rS5kHMWikPYs3GvvQb+/DGQI5CkI90xOlTBLiShYqZzrOxfWZwyg4Xc4Z8WwISh0P/xCJjVtlgAIJFBjllWMS0v3iVWlVg+/6eR3KxZeSum6Jz4JyD8IddUTpescCHj1hNR545aWX1s1fEQVTxplZVi5VpmcJsuA8oAoQayA31sGzF4I3dYBikWC23dFO37DjRRmqmLbC8Bq2261B4JErbDTCtzza0VthjbggOuhICpAFiDfd4Mi1QdOKY/NeG/6Vb97qO2VK2sbU8t3xlz6zeNMwq5kgMz63m0n7bFYn1sRKz8e4wfDjal0ypChtk7AaEgkConFgGVrwLPeh1q0FqQNJBaDsECJWs9zL2bYQsZNNLgfZPhmg8C6dNoJhH755O/feq9jzZOIlRoFLczEwZ9R6NFzZ5MjuAkSBYICkQCKtct1cswanhAde+aZFUfNfq32im8zxNSl0y7vDu4arl1SUYr43IvOHfnccZffeMDS+D8rRow63h081mH0QNGWNbI20IDRKOAL5IW54AdfgVq0GirigbSBchQ+fNrIgy9SjKLh4IV4bZtpAMJskP+1D3530h/Hf/Pne5aMOzOuKwDXYhmkFfpepBmQucE/UwpKwGA/YwdiwLDJkeq7lh5909lzskuvyJuFnTGrJq/uZ337bnNw6lw/BeDNq/7wi0Fvrjlj+ICBZZgwirk6LgTW6HKAIkiEIJ6BzG+GvPYh1KoWqKgBRUsCfgSbZ0qD31MFA73NNED4mEQg9NbKlR37P3fjWc+0v3f0R3bZbHhxoyhKAFkJJTWEJxAJ3wt97IAoQBSIlbHiBNmsG0nVh9TE95nxwVE//p87D05MoHSdU0RoSCR2mo6ekmjQBJKD7z7X/0XikmHvH3f17/d7135v+Mg9y3DoJMeDByiyTkMoqHOJxUBdGu6ZecATr0GvaQPFYgA8iNObtVbBUOG69X/u/VGpIgGRoT/3wu1Pjpp5+dTZHQsuWM1tH8GLG2KCY+WCyjsJd7kCbcZ/yL8jBQ1FQqSdy3LEh4z3Rn81MfCw156f+v+uYBGdNwuyA4tbksmkymukX6x8u2zxub+79PSWEa/tWb3PGRg/xrndh4pAacoBoCiUiUGI4D5YBZnxDswHa6BVFPCiQbpEqA0Jm7deFP5uT/PbV52+hRz2f6T/6hiCS6YcP+y7JYfWDzMVZ5dQlXE254Q6lYGhwNL0V2sTRAQicEqXamgfi/ylL77QuuTSr86+55kdZRaKv/Plb9120viW2I8r1bD9UBGFHT7AKS+iSXyQ0uBIFIgY0Np28DvzQMvXQukIYHSYHLWlU1cWkYj5EKvPHP/opb/vS5h8i0BVXTrtGIKZNUnz01ceWrFHY/I7z/vzpy2X5U/qKLRBjFhgBX4Q3RXp8whcSwVSpB13CHzfjjXDp55Ysf/Tb0278q5jdt+9gtJ1oTaQba4NJMgWNpSuc/9I3rbbe6f+7G8HLi/9ZyVV7OdGxSwPqRCyoimXAVxQp0DZDOStxZDGt0HLW0BeHKIIwhYCu949o+9rJCEj2I/62a2CqmsbUzZvFo59+o5XRjxx2dFvZhd8cy06m1Sk0gjHWNhjwEMwIps9RAxENAgeFCkSIsM54TIpkX1L9/72H8ed9/xjh37vJErXOQLJzJqk2ba2HkKNKdt4cupzR7xa9vwE2usreuhox6MGMZEyys+RFgXSJYCJgVc0g599B/TuQhAYyvNCv10DEgkGTNHQ4atX9NnHrJlogmg0Z2xmu5qA3v3fwFWjVIrv+Exi3CmVh9YP9YZ9Q0s0rPYV3R1B6oXU2OS0wjq7ID8QishCGePQjqVu7X0Ptr976fde/f0SSYpCqh60dfLyqCHRoBLphBCIzz7uuKqL/Gk3ji8Zc060bAR4SIUVY42SHEQzlNaQSAxwBjx/MbBsBRQMyIsFlW+FLCnqwYsU3omwAklo3GlD379XVOZgtJ7R+t6Jx7587YN9MYm0PWzkc0dcfuI+3sibK70heyPng8UP+vWG1fr9Qi5hmhmLZi0MRErUWn/tmvfbFyQPe/WGOwvc+xYwiclkUl2TSnHeU32+9rIvjpNhPx1WsfteGFjBriRKmoXEMEgLEPEgYPCaJtCS1aBOHxKVIKgjkUKiU2/CHyh/xUrFNVQGsLnAKyIdUr60CVdaHLyIntEx78RjX0j2SQC2GbFC6TqXRICSD3/2hgeuWvmrKQu7FtzYgU5fmZgW56wVK0EyQH449Pz/jQzmsGmDg5KcEljF2VZXRbFBUyv3+eXKo25/4L5D/nP/sKpH+nMIhCQadCqVYpEa88B5vzh5wed+98Rhkf3/Naxiz724vNSK0krnfAoejgLggdsysO/Oh/pgMSjngIgHYg1iCsrJe9yHLQznnFPQpLwS3SIrXnrdf/+sJm5bCQKcOAkKizc5CGxBbHmHm4CP0waPHnr5QftFht8+PDbsCPgG7NockdJEUghvfHxwSTbY1EHauBUgwipaqlvtssxiu+6X5+v/qW9snNMuIlRP9fRx6dpBc6qZmhpr7fXnXH3QKf6Y28a3DjqSMkPBsQ4R40QbUqJNYK7jEYAF3NQMNDVBWR/iAcReaM/DNLmwq0RR3TAcRLQoh2iJabGrO+fnVt9wYKb+BsyC33zUnc8MxIAj2GUd4G0S3ZEIw0TUs9n5xx353JWP90UDmO0hAJSuc0Vdv2YBOPL1I667YIwZ+pPK6MAy+F3CzAKtFEl+sfhj5HbDJSGlCXDa+S1uAKpi+8ZGXZyWi77w6sHzrieiPwGQTQWYCgvXWGsf/srlxxy0Zsw/BrcPLwOztaXrlGZWCorylcEkBtzcDGlqguoSkI4BOgpiRnF5u4B6oB6GgNizWkcNPDEfuTWPPb3u7f86/bVfvSkQ9VRNvYFEKQB5FgQN6jXSW/gOhtKqMl4+CACeWvXOZm/s7cat59GzhGlQk5+94o6/rn3soIVdH/7R10LKlCiwtY58YeVCYLSp4TYYBAcKlksDviDbaQdz5cQvVBzwx7mH3frYXfudvl9tY8oqkOTBKhCkdguEKF3nbrvwjIGzD7/sxmlrRz0+uKW6jEU50WXGZKIKfhRiI4ArATIAr1oLWb4GOpsBPALI9QyPE4c2PxhCAsvMShQQi5l1WPvRKx1vnTvqyfM+d/prv3pTapIGqA+8KnIh4HUg+BtZg+JorCDLfp9N3XYPrlAqxXl37dtv/uX9cc9d+o2XsvOPW47Vbyqv1Bg2BJdzAguWvo4cGBmwWAgsieowzq5l5DrcXiWjjk1UHv3Sy4fdcAlDDKVSLDUzjdTMNCkEc3rrKz/7+lnv1b5zQHzqpQNktDgyQmS1IABk5DRgFbitA7JqFai9OVDyFAHEgSUbjgwE2YLNJ2GQWFEO1kQGqFbleIldfOufOh7e/5AXrr1bREiQVFRE3jC4EObd2P0KchBkAWQIbJHpyvS5RsJgB121jSmbL6qgdN3jGI9D3hpz0yXj9NArS9WIOLsOy7DaBK2CNnQVRfWuEoWKbC5DEykhgeSsq9SD41PKRty8ePodJ8+hj86nmbVvAMCVtd/Y43Q64taJ7UNPQs4DwzhRHVqzD0gMIBs0fWALdAjIFxCVADoedn4BSLhHtI7y6p8EVrLOEGl4EbPCX/Lca27hJcc/d9uLBbNDtIFJ0hQDEIOCgVDvuZfdbXRYoCMYXFJRsssIAACkkOJUOl9r99fsfvMu/cnfDrnogQNLJ/10Nz36GOUUmLNOEYp6+PUII348TiDJm2wNYXG5Zh6tRhxRgcGvvvPZO//UzMuX72GHnTcsskeFy2QcwEqrrAa7oKQNfuCS2yyEsyAqBXS0IGzdPSYpDIEVDB4CeK7FRKp0q7+kdWHXR/X7P3/ZzwHYQi3jRsFahIB4+P1FVYAbQBdB0B87CpEIb3MBCOr/RWFivWyterww2SPfkOENAMe+cvhPzh0f2evagV7lYNhOZjgoCns6hgsigk24+FK0XqFWICLFJdpylgeomJno7fFN0CjAz8HlWh0Ra0CHQSzT3R0szMEDRQNML64HB9O9G0OwJwKCtdAlBspgSXZJ+onmp3505tt/eE8glE7UaUpvjKuvFyAFKag9W/iOjQl5sBd0v2IKfcYAQUYrOUqlWBKik8mtlqQRgEQklSRFTXnuyrsezj48eZFb8N/Og1I6VgCJ+bhC8cMnCtLRuocK4CDp8P/D/EXNMMpTTlg41+446ywDYU0boAphOUHQeiToagAVB1EJSLxeEzLy2ZFWmAmaYapMC3UsfLbt1TPGPHNm3Zlv/+G9mTVJQyDZnOwmF8R7gyZTRR5Pz3ssanMrsm3zAfIPuuHIK8ctPum++/73hNSRlCaXSqW4YSuetklIMaWIZ9YkzenP37tst8ZvnfFC5rXjV7t17yFSYTRHiMU6oOghwwPEhCxz8VDh0OHPDYiDn2loUqQ1ERklHhFrkIRcvOhgaSjIWCqw1/l2cIW/SyAYEAyYSETIebpcZbSoD3Lz776z7b6Dj3z5h/+9XnHLJrWrAsn48eOjcDIEwlAECu7TgGhj96j79fD7ZAImzZlDAGAoMmx0bvhpX+jUp754/C/+++mxH91e96u6N6VmpkFj7Varzw8CTIWuXQ+fVD3h2Wsm/eCi3VXlFeWqOgq/0zE4bBXPReag71ZJNlf3FeMP6fbqGew04hoRTy93K156q3P+pZ97JfU0ECS2UrrO9mUuJ4+baryMLoOzcOJIbZIUC7GH9E8A+q6+jXZdfrOt4Co6VKacedqCSU/8+dALjqfGWkv9pF03cWtC6TrXkGjQ/2qa2zb56XOveTbz2iEL7NqZiFVrpQeSQ8yCIkFWrYqCVBygOIjiIIptvaEi4YgCKAEoDlERJoo5HRmsm3Rn8+ud71w0ovGMwz/3SurpfHi6b+XrgSiWjdBOqbiFioIouok5BfcJ8gDEAD0w/DvTt50AuJwjYmVAPvnt6+yYjhGDTio57sHnjrztjqMO3XdowPqJ2poJnHUhkzizZqY5/qXr39z9mdOOerlz9rebqWmZjsQMJMrMmknyyDyPwlWRui7KnOntM2zk9wqfexDxwKIgEDCTVShR8Aboxdk19//Nf2LKAS9efLtAuCEsaetv+Xpk5YByFioJMJ3uOY+iueXT7fJmifuzn/v6D3x4QR4aGAZiHFkpsyUyzRz0/XvUoLqXahf8iGbS3Xn1t7UaOBAgaKy1gqSC1AsR/ebWg772wKmlR1832Iz4Zkwq4HLtlpULzoYkvfFoB21mZCQPsCi/W3yAxUFFSXtkVsmKucupOTn5ue/9paDuG8ki3c8Un2Q9IQU5oHr8YPjeQJdRcKSoUGtBPedGEjazFoKGhnPb1AQkQqfEA1OQw8ZCUKLIUZdy2U47TsYNPU3X3PXu9L/844cHnb933o5vzUwdQoqJAibxB7P+vHzM02ed+WzXC8eudCve0PEqo1UZiYs4QR4YbeEIAaGIEuEyp71q3aVYzeGFP//hitSUyU987y+SDDTe1hJ2ReTpMIbQnSSy4RAyYPLAFCSPeGFa+LYlgoxB3uZymMIUhLLF5Dgjqot478heXzpvwIBjPjt16PX0It0AgLd2a9T1QOIMjMehbw6/66KxeuwVA6KDy112rfUVtCZFxRaWUEyoUK/JKBRWLgEKQj4gZCO6wkDH9VJ5/9k3W59PnjD7licLTF6Ktko+YnrOJAKAle1N5ZoIIk4IinrOvrfuiQzAAvC3pQbImwDAioaDDsv7FRgaAg2QIiHRuVybG8nVZZ8vOe4nbxx294zjJk6tUiDZ2oUdxSCR5lH2M8+ce8O/Oh+fOo/fe1JHoyYioJztcJa7wC4LcRk47oLjzqLX/Psu2PCznHTBsQ/f+cyOJGJKTROtXf6me/bM0TNPOfKE2bc8KQkJK5i3fjJq1iEiAjj2xXImnNf68w5e8z8DW/D2qA20HsCWwWzhw0FBd5MyxIBoEFhnXadoJvuZ6OTaGwae9+DwmmhtfSNyqd75zC0GiQGTOFNTY+0cAEc/9dl7ztvXG52qlmGDMtkmzhlPKSnWAL2jcAcFLQ5WnJSYEpVRHhbK0l/+T9Nfr73y7ftWhkyeojRtsyxkYSiLKAwikLA7BG1krwbMJAMUQa4fB+r0XQP4gEBDit0sFQ9dkhiIIhClgmAoW6/d7/IPiO059XSu+ywhxZJo2FYRSKHGWptEUokITX/6nDvva3ns4A9N0/0qWqG0xNipKEARCEUg5IWv+fceREVA5MGSkUhkIC1zTe8/5T973LjGU8+/8u37VuYLQLZ1naJTYEeAkAemGIRi6823e84gD1ARCBls88qg4PLgqARCUYC88DUGUAmAUoiKQygKBw8OJWCOEUsVV6vhBwIAVg3epllIqQJInGnOf+2WReOf+MKX57jlvy0xUeUYzhcNKwo2/woFi/A9G+QA9qgMa2zbgq/Sb6ae8Nwlj0vNTJPPF9hOyRPKMsOyBYsO5lg83/z8C58bOGj0p6lCv3ajIwPLDr5zyDEjxxY59pETRk4cArZeB/iABKw8BS8W2b7h5lr79sSGiECUJ/yMUAmAqDAZ9BgIB3lgRAAxElGKGPzhs88+2PzqQa96Acm1HVvSOQRAm3To368338J7LxwRCAyc3g48QBABC4oRmByI8tkpRTm+UuRDgyHsIyO57V7CtXrwYCYQv2sejFuUgtEe+PKyqYViCDwoVeIJhDAL278QVQOs4hDlwnDwpgj2fHEo9wsE9sML8MEMOCFYYVgIHGkwFFgUHAdLyCywIoFzIgQLXgf0rXR5a10ZmxOLTjgROAGCehwOR/F7H74IrBj4EhECCZI7YL7ZLHKswdCwYsM583ojP28HCwcWg/4wQX3WAB4AJoYjgsALqnYKCSv5ZvBBzj4BcBByAlRK2YLtvZB5Rjyr7SglKuw27kGg0PNMojAjWThsxiGwO7IpifKZocGIwlEGgEHv+UAceg0CX0KmctubAA8MA0sKjuIhDZlDd/G4VxAEDgOcrDR8n3dYc4fyeHkVsh6AUriNHvXGoRAToEpBktlhz98oUkKAUzEIVUIgUL2eTBa635oAXQp2se0RC/ADVYpS2DAxwSFesCaEIEuBKPRcRcFBIetyO2xBnbPCUHC6DKRUd9FpEV7Jc38QBqsyOLduh80355tY0PdJCVMcBNVNphcTgYUqCgrmjJLtoQHCDj9k0HuHMEE+k0VAgDBEbUl5+BZcQ6YLAKz024fvJgTLDBXopeA+SAqxnoJWYIYvhBzv0CbkEGY4ZjBxIJz5CVK3BSDpXn3Tz3Z9/RCAEpCKh/Z0Q06tKEmr8H6HWdOJwVd3sK5mHQOkK58iGs6QN5Jmmf/J9r3eKRR0kBGESUgotM3YALVQkRYj9AsD9oMKho+ceIhAw4krWsL1dVReGxB8AXIFDbAd/YBU8FJaPsL4HR4sdwXmqUeF7obBFccKNkgJ3iEXOxYhD4woLDJBjoP00P093hMAKwDr0u2DAbICGFGwJBvZ59LDx9yBueeBpTRePCMRZINem0WtrMLDoEP+Iv/qC8HPZ+Wmtt9kJw2ZJADAIjkfGiQKvhRr2p5NIoMk6cDbMiJw26NPYOAIqtCVCgatp0QFADOHE2J46H/S4pbxKTqYGPvKEeBgoRgbGC4qoBmCE4avfTDcjvMDdRQsHiwAywxAQUE26KAgoVYVASxcv1BWv3iAIEGWYcVBi4Cou8qfC2f3uoI0MOnQU8h756ntt/0JsMgaYR/sbJHS7IVTEwag4diiG3XtALWlSvys88DiyCEHEr2JVFcBhQBXpO8tYvqlna1QEIAII38MVUj3KLgrJkSpAlgVRaeLbn9bCkckJAoxnykK0RXiiDcuAOwCtapKIBLfYd3H2MWFGWBFYJRB4G26EoqBCMX6pWX77QaKjgQ7mxRI3IZdTwAwBcmZVkXgwsntCCqYFKxVGo6jYQVvT4+qsLTaQITgqAQs0R0GAh0QBRmweOJ0WPQiG9FwAEgRRJUgx9shHOzDA5MKiROF4LgYDjP/eo7u6pkdc05yHgNYUcZKBEKWiqt6CvMsNKcISruIBC6fibkDYgEu5llLBCFNQamI9Lq+hOCk+uAUPgVf5baDBvAMrDOwZKAkF/r7KnRTepPQLT9PaIswAACmODkiODIwYiHUbZ66CdVgnkqCmn6tzA47s8A5jrDyQNCSJ9Z6bxBRRF/Dh6K+Uy798gKENHyKwScT+gD5Tp8b+qgBM2zAinaYTXWKlU+AjzgchYEgWr9DWb7FrSMggg64IaiBQSqIzm9XPksrI2zQhSgcAUrl+xBJL75LoAGMRKBoO2QFezAQEHwyyEFDF3uovfAqAsAQoHWla0g06HdWbT/Tn9/Y7KxxAHLK69l6vbfHSgoKgFMycCxgCGT73Yy/j1dzZbMSiPy/ztuzrB2sMWAi9Ng7sj7OArQEDUr6Y2j7lRWcMRqdXvDljoBc0DijMPz8ewpenQaW5JaX1aXr3KQh09V2avueZ3lA2vNzBvBJgvnpnvPzNWC1wNcCS4KMAbq0cd5H22/XJxIN+ty7v+MTiPceOnIPX0XQFQ/OgHEUzrV4vkXrnTPBM9guVHBABxd1sA9PMSEJS+jRQ/vDgRU7JeUl+9x83aEPratL00MAkKyZaVKNtdvlNJAsWGUomDf31mwjjwXCz7UAXaII4wHM2/aa6q5vv2rOvftg/6s/OHHQsc2X3T64deJXOzjOmajTJWGpW4/ugsWNUsL3XQR0bg8NAHhB1g8H2iBHwatP3aUJfigkvgBOFLUTUO2NHLFv2TEP3n303IbvHHzPhFRjrQUgDQnR29AE5Dl/zVI013B+tniuoIACpnCx1bYnsMN7l3PvPtj/XuLe/Y6ad9tDo5qP+FqmbSC6NJTKAD4Rcvndv/76Bi4jLIK2xDndd1e7n1nBhJwK1I6vA5Xvh6opZ4CsATImeO+bIJaR8a3koHlYdK9EzYCvzLpj2ss3VFdPKK9LkxMR2gZmobBPnAhbDWR1MLf8/DKm+/+tDubqG8AagJUH7Dl+mzz44Og4hbo0ueMSU6tuPeGFq/fvOOmlan/8lJa2MGrtM5wo+IY2ur7F92EJ0HobgsB0AQMY5IyC9nuq+u5tJz1cq0IYmzQ5Espl2JVLZWlV6ZTLbj7wiZM+6Jh1Xb6HX7JGTKqRtppZyDOB1kRzzgLaklAvQKoQUg2BFAlgbY4jK+ZtbfNEyRrRqRRZCNQvv//y6f7KET8ejZFjdReQE8ekyUSY4EhDiHptCdRbDStroFO2S7dwC5+ogPBZ9RzEBMWhWxiyFKIEUIAmgmjoTu2kFbAD4iP32Xf4SX+87Zg5T5580C37pRrJAiSJrdhjIBDzqM2ZfHW1gNYbUAKnBayCAQ3kXK51Thq5sGezbPmuFwWQpBrJJs++bvyvz1n81JBlU/5Y1TFybBtgs1EWiQalPU7n3efi9ZMN5t79GeB7gF/QANO3HQi0CFRkFwCrBKzR06d2gO8YzlDP88SKYvBCREJitM+soaWqdJ/aI9WQlyZPP/Kndz91yA3pdF1nQ0L0O+l6SW2Fjt8d5KGDgJwRqHwKUJG7Wgz+GMBAAny11SqaKZkMdv1Fz0+Nx+9I/mjQyslnx9SwwR9lrYsQFEGZdqJgA+le3OqirS5Fa6mKtEEZYftEA/1oVFlFkjNBsCJIS+pW+1BBNo2fb6FWfKRdceqAAFZplWUHm4Urp+r4sFj11ecc80HdG/bFi+vS9CAA1NTMNI0BYNwCL0CQpaDXU9QVN1Uo6vaSl1+iwL6S4Y1yBZsHQaghAVWXVi6VIvvlo248cMRNJ98+VE84sgVAs2OnjNGd0k2jKVmvkb709FCK2wWq0PuS8AzuLgWWaH7LPbXtBGCltHSWKqISCwfHyipd0I8SkhKiAiRNtOkzAEgALRpdUehWcdLm4KpKxk84AMMfmHTMrD/PWvan+scaa+eJCNXXg1Ip6pc2iDGRZSAXBAg2+jyD8gpBBkCLp3wAYHZE1DcTkEyKSqWI69JwNTUoO2TIy1fGcuMu8mRQdE0nLMCaFekMAvVeINM2IWw90sAknKsCABbNisWDaepoz2wzDZBO17nwxt785lHP3zFp4GEX5JSGtrAQMazCxIQQHygKolS8ibwKCt0YDlq8UUaRAVuOoxTlAw/82v7xYV8cOuyL1xDRrQC4pkZMYz9AYqcSCsgUQnHXteJYQF4AREgsgHZP9zMWIJRKESdvO3mgW3DtiZ0fDbxisIzehwG0OThlxChRRX3Rg81SfAhvr+5McZeAPLxidlorTVFEPux4/9F3mp55QCBEjZtfudwnDZBKESchKvUkXfj1ox+YWxnd74Yx8THlbZak3TmGho64oEU6Sdj+v7DbpcdNoAg65E/LCrq8KuUg0B3sPDNiwPCBI376H59794urWmb84MlGmp1nzdKbUaiZX8yPPEhJJvCbVZEtkvUaf+nQn84CaHd9536TyaRKpYgv/M/bDi2fd+L/rl09fhwcsMayIxJFpDSH+pt6oHnpVVHmd72SbmugBbDkWEiJKVE607qurb39g2vvnnnIT4NburBPRqtfQCev4g6YePb4fUZ86ypVPvGMISiHl2OXU6I0NEkISvIJmPlDPta/wW76sCjrNXyTIxZNcNmYMty5xl/d8e4tja+fdf3atfNaEwnR6XS9YJMgMVDq3zpjwauVrbsd5FsXnG8pvdx9ODcWdhGjdFPnqlfufXToISKymSYgCIB/cXh9fOIB3/jARHcf0ZFjXwPaKgrCOWG1FIrW5WPdtBCYCiEsDhEbMcr4AizJLPrnokUP/9dL7373g3Ce6Kt27BfdlUoRBw+A5r0257ffPOzIP92bKz30x9Hy8UcqC5RYdj5I55slK6FCLEskzMfPL5sKjoUrPvlOURCTIxCJsJEudkoP8qoqj7z8qKlPnLK649Ur0mn6axFI3KRZME60FqBVgiw6og3jKhSCKQsgTkBW9c3uJxJQlCZ3zmdfOqrD7T7CZmGzHnsCA8OhSZRi7UObZLDy2VW+DnCJZmHfU+RHyZiupsVm9btXNzx35H/naXUi6hdQ7jffmU6TA5KqIVFPdWl6+gXgszUnzjozYkZeV1kydBgyEOuckNJKEaCKWCMuOg/CFtJLpdu16YF+NSCiRRidrCyXjNmzomR4+tQT3mpYvfbRZGNj7XsgBfzIKWwEJGYcY5UUc+WyAaESND4jOAk0V4vWfRKAiRODPzdi6NChi1ZDWkLE6YUnKwcehxTVdcjGHz5QOCeILEsM2pFHplU60bFu/t2PfnD3VZj389XJ8HCs1BZ4SVtIeKe4Lp1CItGgGxoSTES/G33Afz06cNg510Zio89ysTiZHKwRp7t0oAfzmsCYQB12MIOIECmSeimyFfmNKAxYJQYi7MQDyvetG0RDT/js5w6+pvHR6bdQihzCbqXFm5sAtEQVVjmgywdYScGmdkPrbl+QBYhGgOVWZwCA6vvmCCrP2KUGNNcwKgkwqtsGUs8n3NMMrfe5AsGK71wkogdEYCpalryTW/v6hTNeOOmJQOOITm2F5lRbJeKRTtc5ooI6XrYEN599WO0Tf87F9rl1VcXw/XOs0eGc84i0RuHweMRFUEoK7STwRcI6Q4B6U48q338gSC3J5ditjQ4udRU1Nw78ygdfrF7y74uaGmtfBRHwox8ppFKMZKAVFndl25cTYMM+31RsgIt6AfoUhAvjUFij+mZL8573UgItIqCDVHBcJm0EdVHv+z9MrGGBgsQjWnW0dLasm3PTczOm3QggE5hecHor9SjaqiGvgLARSiSg0ml6EsBhsWNmX+RX7X6ZK6kYgCwc2BFU0EQozkC1OHAZYZ4DpEsC51ZtCI67Vy38oVJ6nYMgA4eS8UfER339ubJBB/14wsM1N8xKpXzUzDSYE+DO+dkOf20sJAF6y17tAcYN1gFQXv8IyGXQWFYwN33A2CrEkcQOEWW0lwG1f/RXu+qZq/HCme8BhETiLzq9lZtTbYOYJ0k6DRe4aqd1ZWYceN2AaXf9JTvk2J+6itFfcqIBP2Mh0E4ZWkcaGQNEKgDtO3S1dEGY89VxRefsdRNL0u3DEaANsXVdA3REDZpyzdt1L305nnvpO133174MEUJdg2aSZhVniLc2aLuCHsW1PaWNBGTKgNyaPt53oAOcbgWVlAPSFaJNtclgJYUpv8JwhKhWkVKjm1cuLmt66wfNjx37t2Kgm94GPYq2WdA7nCyhZqZubaz9kIAvl3/xgbpc1Yhr/cpRe7msQ46jbpFXoYMGl4L4AI1BlVF0tLSis2sNQC1QulgEepZ1iACkGBCtSUSElPOHlB9AmYOeLfn6P+4aPPlLVy9645/rzBnPLqP4asBfJKykZ5qqrBcOFAa8Smi1sl8pVqzXATEGZO2Gh39ifdufbwapmSLlWuU6O2PNmZ9Vvve7ny6d89u1SIhGul62lArfIQJQuN3GWgsklSTr0ZqihgkTpj28eErqMhcfcrEtGxsDOSZRYE+pjAEicYXBFVWwnR5Wrc7B71wTZOZRvty8iA8N8yJFCqtppKuNoYyXGTj6/OVTzvx85d5HXyXx9mpRKyHoIkjRaaXFbIwUxQakE8TZ/t2xaguWVbLI15duUGSU7/PLsGLKjAa06Vj8WLxj/sXN6fPe7gCARIPGNuxFuL0EoOAtIJUCEqLnpqkNc4+9qirxs//J+KOu8asmnOLKJoCYLBtnOgBUKcHIqnJUDpqEpjVLsGLJfAgyIGN6NkooqNGizzQUxIpkci4XGzyeI+X3kRVIdjUArXu0U5Xe2XZCBsJd/bxXH4IuAH7QZzifK1f8PcwsBKKSahPLrFtumhcmO9Ln/CYDIPBkprvt8fC3owDk7QIFZiEham2a5hBw6sBTrqnrqJ52gx115DiKRLiCLDwtKiNBkkPlbmMwoHogli6ch441C6GUBrQXHKuWbwu/wSKDCGSoM8MWBCgoCs7pXI9xp14jLuJU0KGzH5dDDnA5wGYBpYripIRQ/ThEYkaLj9i6OfdWLnvq6iUz7l2GpCigHkjVbtfOFDuicluQJodkUsmcempOU8PuBx306Orchddmhk/5fuewvWGCynOdISa2jNEVAzBs8oH4cMUgfLRwLiSThfK8gEVk2tDFkkJkTeUXf2Np6+szMCICFfGCpId+CQCChtqRKEQVfQEzi/GU9uIm0rHy3XhmyQVr/3jBjHYAqEkapGiHtCTZYfVvSKUYaXJINOj5s2a1tP3+GxfE3/v7cf7ch2c3Z1tMthQ0KKJctSIwCzwRHL7HGBwz7UhUjtkjOK1ANFTEgIwG6WBAayD//0aDTPjz8DOY7t+BLhqFzw3EeP1OCmWN8G8ZkDaA0gKlLEoqVAS2Pdq+tH7i7B8fvPaPF8xAoiE4jGgrtZnftQSgYBbq8mZBt/7jysePeez4afqtB3+8ct6sro8E2njKVWiRCAkyPmNsaQzHTNkHEw/dH7q0BNyVDSKNigEWEDOIGSK9j48/ndxB2IHgypOAQn3fCCGlQ2skPuB8JjjoaImJdqx4tnzdnIM776lLzZo1qzMAeXUOINmRy7/jBaDYLCQa9CPzKNv1h69dHXv7/ilrZj2YXrRiqW43iiJx5UoV0AWLSss4acQgfPezB2OvffYMjnHJuQB0Uy/YrnhsksII04aUgSjdlgIY9X2LmBJBQMRgWIpXKA04r3XZpVPv/nJt058vmovkTAOAsL36Du+EGODjtUHNTN3879p3CKjLfuXnp8/a/TM3jZp42Mh9Kz2uUoIyhvIyjOHGwxmT98CLuw1G45sL0Lp8DWAA5enwvL3NjLlu8BCl35VgolQEJWWKHMWi7UvfMOsWfaet4eIXGwsUda3dmZZcYee7Au4gmVQiolr//v3/GTjjFwcsfCr922ffnatWsVbDYsoNIJEuEngZRs2gATj/6P0x7dAJUF4MnAkOjFFFXUA3u3KucPxw3yRgyJzVAgAuk5kf61yzsHzdnOTEf586ra3h4heRnGkgEuCenewi7OxXaCsJgDr5hs/FRu53/T4HHn7AgWMqsK+Cs9Zp3wMqFAExhbc7snhs9jy8P28xYCJQEQPmfIEvf/wtCxyiJdp0Nj9l7zy+FknZaJh5o1OeOiqefnFpQCQkk2pnfPC7jgCEXBoSaYV0nUsAOn3aHy4s22uPa75w8NTSA6q1G5RhlfGIRAEjFNAZJTy6cBUeenUu1jVnoWIxAA7CdpOJGN0CUKZNZ9NMe+fxR/VHAIoElwHIzryyu4gAFC1qQ4IVkeja/zfJTqi9aezkg4+vmTgCR3uw4jvTbgjlACIlCqtyFve/thBPvrEYEMBEgi5gsqnbZnIULdFe18rnc3eefASSQv0QANrZH/yuKQD5K0j8sARAvnzXOXrfSdeeOOXQYceNMlxhgZxjFSNBudHwPOCZlS249+X3sXxRC1RMA0rQe2dVArFjiUSV6WxaesyML49/ZB6yu9ID7euld8lZL/oDI5lUmP4U0a8PnlXd1fbn2c084J1s/OARQ6potzKymkm1QdDpgN3LYzhyzxFwJVHMW7UOrtNCebooUFdEDQuElEfG72odt+C+O+atLXQIwacCsDNdjY2CxpQg0aA7H0+1qdf+9sA6HvzGq2vsgc3l1YP3GBSTkUTcJk61O0G1U9h/1ABMGDsMK3yL1avaAMfQmgr5dwEGEIGOkPY7WsctmHXHvLVrPxWAnfqakxZASJLTDd37zTllq7r++Na6nJrdjMMGDB2m9yvXLupArUGuDfaIeThu9yEoH1yO+U1t6Gz1oZQBdFHBmPJI+50t4xY89vNPBWCXuFJA4x8YiQadeS7Vpd7514wWu/sjzy9v2nOBrtx95PByGh4ll7GisiIgR9h3SCkO3HM42rVg4Yq1gM9QRoPAItCiOdc1bO4DdyxqabGfCsCupg1qpht6+utLaPZ9f1ik92h6ZZV/WGzg0JLxVUY8ImkHU5sDqrTC4WOrMXrkECxs60JrcxugIr4uGWC8ztUffO3J3/y6MSmExpR8KgC7kjYIQaI89RTUf0x5mVvoz8832/L3O+Sg4cOH0LhSstpn8pnIWcHYshiOnzjCrSspoflNWRPtan4j2jb3zEfffHQlptcTGhs/sQLwiVVt6xEyTgHgo68/pmTfg24/vmbqpBP2KMdQAWd9Jo4qvL0OdN+Lb2L+vPd/dtJDiR+ml6KrO9vk02sXv4TQIFoBGIuxMXz1D/W7XTO7NfmkLz+fJVJ7zwIx353xMI659ohCZ6lkUn26bp9EbZA/zGraFZO9C//5eFV945v4wo2nFaLF+XDt/5Hr/wMgtrU6Nr2zowAAAABJRU5ErkJggg==';</script>
+<script>
+// ─── PERSISTÊNCIA ─────────────────────────────────────────────────────────────
+// URL do estado compartilhado no servidor (vazio = só localStorage, ex: arquivo local)
+const STATE_API = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+  && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? window.location.origin + '/api/state' : '';
+let _stateRev = 0;
+let _pushTimer = null;
+let _suppressPush = false; // evita push enquanto aplica dados vindos do servidor
+let odooIgnoredList = []; // lista de projetos Odoo excluídos (compartilhada via servidor)
+
+const LS = {
+  save() {
+    // cache local
+    localStorage.setItem('s1_projetos',   JSON.stringify(projetos));
+    localStorage.setItem('s1_concluidos', JSON.stringify(concluidos));
+    localStorage.setItem('s1_excluidos',  JSON.stringify(excluidos));
+    localStorage.setItem('s1_entradas',   JSON.stringify(entradas));
+    localStorage.setItem('s1_nextId',     nextId);
+    localStorage.setItem('s1_rodizio',    rodizio);
+    // envia ao servidor (debounce)
+    if (STATE_API && !_suppressPush) {
+      clearTimeout(_pushTimer);
+      _pushTimer = setTimeout(pushState, 600);
+    }
+  },
+  load() {
+    try {
+      const p = localStorage.getItem('s1_projetos');
+      const c = localStorage.getItem('s1_concluidos');
+      const x = localStorage.getItem('s1_excluidos');
+      const e = localStorage.getItem('s1_entradas');
+      if (p) projetos   = JSON.parse(p);
+      if (c) concluidos = JSON.parse(c);
+      if (x) excluidos  = JSON.parse(x);
+      if (e) entradas   = JSON.parse(e);
+      nextId  = parseInt(localStorage.getItem('s1_nextId')  || nextId);
+      rodizio = parseInt(localStorage.getItem('s1_rodizio') || rodizio);
+    } catch(err) { console.warn('LS load error', err); }
+  }
+};
+
+async function pushState() {
+  if (!STATE_API) return;
+  // proteção: nunca apaga o servidor com um estado totalmente vazio
+  if (!projetos.length && !concluidos.length) return;
+  try {
+    const r = await fetch(STATE_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projetos, concluidos, excluidos, nextId, rodizio, odooIgnored: odooIgnoredList, appVer: 'v2' })
+    });
+    const d = await r.json();
+    if (d.rev) _stateRev = d.rev;
+  } catch(e) { console.warn('pushState falhou', e); }
+}
+
+// busca estado do servidor; aplica se for mais novo
+async function pullState(forcar) {
+  if (!STATE_API) { console.warn('[state] STATE_API vazio — rodando só com localStorage'); return false; }
+  try {
+    // timeout de 8s para o fetch não travar a tela
+    const ctrl = new AbortController();
+    const tmo = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(STATE_API, { cache: 'no-store', signal: ctrl.signal });
+    clearTimeout(tmo);
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' em ' + STATE_API);
+    const s = await r.json();
+    if (!s) return false;
+    console.log('[state] pull OK — rev', s.rev || 0, '| projetos', (s.projetos||[]).length, '| concluidos', (s.concluidos||[]).length);
+    // primeira carga ou servidor mais novo
+    if (forcar || (s.rev || 0) > _stateRev) {
+      // se o servidor está vazio mas temos dados locais, mantém local (migração inicial)
+      const servidorVazio = (!s.projetos || !s.projetos.length) && (!s.concluidos || !s.concluidos.length);
+      if (servidorVazio && (projetos.length || concluidos.length) && forcar) {
+        await pushState();
+        return false;
+      }
+      _suppressPush = true;
+      projetos   = s.projetos   || [];
+      concluidos = s.concluidos || [];
+      excluidos  = s.excluidos  || [];
+      nextId     = s.nextId     || nextId;
+      rodizio    = s.rodizio    || rodizio;
+      odooIgnoredList = s.odooIgnored || [];
+      _stateRev  = s.rev || 0;
+      localStorage.setItem('s1_projetos',   JSON.stringify(projetos));
+      localStorage.setItem('s1_concluidos', JSON.stringify(concluidos));
+      localStorage.setItem('s1_excluidos',  JSON.stringify(excluidos));
+      _suppressPush = false;
+      return true;
+    }
+  } catch(e) { console.warn('pullState falhou', e); }
+  return false;
+}
+
+// sem dados iniciais — dashboard parte em branco no primeiro uso
+
+function getAv(r) {
+  const lista = getProjetistas();
+  const p = lista.find(x => x.chave === r);
+  return p ? { cl: p.avCl, in: p.ini } : { cl: 'av-s', in: (r || '?').slice(0, 2) };
+}
+function primeiroNome(s) { return s ? s.trim().split(' ')[0] : '—'; }
+
+function now() {
+  return new Date().toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function toast(msg, icon='ti-check') {
+  const el = document.getElementById('toast');
+  el.innerHTML = `<i class="ti ${icon}"></i>${msg}`;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+let projetos   = [];
+let concluidos = [];
+let excluidos  = [];
+let entradas   = [];
+let filtro = 'todos', filtroProj = '', busca = '', buscaHist = '', buscaExcl = '', view = 'card';
+let sortCol = '', sortDir = 1;
+let nextId = 12, editId = null;
+let segVals = { status: 'fila', prior: 'Nula' };
+let rodizio = 0;
+
+// ─── PROJETISTAS ──────────────────────────────────────────────────────────────
+const PROJETISTAS_PADRAO = [
+  { id:1, nome:'Tarcisio', chave:'1. TARCISIO', ini:'TC', avCl:'av-t', cor:'#E9EBFA', corTxt:'#1A2DB8', auto:false },
+  { id:2, nome:'Fagner',   chave:'2. FAGNER',   ini:'FG', avCl:'av-f', cor:'#EAF3DE', corTxt:'#3B6D11', auto:true  },
+  { id:3, nome:'Gabriel',  chave:'3. GABRIEL',  ini:'GB', avCl:'av-g', cor:'#FDE9F3', corTxt:'#B03079', auto:true  },
+];
+const CORES_DISP = [
+  { cor:'#E9EBFA', corTxt:'#1A2DB8', avCl:'av-t' },
+  { cor:'#EAF3DE', corTxt:'#3B6D11', avCl:'av-f' },
+  { cor:'#FDE9F3', corTxt:'#B03079', avCl:'av-g' },
+  { cor:'#FFF3E0', corTxt:'#854F0B', avCl:'av-s' },
+  { cor:'#E1F5FE', corTxt:'#0277BD', avCl:'av-s' },
+  { cor:'#F3E5F5', corTxt:'#6A1B9A', avCl:'av-s' },
+];
+
+function getProjetistas() {
+  try { const s = localStorage.getItem('s1_projetistas'); if (s) return JSON.parse(s); } catch(e) {}
+  localStorage.setItem('s1_projetistas', JSON.stringify(PROJETISTAS_PADRAO));
+  return PROJETISTAS_PADRAO;
+}
+function salvarProjetistas(lista) { localStorage.setItem('s1_projetistas', JSON.stringify(lista)); }
+
+function getMembros() { return getProjetistas().map(p => p.chave); }
+
+// ─── BALANCEAMENTO DE CARGA REAL ──────────────────────────────────────────────
+function cargaAtiva(resp) {
+  return projetos.filter(p => p.resp === resp && (p.status === 'fila' || p.status === 'andamento')).length;
+}
+function membroComMenosCarga() {
+  // apenas projetistas com auto:true participam da atribuição automática
+  const autoMembros = getProjetistas().filter(p => p.auto).map(p => p.chave);
+  if (!autoMembros.length) return getProjetistas()[0]?.chave || '';
+  let min = Infinity, escolhido = autoMembros[0];
+  autoMembros.forEach(m => { const c = cargaAtiva(m); if (c < min) { min = c; escolhido = m; } });
+  return escolhido;
+}
+function proxMembro() { return membroComMenosCarga(); }
+
+// ─── PRAZO ────────────────────────────────────────────────────────────────────
+function prazoDias(prazo) {
+  if (!prazo) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const d = new Date(prazo + 'T00:00:00');
+  return Math.round((d - hoje) / 86400000);
+}
+function prazoBadge(prazo) {
+  if (!prazo) return '';
+  const dias = prazoDias(prazo);
+  const fmt = new Date(prazo + 'T00:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
+  if (dias < 0)  return `<span class="badge b-vencido"><i class="ti ti-alert-circle"></i>Atrasado ${Math.abs(dias)}d</span>`;
+  if (dias === 0) return `<span class="badge b-hoje"><i class="ti ti-alarm"></i>Entrega hoje</span>`;
+  if (dias <= 3)  return `<span class="badge b-urgente"><i class="ti ti-calendar-event"></i>${dias}d</span>`;
+  return `<span class="badge b-prazo"><i class="ti ti-calendar"></i>${fmt}</span>`;
+}
+
+// ─── BADGES ───────────────────────────────────────────────────────────────────
+function statusBadge(s) {
+  if (s === 'fila')      return '<span class="badge b-fila"><i class="ti ti-clock"></i>Na fila</span>';
+  if (s === 'andamento') return '<span class="badge b-and"><i class="ti ti-player-play"></i>Em andamento</span>';
+  return '<span class="badge b-ok"><i class="ti ti-check"></i>Concluído</span>';
+}
+function priorBadge(p) {
+  if (p === 'Alta')  return '<span class="badge b-alta"><i class="ti ti-alert-triangle"></i>Alta</span>';
+  if (p === 'Média') return '<span class="badge b-media">Média</span>';
+  return '';
+}
+
+// badges clicáveis para edição inline
+function statusClick(id, s) {
+  const lbl = s==='fila'?'Na fila':s==='andamento'?'Em andamento':'Concluído';
+  const cls = s==='fila'?'b-fila':s==='andamento'?'b-and':'b-ok';
+  const clk = window._canEdit ? `onclick="abrirPopStatus(event,${id})" class="badge ${cls} badge-click"` : `class="badge ${cls}"`;
+  const arr = window._canEdit ? `<i class="ti ti-chevron-down" style="margin-left:3px;font-size:9px"></i>` : '';
+  return `<span ${clk}><i class="ti ti-clock"></i>${lbl}${arr}</span>`;
+}
+function priorClick(id, p) {
+  const arr = window._canPrior ? `<i class="ti ti-chevron-down" style="margin-left:3px;font-size:9px"></i>` : '';
+  const clk = (cls, extra='') => window._canPrior ? `class="badge ${cls} badge-click" onclick="abrirPopPrior(event,${id})" ${extra}` : `class="badge ${cls}" ${extra}`;
+  if (p==='Alta')  return `<span ${clk('b-alta')}><i class="ti ti-alert-triangle"></i>Alta${arr}</span>`;
+  if (p==='Média') return `<span ${clk('b-media')}>Média${arr}</span>`;
+  return `<span ${clk('','style="background:rgba(0,0,0,.06);color:#aaa"')}>—${arr}</span>`;
+}
+function respClick(id, resp) {
+  const av = getAv(resp);
+  const nome = resp.split('. ')[1] || resp;
+  if (!window._canDelete) return `<div class="resp-cell"><div class="av ${av.cl}">${av.in}</div><span>${nome}</span></div>`;
+  return `<div class="resp-cell resp-click" onclick="abrirPopResp(event,${id})"><div class="av ${av.cl}">${av.in}</div><span>${nome}</span><i class="ti ti-chevron-down" style="font-size:10px;color:var(--text3)"></i></div>`;
+}
+function editarNome(e, id) {
+  e.stopPropagation();
+  fecharPops();
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  const pop = criarPop(`
+    <div style="padding:4px 2px">
+      <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">Renomear projeto</label>
+      <input id="pop-nome-input" type="text" value="${p.nome}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;min-width:220px" onkeydown="if(event.key==='Enter')salvarNomeInline(${id})">
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="salvarNomeInline(${id})" style="flex:1;padding:5px;background:var(--s1);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Salvar</button>
+        <button onclick="fecharPops()" style="flex:1;padding:5px;background:#f0f0f0;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:12px">Cancelar</button>
+      </div>
+    </div>`);
+  posicionarPop(pop, e.currentTarget);
+  setTimeout(() => { const inp = document.getElementById('pop-nome-input'); if (inp) { inp.focus(); inp.select(); } }, 50);
+}
+
+function salvarNomeInline(id) {
+  const inp = document.getElementById('pop-nome-input');
+  if (!inp) return;
+  const novo = inp.value.trim().toUpperCase();
+  if (!novo) return;
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  const antigo = p.nome;
+  p.nome = novo;
+  p.log.push({ t: now(), msg: `Nome alterado de "${antigo}" para "${novo}"`, tipo: '' });
+  fecharPops();
+  LS.save(); renderView();
+  toast('Nome atualizado', 'ti-pencil');
+}
+
+function abrirPopResp(e, id) {
+  e.stopPropagation();
+  fecharPops();
+  const projetistas = getProjetistas();
+  const pop = criarPop(projetistas.map(p => {
+    const av = getAv(p.chave);
+    return `<div class="pop-item" onclick="setRespInline(${id},'${p.chave}')"><div class="av ${av.cl}" style="width:22px;height:22px;font-size:10px;flex-shrink:0">${av.in}</div>${p.nome}</div>`;
+  }).join(''));
+  posicionarPop(pop, e.currentTarget);
+}
+function setRespInline(id, resp) {
+  fecharPops();
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  p.resp = resp;
+  p.log.push({ t:now(), msg:`Projetista alterado para ${resp}`, tipo:'blue' });
+  LS.save(); renderView();
+}
+
+function prazoClick(id, prazo) {
+  const label = prazo ? `<i class="ti ti-calendar"></i>${prazo}` : `<i class="ti ti-calendar-plus"></i>Prazo`;
+  const cor   = prazo ? (new Date(prazo) < new Date() ? 'color:#e74c3c' : '') : 'color:#aaa';
+  const arr   = window._canEdit ? `<i class="ti ti-chevron-down" style="margin-left:3px;font-size:9px"></i>` : '';
+  const clk   = window._canEdit ? `onclick="abrirPopPrazo(event,${id})"` : '';
+  return `<span class="badge${window._canEdit?' badge-click':''}" style="background:rgba(0,0,0,.06);${cor}" ${clk}>${label}${arr}</span>`;
+}
+
+function abrirPopStatus(e, id) {
+  e.stopPropagation();
+  fecharPops();
+  const opts = [
+    { v:'fila',      l:'Na fila',      icon:'ti-clock' },
+    { v:'andamento', l:'Em andamento',  icon:'ti-player-play' },
+    { v:'revisao',   l:'Revisão',       icon:'ti-eye' },
+    { v:'aprovacao', l:'Aprovação',     icon:'ti-star' },
+  ];
+  const pop = criarPop(opts.map(o =>
+    `<div class="pop-item" onclick="setStatusInline(${id},'${o.v}')"><i class="ti ${o.icon}"></i>${o.l}</div>`
+  ).join('') + `<div class="pop-item pop-concluir" onclick="setStatusInline(${id},'concluido')"><i class="ti ti-check"></i>Concluído</div>`);
+  posicionarPop(pop, e.currentTarget);
+}
+function abrirPopPrior(e, id) {
+  e.stopPropagation();
+  fecharPops();
+  const opts = [
+    { v:'Alta',  l:'Alta',  icon:'ti-alert-triangle', cor:'#e74c3c' },
+    { v:'Média', l:'Média', icon:'ti-minus',           cor:'#e67e22' },
+    { v:'Nula',  l:'Sem prioridade', icon:'ti-circle-dashed', cor:'#aaa' },
+  ];
+  const pop = criarPop(opts.map(o =>
+    `<div class="pop-item" onclick="setPriorInline(${id},'${o.v}')" style="color:${o.cor}"><i class="ti ${o.icon}"></i>${o.l}</div>`
+  ).join(''));
+  posicionarPop(pop, e.currentTarget);
+}
+function abrirPopPrazo(e, id) {
+  e.stopPropagation();
+  fecharPops();
+  const p = projetos.find(x => x.id === id);
+  const pop = criarPop(`<div style="padding:4px 2px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">Selecionar prazo</label><input type="date" id="pop-date-input" value="${p?.prazo||''}" style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--txt);font-size:13px"><div style="display:flex;gap:6px;margin-top:8px"><button onclick="setPrazoInline(${id})" style="flex:1;padding:5px;background:var(--s1);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">Salvar</button><button onclick="setPrazoInline(${id},true)" style="flex:1;padding:5px;background:#f0f0f0;color:#666;border:none;border-radius:6px;cursor:pointer;font-size:12px">Limpar</button></div></div>`);
+  posicionarPop(pop, e.currentTarget);
+}
+
+function criarPop(html) {
+  const pop = document.createElement('div');
+  pop.id = 'inline-pop';
+  pop.className = 'inline-pop';
+  pop.innerHTML = html;
+  pop.addEventListener('click', e => e.stopPropagation());
+  document.body.appendChild(pop);
+  return pop;
+}
+function posicionarPop(pop, anchor) {
+  const r = anchor.getBoundingClientRect();
+  pop.style.top  = (r.bottom + window.scrollY + 4) + 'px';
+  pop.style.left = (r.left  + window.scrollX) + 'px';
+}
+function fecharPops() {
+  document.getElementById('inline-pop')?.remove();
+}
+document.addEventListener('click', fecharPops);
+
+function setStatusInline(id, val) {
+  fecharPops();
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  if (val === 'concluido') { concluirProjeto(id); renderView(); return; }
+  p.status = val;
+  const labels = { fila:'Na fila', andamento:'Em andamento', revisao:'Revisão', aprovacao:'Aprovação' };
+  p.log.push({ t:now(), msg:`Status alterado para "${labels[val]}"`, tipo:'blue' });
+  LS.save(); updateStats(); renderView();
+}
+function setPriorInline(id, val) {
+  fecharPops();
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  p.prior = val;
+  p.log.push({ t:now(), msg:`Prioridade alterada para "${val}"`, tipo:'' });
+  LS.save(); updateStats(); renderView();
+}
+function setPrazoInline(id, limpar) {
+  const p = projetos.find(x => x.id === id);
+  if (!p) { fecharPops(); return; }
+  p.prazo = limpar ? '' : (document.getElementById('pop-date-input')?.value || '');
+  fecharPops();
+  LS.save(); renderView();
+}
+function origemBadge(o) {
+  return o === 'whatsapp' ? '<span class="badge b-wpp"><i class="ti ti-brand-whatsapp"></i>WhatsApp</span>' : '';
+}
+
+// ─── AÇÕES DOS CARDS ──────────────────────────────────────────────────────────
+function cardActions(p) {
+  const ed  = window._canEdit   ? `<button class="act-btn act-edit" onclick="abrirModal(${p.id})" title="Editar"><i class="ti ti-edit"></i></button>` : '';
+  const del = window._canDelete ? `<button class="act-btn act-del"  onclick="deletar(${p.id})"   title="Excluir"><i class="ti ti-trash"></i></button>` : '';
+  if (!window._canEdit) return '';
+  if (p.status === 'fila')      return `<button class="act-btn act-start" onclick="setStatus(${p.id},'andamento')"><i class="ti ti-player-play"></i>Iniciar</button>${ed}${del}`;
+  if (p.status === 'andamento') return `<button class="act-btn act-done"  onclick="concluir(${p.id})"><i class="ti ti-check"></i>Concluir</button><button class="act-btn act-pause" onclick="setStatus(${p.id},'fila')"><i class="ti ti-player-pause"></i>Pausar</button>${ed}${del}`;
+  return `${ed}${del}`;
+}
+function tblActions(p) {
+  if (!window._canEdit) return '';
+  let main = '';
+  if (p.status === 'fila')           main = `<button class="tbl-btn tb-start" onclick="setStatus(${p.id},'andamento')"><i class="ti ti-player-play"></i>Iniciar</button>`;
+  else if (p.status === 'andamento') main = `<button class="tbl-btn tb-done"  onclick="concluir(${p.id})"><i class="ti ti-check"></i>Concluir</button>`;
+  const ed  = `<button class="tbl-btn tb-edit" onclick="abrirModal(${p.id})"><i class="ti ti-edit"></i></button>`;
+  const del = window._canDelete ? `<button class="tbl-btn tb-del" onclick="deletar(${p.id})"><i class="ti ti-trash"></i></button>` : '';
+  return `<div class="tbl-actions">${main}${ed}${del}</div>`;
+}
+
+// ─── RENDER PROJETOS ──────────────────────────────────────────────────────────
+function getLista() {
+  let l = projetos.filter(p => {
+    if (filtro === 'fila')      return p.status === 'fila';
+    if (filtro === 'andamento') return p.status === 'andamento';
+    if (filtro === 'alta')      return p.prior === 'Alta';
+    return true;
+  });
+  if (filtroProj) l = l.filter(p => p.resp === filtroProj);
+  if (busca) {
+    const b = busca.toLowerCase();
+    l = l.filter(p => p.nome.toLowerCase().includes(b) || (p.solic || '').toLowerCase().includes(b));
+  }
+  if (sortCol) {
+    l.sort((a, b) => {
+      const va = (a[sortCol] || '').toLowerCase();
+      const vb = (b[sortCol] || '').toLowerCase();
+      return va < vb ? -sortDir : va > vb ? sortDir : 0;
+    });
+  } else {
+    // ordenação padrão: vencidos/hoje primeiro, depois por prazo, sem prazo no fim
+    l.sort((a, b) => {
+      const da = a.prazo ? prazoDias(a.prazo) : 9999;
+      const db = b.prazo ? prazoDias(b.prazo) : 9999;
+      return da - db;
+    });
+  }
+  return l;
+}
+
+function setSort(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  renderView();
+}
+function sortIcon(col) {
+  if (sortCol !== col) return '<i class="ti ti-selector" style="font-size:10px;opacity:.4"></i>';
+  return sortDir === 1 ? '<i class="ti ti-sort-ascending" style="font-size:10px"></i>' : '<i class="ti ti-sort-descending" style="font-size:10px"></i>';
+}
+
+function renderView() {
+  const l = getLista();
+  const area = document.getElementById('view-area');
+  if (!l.length) {
+    area.innerHTML = `<div class="empty"><i class="ti ti-inbox"></i>Nenhum projeto encontrado</div>`;
+    updateStats(); return;
+  }
+  if (view === 'card') {
+    area.innerHTML = `<div class="grid">${l.map(p => {
+      const av = getAv(p.resp);
+      const nomeEl = window._canEdit
+        ? `<div class="card-name" style="cursor:pointer" onclick="editarNome(event,${p.id})" title="Clique para renomear">${p.nome} <i class="ti ti-pencil" style="font-size:10px;opacity:.4;margin-left:2px"></i></div>`
+        : `<div class="card-name">${p.nome}</div>`;
+      return `<div class="card">
+        <div class="card-accent ac-${p.status}"></div>
+        <div class="card-top">
+          ${nomeEl}
+          <div class="card-badges">${statusClick(p.id,p.status)}${priorClick(p.id,p.prior)}${prazoClick(p.id,p.prazo)}${origemBadge(p.origem)}</div>
+          <div class="card-meta">
+            <div class="meta-row">${respClick(p.id, p.resp)}</div>
+            <div class="meta-row"><i class="ti ti-user"></i><span>Solicitante: <strong>${primeiroNome(p.solic)}</strong></span></div>
+            </div>
+          ${p.nota ? `<div class="card-obs"><i class="ti ti-notes" style="font-size:11px"></i> ${p.nota}</div>` : ''}
+        </div>
+        <div class="card-body"><div class="card-actions">${cardActions(p)}</div></div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    area.innerHTML = `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th style="width:24%">Projeto</th>
+      <th style="width:13%;cursor:pointer;user-select:none" onclick="setSort('resp')" title="Ordenar por projetista">Projetista ${sortIcon('resp')}</th>
+      <th style="width:11%;cursor:pointer;user-select:none" onclick="setSort('solic')" title="Ordenar por solicitante">Solicitante ${sortIcon('solic')}</th>
+      <th style="width:11%">Status</th>
+      <th style="width:9%">Prioridade</th>
+      <th style="width:12%">Prazo</th>
+      <th style="width:14%">Ações</th>
+    </tr></thead><tbody>${l.map(p => {
+      const av = getAv(p.resp);
+      return `<tr>
+        <td><strong ${window._canEdit ? `onclick="editarNome(event,${p.id})" style="cursor:pointer" title="Clique para renomear"` : ''}>${p.nome}${window._canEdit ? ' <i class="ti ti-pencil" style="font-size:10px;opacity:.4"></i>' : ''}</strong>${p.nota ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${p.nota}</div>` : ''}</td>
+        <td>${respClick(p.id, p.resp)}</td>
+        <td style="color:var(--text2)">${primeiroNome(p.solic)}</td>
+        <td>${statusClick(p.id,p.status)}</td>
+        <td>${priorClick(p.id,p.prior)}</td>
+        <td>${prazoClick(p.id,p.prazo)}</td>
+        <td>${tblActions(p)}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+  }
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent = projetos.length;
+  document.getElementById('s-fila').textContent  = projetos.filter(p => p.status === 'fila').length;
+  document.getElementById('s-and').textContent   = projetos.filter(p => p.status === 'andamento').length;
+  document.getElementById('s-alta').textContent  = projetos.filter(p => p.prior === 'Alta').length;
+}
+
+// ─── CONTROLES ────────────────────────────────────────────────────────────────
+function setView(v) {
+  view = v;
+  document.getElementById('vbtn-card').classList.toggle('on', v === 'card');
+  document.getElementById('vbtn-list').classList.toggle('on', v === 'list');
+  renderView();
+}
+
+// limpa todos os filtros de status E projetista
+function clearFiltros() {
+  document.querySelectorAll('.fbtn').forEach(b => {
+    b.className = b.className.replace(/\bon(-\w+)?\b/g, '').trim();
+    b.style.background = '';
+    b.style.color = '';
+    b.style.borderColor = '';
+  });
+}
+
+function setFiltro(btn, f) {
+  clearFiltros();
+  btn.classList.add('on');
+  filtro = f; filtroProj = '';
+  renderView();
+}
+
+function setFiltroProj(btn, resp) {
+  if (filtroProj === resp) {
+    clearFiltros();
+    document.getElementById('fb-todos').classList.add('on');
+    filtroProj = ''; filtro = 'todos';
+  } else {
+    clearFiltros();
+    filtroProj = resp; filtro = 'todos';
+    const p = getProjetistas().find(x => x.chave === resp);
+    btn.style.background = p ? p.cor : '';
+    btn.style.color = p ? p.corTxt : '';
+    btn.style.borderColor = p ? p.corTxt : '';
+  }
+  renderView();
+}
+
+function setFiltroExt(f) {
+  goTab('projetos');
+  clearFiltros();
+  const map = { fila: 'fb-fila', andamento: 'fb-andamento', alta: 'fb-alta' };
+  const el = document.getElementById(map[f]);
+  if (el) el.classList.add('on');
+  filtro = f; filtroProj = '';
+  renderView();
+}
+
+function buscar(v)     { busca = v; renderView(); }
+function buscarHist(v) { buscaHist = v; renderHist(); }
+
+function setStatus(id, st) {
+  const p = projetos.find(x => x.id === id); if (!p) return;
+  const label = { fila: 'Na fila', andamento: 'Em andamento', concluido: 'Concluído' };
+  p.status = st;
+  p.log.push({ t: now(), msg: `Status alterado para ${label[st]}`, tipo: st === 'andamento' ? 'blue' : '' });
+  LS.save(); renderView();
+}
+function concluir(id) {
+  const p = projetos.find(x => x.id === id); if (!p) return;
+  p.status = 'concluido';
+  p.dataConclusao = now();
+  p.log.push({ t: now(), msg: 'Projeto concluído', tipo: 'green' });
+  concluidos.unshift(p);
+  projetos = projetos.filter(x => x.id !== id);
+  LS.save(); renderView();
+  toast('Projeto concluído!', 'ti-circle-check');
+}
+function odooIgnorados() {
+  return odooIgnoredList;
+}
+
+function deletar(id) {
+  if (!confirm('Mover este projeto para a lixeira?')) return;
+  const proj = projetos.find(x => x.id === id);
+  if (!proj) return;
+  if (proj.odooId) {
+    if (!odooIgnoredList.includes(proj.odooId)) odooIgnoredList.push(proj.odooId);
+  }
+  proj.dataExclusao = now();
+  proj.excluidoPor  = usuarioLogado?.nome || '—';
+  proj.log.push({ t: now(), msg: `Projeto movido para lixeira por ${usuarioLogado?.nome || '—'}`, tipo: '' });
+  excluidos.unshift(proj);
+  projetos = projetos.filter(x => x.id !== id);
+  LS.save(); renderView();
+  toast('Projeto movido para a lixeira', 'ti-trash');
+}
+
+function restaurarExcluido(id) {
+  const p = excluidos.find(x => x.id === id);
+  if (!p) return;
+  delete p.dataExclusao;
+  delete p.excluidoPor;
+  p.status = 'fila';
+  p.log.push({ t: now(), msg: `Projeto restaurado por ${usuarioLogado?.nome || '—'}`, tipo: 'blue' });
+  projetos.unshift(p);
+  excluidos = excluidos.filter(x => x.id !== id);
+  LS.save(); renderExcluidos(); renderView(); updateStats();
+  toast('Projeto restaurado para a fila!', 'ti-refresh');
+}
+
+function removerDefinitivo(id) {
+  if (!confirm('Remover permanentemente? Esta ação não pode ser desfeita.')) return;
+  excluidos = excluidos.filter(x => x.id !== id);
+  LS.save(); renderExcluidos();
+  toast('Projeto removido definitivamente', 'ti-trash');
+}
+
+function buscarExcl(v) { buscaExcl = v; renderExcluidos(); }
+
+function renderExcluidos() {
+  const el = document.getElementById('excluidos-list');
+  if (!el) return;
+  let l = excluidos;
+  if (buscaExcl) {
+    const b = buscaExcl.toLowerCase();
+    l = l.filter(p => p.nome.toLowerCase().includes(b) || (p.solic || '').toLowerCase().includes(b));
+  }
+  if (!l.length) {
+    el.innerHTML = `<div class="empty"><i class="ti ti-trash"></i>Nenhum projeto excluído</div>`;
+    return;
+  }
+  el.innerHTML = l.map(p => `
+    <div class="hist-item">
+      <div class="hist-header">
+        <div>
+          <div class="hist-name">${p.nome}</div>
+          <div style="display:flex;gap:5px;margin-top:6px">${priorBadge(p.prior) || ''}${origemBadge(p.origem)}</div>
+        </div>
+        <div class="hist-date">Excluído em<br>${p.dataExclusao || '—'}<br><span style="font-size:10px;color:var(--text3)">por ${p.excluidoPor || '—'}</span></div>
+      </div>
+      <div class="hist-meta">
+        <div class="hm"><div class="hm-l">Projetista</div><div class="hm-v">${p.resp || '—'}</div></div>
+        <div class="hm"><div class="hm-l">Solicitante</div><div class="hm-v">${primeiroNome(p.solic)}</div></div>
+        <div class="hm"><div class="hm-l">Status anterior</div><div class="hm-v">${p.status === 'fila' ? 'Na fila' : p.status === 'andamento' ? 'Em andamento' : 'Concluído'}</div></div>
+      </div>
+      ${p.nota ? `<div class="card-obs" style="margin-bottom:12px"><i class="ti ti-notes" style="font-size:11px"></i> ${p.nota}</div>` : ''}
+      <div class="hist-actions">
+        <button class="btn-reabrir" onclick="restaurarExcluido(${p.id})"><i class="ti ti-refresh"></i> Restaurar projeto</button>
+        ${window._canDelete ? `<button class="btn-arquivar" onclick="removerDefinitivo(${p.id})">Remover definitivamente</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+function reabrirConcluido(id) {
+  const p = concluidos.find(x => x.id === id); if (!p) return;
+  p.status = 'fila';
+  p.log.push({ t: now(), msg: 'Projeto reaberto', tipo: 'blue' });
+  delete p.dataConclusao;
+  projetos.unshift(p);
+  concluidos = concluidos.filter(x => x.id !== id);
+  LS.save(); renderHist(); renderView(); updateStats();
+  toast('Projeto reaberto na fila', 'ti-refresh');
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────────
+function goTab(t) {
+  ['projetos', 'concluidos', 'excluidos', 'usuarios'].forEach(n => {
+    const tab = document.getElementById('tab-' + n);
+    const panel = document.getElementById('panel-' + n);
+    if (tab)   tab.classList.toggle('on', n === t);
+    if (panel) panel.classList.toggle('on', n === t);
+  });
+  document.getElementById('view-toggle').style.display = t === 'projetos' ? 'flex' : 'none';
+  if (t === 'concluidos') renderHist();
+  if (t === 'excluidos')  renderExcluidos();
+  if (t === 'usuarios')   { renderUsuarios(); renderProjetistas(); }
+}
+
+// ─── EDIÇÃO RÁPIDA ───────────────────────────────────────────────────────────
+const STATUS_OPTS  = ['fila','andamento','revisao','aprovacao','concluido'];
+const STATUS_LABEL = { fila:'Fila', andamento:'Em andamento', revisao:'Revisão', aprovacao:'Aprovação', concluido:'Concluído' };
+const PRIOR_OPTS   = ['Alta','Média','Nula'];
+
+function rapidoSetStatus(id, val) {
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  if (val === 'concluido') { concluirProjeto(id); renderRapido(); return; }
+  p.status = val;
+  p.log.push({ t: now(), msg: `Status alterado para "${STATUS_LABEL[val]}"`, tipo: 'blue' });
+  LS.save(); updateStats(); renderView(); renderRapido();
+}
+
+function rapidoSetPrior(id, val) {
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  p.prior = val;
+  p.log.push({ t: now(), msg: `Prioridade alterada para "${val}"`, tipo: '' });
+  LS.save(); updateStats(); renderView(); renderRapido();
+}
+
+function rapidoSetPrazo(id, val) {
+  const p = projetos.find(x => x.id === id);
+  if (!p) return;
+  p.prazo = val;
+  LS.save(); renderRapido();
+}
+
+function renderRapido() {
+  const el  = document.getElementById('rapido-table');
+  if (!el) return;
+  const srch = (document.getElementById('srch-rapido')?.value || '').toLowerCase();
+  let lista = projetos.filter(p => p.status !== 'concluido');
+  if (srch) lista = lista.filter(p =>
+    p.nome.toLowerCase().includes(srch) ||
+    (p.solic || '').toLowerCase().includes(srch) ||
+    (p.resp  || '').toLowerCase().includes(srch)
+  );
+  if (!lista.length) {
+    el.innerHTML = `<div class="empty"><i class="ti ti-table"></i>Nenhum projeto ativo</div>`;
+    return;
+  }
+  const priorColor = { Alta:'#c0392b', Média:'#e67e22', Nula:'#aaa' };
+  el.innerHTML = `
+  <table class="rq-table">
+    <thead>
+      <tr>
+        <th style="width:36%">Projeto</th>
+        <th style="width:13%">Projetista</th>
+        <th style="width:13%">Solicitante</th>
+        <th style="width:16%">Status</th>
+        <th style="width:10%">Prioridade</th>
+        <th style="width:12%">Prazo</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${lista.map(p => `
+      <tr>
+        <td class="rq-nome">${p.nome}</td>
+        <td>${p.resp || '—'}</td>
+        <td>${primeiroNome(p.solic)}</td>
+        <td>
+          <select class="rq-sel" onchange="rapidoSetStatus(${p.id}, this.value)">
+            ${STATUS_OPTS.filter(s => s !== 'concluido').map(s =>
+              `<option value="${s}" ${p.status === s ? 'selected' : ''}>${STATUS_LABEL[s]}</option>`
+            ).join('')}
+            <option value="concluido" style="color:#27ae60">✓ Concluído</option>
+          </select>
+        </td>
+        <td>
+          <select class="rq-sel rq-prior" style="color:${priorColor[p.prior]||'#aaa'}" onchange="rapidoSetPrior(${p.id}, this.value)">
+            ${PRIOR_OPTS.map(v =>
+              `<option value="${v}" style="color:${priorColor[v]}" ${p.prior === v ? 'selected' : ''}>${v}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td>
+          <input type="date" class="rq-date" value="${p.prazo || ''}" onchange="rapidoSetPrazo(${p.id}, this.value)">
+        </td>
+      </tr>
+    `).join('')}
+    </tbody>
+  </table>`;
+}
+
+// ─── HISTÓRICO ────────────────────────────────────────────────────────────────
+function renderHist() {
+  const el = document.getElementById('hist-list');
+  let l = concluidos;
+  if (buscaHist) {
+    const b = buscaHist.toLowerCase();
+    l = l.filter(p => p.nome.toLowerCase().includes(b) || (p.solic || '').toLowerCase().includes(b));
+  }
+  if (!l.length) {
+    el.innerHTML = `<div class="empty"><i class="ti ti-history"></i>Nenhum projeto concluído ainda</div>`;
+    return;
+  }
+  el.innerHTML = l.map(p => `
+    <div class="hist-item">
+      <div class="hist-header">
+        <div>
+          <div class="hist-name">${p.nome}</div>
+          <div style="display:flex;gap:5px;margin-top:6px">${priorBadge(p.prior) || ''}${origemBadge(p.origem)}</div>
+        </div>
+        <div class="hist-date">Concluído em<br>${p.dataConclusao || '—'}</div>
+      </div>
+      <div class="hist-meta">
+        <div class="hm"><div class="hm-l">Projetista</div><div class="hm-v">${p.resp}</div></div>
+        <div class="hm"><div class="hm-l">Solicitante</div><div class="hm-v">${primeiroNome(p.solic)}</div></div>
+      </div>
+      ${p.nota ? `<div class="card-obs" style="margin-bottom:12px"><i class="ti ti-notes" style="font-size:11px"></i> ${p.nota}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="section-label" style="margin-bottom:0">Histórico de movimentações <span style="font-weight:400;color:var(--text3)">(${(p.log||[]).length})</span></div>
+        <button onclick="toggleLog(this)" style="font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:3px" data-open="0">
+          <i class="ti ti-chevron-down"></i> Ver
+        </button>
+      </div>
+      <div class="hist-log" style="display:none">${(p.log||[]).map(lg => `
+        <div class="log-item">
+          <div class="log-dot ${lg.tipo || ''}"></div>
+          <div><strong>${lg.t}</strong> — ${lg.msg}</div>
+        </div>`).join('')}
+      </div>
+      <div class="hist-actions">
+        <button class="btn-reabrir" onclick="reabrirConcluido(${p.id})"><i class="ti ti-refresh"></i> Reabrir projeto</button>
+        <button class="btn-arquivar" onclick="removerHist(${p.id})">Remover histórico</button>
+      </div>
+    </div>`).join('');
+}
+function toggleLog(btn) {
+  const log = btn.closest('.hist-item').querySelector('.hist-log');
+  const open = btn.dataset.open === '1';
+  log.style.display = open ? 'none' : 'block';
+  btn.dataset.open = open ? '0' : '1';
+  btn.innerHTML = open ? '<i class="ti ti-chevron-down"></i> Ver' : '<i class="ti ti-chevron-up"></i> Ocultar';
+}
+function removerHist(id) {
+  if (!confirm('Remover permanentemente do histórico?')) return;
+  concluidos = concluidos.filter(x => x.id !== id);
+  LS.save(); renderHist();
+}
+
+// ─── ENTRADAS WHATSAPP ────────────────────────────────────────────────────────
+function renderEntradas() {
+  const el = document.getElementById('entradas-list');
+  if (!entradas.length) {
+    el.innerHTML = `<div class="empty"><i class="ti ti-circle-check"></i>Nenhuma entrada pendente</div>`;
+    return;
+  }
+  el.innerHTML = entradas.map(e => `
+    <div class="ent-card">
+      <div class="ent-header">
+        <div class="ent-who"><div class="av ${e.av.cl}">${e.av.in}</div>${e.who}<span class="wpp-tag">WhatsApp</span></div>
+        <div class="ent-time">${e.time}</div>
+      </div>
+      <div class="ent-msg">"${e.msg}"</div>
+      <div class="ent-extracted">
+        <div class="ext-item"><div class="ext-l">Projeto</div><div class="ext-v" style="font-size:11px">${e.nome}</div></div>
+        <div class="ext-item"><div class="ext-l">Prioridade</div><div class="ext-v">${e.prior}</div></div>
+      </div>
+      <div class="ent-actions">
+        <button class="btn-criar" onclick="criarDaEntrada('${e.id}')"><i class="ti ti-plus"></i> Criar projeto</button>
+        <button class="btn-sec"   onclick="editarEntrada('${e.id}')"><i class="ti ti-edit"></i> Editar antes</button>
+        <button class="btn-sec"   onclick="ignorarEntrada('${e.id}')">Ignorar</button>
+      </div>
+    </div>`).join('');
+}
+
+function criarDaEntrada(eid) {
+  const e = entradas.find(x => x.id === eid); if (!e) return;
+  const resp = proxMembro();
+  const carga = cargaAtiva(resp);
+  projetos.unshift({
+    id: nextId++, nome: e.nome, resp, solic: e.solic || e.who,
+    status: 'fila', prior: e.prior, obs: e.obs, prazo: '', nota: '',
+    log: [{ t: now(), msg: `Criado via WhatsApp — solicitante: ${e.who} — atribuído a ${resp} (${carga} projeto(s) ativo(s))`, tipo: 'blue' }],
+    origem: 'whatsapp'
+  });
+  entradas = entradas.filter(x => x.id !== eid);
+  LS.save(); atualizarContadorEnt(); renderEntradas(); updateStats();
+  toast(`Criado e atribuído a ${resp}`, 'ti-user-check');
+}
+
+function editarEntrada(eid) {
+  const e = entradas.find(x => x.id === eid); if (!e) return;
+  editId = null;
+  document.getElementById('modal-title').textContent = 'Criar projeto da entrada';
+  document.getElementById('f-nome').value  = e.nome;
+  document.getElementById('f-resp').value  = proxMembro();
+  document.getElementById('f-solic').value = e.solic || e.who;
+  document.getElementById('f-obs').value   = e.obs;
+  document.getElementById('f-prazo').value = '';
+  document.getElementById('f-nota').value  = '';
+  segVals.status = 'fila'; segVals.prior = e.prior;
+  resetSegs(); atualizarCargaModal();
+  document.getElementById('modal-overlay').classList.add('open');
+  entradas = entradas.filter(x => x.id !== eid);
+  LS.save(); atualizarContadorEnt();
+}
+
+function ignorarEntrada(eid) {
+  entradas = entradas.filter(x => x.id !== eid);
+  LS.save(); atualizarContadorEnt(); renderEntradas();
+}
+
+function atualizarContadorEnt() {
+  const n = entradas.length;
+  const pill = document.getElementById('ent-pill');
+  const wppN = document.getElementById('wpp-n');
+  if (pill) pill.textContent = n;
+  if (wppN) wppN.textContent = n;
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function atualizarCargaModal() {
+  const resp = document.getElementById('f-resp').value;
+  const c = cargaAtiva(resp);
+  document.getElementById('f-resp-carga').textContent = `— ${c} ativo(s)`;
+}
+
+function setSeg(tipo, val, btn) {
+  segVals[tipo] = val;
+  document.getElementById('seg-' + tipo).querySelectorAll('.seg-btn').forEach(b => b.className = 'seg-btn');
+  btn.className = 'seg-btn on-' + val;
+}
+
+function resetSegs() {
+  ['fila','andamento','concluido'].forEach(v => {
+    const b = document.querySelector(`#seg-status .seg-btn[onclick*="'${v}'"]`);
+    if (b) b.className = 'seg-btn' + (segVals.status === v ? ' on-' + v : '');
+  });
+  ['Nula','Média','Alta'].forEach(v => {
+    const b = document.querySelector(`#seg-prior .seg-btn[onclick*="'${v}'"]`);
+    if (b) b.className = 'seg-btn' + (segVals.prior === v ? ' on-' + v : '');
+  });
+}
+
+function abrirModal(id) {
+  editId = id;
+  const p = id ? projetos.find(x => x.id === id) : null;
+  document.getElementById('modal-title').textContent = p ? 'Editar projeto' : 'Novo projeto';
+  document.getElementById('f-nome').value  = p ? p.nome  : '';
+  popularSelectResp(p ? p.resp : proxMembro());
+  document.getElementById('f-solic').value = p ? p.solic : '';
+  document.getElementById('f-prazo').value = p ? (p.prazo || '') : '';
+  document.getElementById('f-nota').value  = p ? p.nota  : '';
+  segVals.status = p ? p.status : 'fila';
+  segVals.prior  = p ? p.prior  : 'Nula';
+  resetSegs(); atualizarCargaModal();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function fecharModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function salvarProjeto() {
+  const nome = document.getElementById('f-nome').value.trim();
+  if (!nome) { document.getElementById('f-nome').focus(); return; }
+  const dados = {
+    nome, resp:  document.getElementById('f-resp').value,
+    solic: document.getElementById('f-solic').value.trim(),
+    status: segVals.status, prior: segVals.prior,
+    prazo: document.getElementById('f-prazo').value,
+    nota:  document.getElementById('f-nota').value.trim()
+  };
+  if (editId) {
+    const p = projetos.find(x => x.id === editId);
+    if (p) {
+      const mudouStatus = p.status !== dados.status;
+      Object.assign(p, dados);
+      const label = { fila: 'Na fila', andamento: 'Em andamento', concluido: 'Concluído' };
+      p.log.push({ t: now(), msg: mudouStatus ? `Status alterado para ${label[dados.status]}` : 'Projeto editado', tipo: mudouStatus && dados.status === 'andamento' ? 'blue' : '' });
+    }
+    toast('Projeto salvo', 'ti-device-floppy');
+  } else {
+    projetos.unshift({
+      id: nextId++, ...dados,
+      log: [{ t: now(), msg: `Projeto criado — solicitante: ${dados.solic || 'não informado'}`, tipo: '' }],
+      origem: 'manual'
+    });
+    toast('Projeto criado!', 'ti-circle-plus');
+  }
+  LS.save(); fecharModal(); renderView();
+}
+
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) fecharModal();
+});
+document.getElementById('f-resp').addEventListener('change', atualizarCargaModal);
+
+// ─── CONFIGURAÇÕES DE INTEGRAÇÃO ─────────────────────────────────────────────
+const CFG_KEY = 's1_integracao';
+let cfg = { pollOn: false, url: '', token: '', interval: 30, odooOn: true, odooUrl: 'https://stand-1.odoo.com', odooDB: 'stand-1', odooLogin: 'projeto@stand1.com.br', odooKey: '439a4bde29f17598c6376e873fee90b726872189', odooInterval: 2 };
+let _pollTimer = null;
+let _pollStatus = 'idle';
+let _odooTimer = null;
+let _odooStatus = 'idle';
+let _odooUid = null;
+
+function carregarCfg() {
+  try { const raw = localStorage.getItem(CFG_KEY); if (raw) cfg = { ...cfg, ...JSON.parse(raw) }; } catch(e) {}
+  // forçar credenciais e ativar Odoo sempre
+  cfg.odooOn    = true;
+  cfg.odooUrl   = 'https://stand-1.odoo.com';
+  cfg.odooDB    = 'stand-1';
+  cfg.odooLogin = 'projeto@stand1.com.br';
+  cfg.odooKey   = '439a4bde29f17598c6376e873fee90b726872189';
+}
+function salvarCfg() {
+  cfg.pollOn      = document.getElementById('cfg-poll-on').checked;
+  cfg.url         = document.getElementById('cfg-url').value.trim();
+  cfg.token       = document.getElementById('cfg-token').value.trim();
+  cfg.interval    = Math.max(10, parseInt(document.getElementById('cfg-interval').value) || 30);
+  cfg.odooOn      = document.getElementById('cfg-odoo-on').checked;
+  cfg.odooUrl     = document.getElementById('cfg-odoo-url').value.trim().replace(/\/$/, '');
+  cfg.odooDB      = document.getElementById('cfg-odoo-db').value.trim();
+  cfg.odooLogin   = document.getElementById('cfg-odoo-login').value.trim();
+  cfg.odooKey     = document.getElementById('cfg-odoo-key').value.trim();
+  cfg.odooInterval= Math.max(1, parseInt(document.getElementById('cfg-odoo-interval').value) || 5);
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+  reiniciarPoll();
+  reiniciarPollOdoo();
+}
+function abrirCfg() {
+  document.getElementById('cfg-poll-on').checked        = cfg.pollOn;
+  document.getElementById('cfg-url').value              = cfg.url;
+  document.getElementById('cfg-token').value            = cfg.token;
+  document.getElementById('cfg-interval').value         = cfg.interval;
+  document.getElementById('cfg-odoo-on').checked        = cfg.odooOn;
+  document.getElementById('cfg-odoo-url').value         = cfg.odooUrl;
+  document.getElementById('cfg-odoo-db').value          = cfg.odooDB;
+  document.getElementById('cfg-odoo-login').value       = cfg.odooLogin;
+  document.getElementById('cfg-odoo-key').value         = cfg.odooKey;
+  document.getElementById('cfg-odoo-interval').value    = cfg.odooInterval;
+  atualizarPollDots();
+  document.getElementById('cfg-overlay').classList.add('open');
+}
+function fecharCfg() {
+  document.getElementById('cfg-overlay').classList.remove('open');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const o = document.getElementById('cfg-overlay');
+  if (o) o.addEventListener('click', e => { if (e.target === o) fecharCfg(); });
+});
+
+function atualizarPollDots() {
+  const dot1 = document.getElementById('poll-dot-cfg');
+  const dot2 = document.getElementById('poll-dot-ent');
+  const lbl1 = document.getElementById('poll-status-cfg');
+  const lbl2 = document.getElementById('poll-status-ent');
+  const cls  = _pollStatus === 'ok' ? 'on' : _pollStatus === 'err' ? 'err' : '';
+  const msg  = cfg.pollOn && cfg.url
+    ? (_pollStatus === 'ok'  ? `Conectado — polling a cada ${cfg.interval}s`
+    :  _pollStatus === 'err' ? 'Erro ao conectar — verifique a URL e o token'
+    :                          `Aguardando polling (${cfg.interval}s)`)
+    : cfg.url ? 'Polling desativado' : 'Integração WhatsApp não configurada';
+  [dot1, dot2].forEach(d => { if (d) { d.className = 'poll-dot' + (cls ? ' ' + cls : ''); } });
+  if (lbl1) lbl1.textContent = msg;
+  if (lbl2) lbl2.textContent = msg;
+
+  const dotO = document.getElementById('poll-dot-odoo');
+  const lblO = document.getElementById('poll-status-odoo');
+  const clsO = _odooStatus === 'ok' ? 'on' : _odooStatus === 'err' ? 'err' : '';
+  const msgO = cfg.odooOn && cfg.odooUrl && cfg.odooKey
+    ? (_odooStatus === 'ok'  ? `Odoo conectado — polling a cada ${cfg.odooInterval}min`
+    :  _odooStatus === 'err' ? 'Erro ao conectar ao Odoo — verifique as credenciais'
+    :                          `Aguardando polling Odoo (${cfg.odooInterval}min)`)
+    : 'Integração Odoo não configurada';
+  if (dotO) dotO.className = 'poll-dot' + (clsO ? ' ' + clsO : '');
+  if (lblO) lblO.textContent = msgO;
+  const syncBtn = document.getElementById('btn-odoo-sync');
+  if (syncBtn) syncBtn.style.display = (cfg.odooOn && cfg.odooUrl && cfg.odooKey) ? '' : 'none';
+}
+
+async function executarPoll() {
+  if (!cfg.pollOn || !cfg.url) return;
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (cfg.token) headers['Authorization'] = 'Bearer ' + cfg.token;
+    const r = await fetch(cfg.url, { headers });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const lista = Array.isArray(data) ? data : [data];
+    let novas = 0;
+    lista.forEach(item => {
+      if (item && item.id && !entradas.find(e => e.id === item.id)) {
+        injetarEntrada(item); novas++;
+      }
+    });
+    if (novas) { LS.save(); atualizarContadorEnt(); if (document.getElementById('panel-entradas').classList.contains('on')) renderEntradas(); toast(`${novas} nova(s) entrada(s) do WhatsApp`, 'ti-brand-whatsapp'); }
+    _pollStatus = 'ok';
+  } catch(e) {
+    _pollStatus = 'err';
+    console.warn('[S1 poll]', e.message);
+  }
+  atualizarPollDots();
+}
+
+function reiniciarPoll() {
+  clearInterval(_pollTimer);
+  _pollTimer = null;
+  _pollStatus = 'idle';
+  atualizarPollDots();
+  if (cfg.pollOn && cfg.url) {
+    executarPoll();
+    _pollTimer = setInterval(executarPoll, cfg.interval * 1000);
+  }
+}
+
+async function testarPoll() {
+  if (!cfg.url) { toast('Configure a URL primeiro', 'ti-alert-circle'); return; }
+  salvarCfg();
+  _pollStatus = 'idle'; atualizarPollDots();
+  await executarPoll();
+  atualizarPollDots();
+}
+
+// ─── ODOO INTEGRATION ─────────────────────────────────────────────────────────
+function odooProxyUrl() {
+  // Usa proxy local no VPS para evitar bloqueio de CORS
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return window.location.origin + '/odoo-proxy';
+  }
+  return cfg.odooUrl;
+}
+
+async function odooAuth() {
+  const r = await fetch(odooProxyUrl() + '/jsonrpc', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc:'2.0', method:'call', id:1, params: {
+      service:'common', method:'authenticate',
+      args: [cfg.odooDB, cfg.odooLogin, cfg.odooKey, {}]
+    }})
+  });
+  const d = await r.json();
+  return d.result || null;
+}
+
+function mostrarSincronizando(ativo) {
+  let el = document.getElementById('odoo-sync-bar');
+  if (ativo) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'odoo-sync-bar';
+      el.innerHTML = `<i class="ti ti-refresh" style="animation:spin .8s linear infinite"></i> Sincronizando com Odoo...`;
+      document.getElementById('view-area')?.before(el);
+    }
+  } else {
+    el?.remove();
+  }
+}
+
+async function executarPollOdoo(force = false) {
+  if (!force && !cfg.odooOn) return;
+  if (!cfg.odooUrl || !cfg.odooDB || !cfg.odooLogin || !cfg.odooKey) return;
+  mostrarSincronizando(true);
+  try {
+    if (!_odooUid) _odooUid = await odooAuth();
+    if (!_odooUid) { _odooStatus = 'err'; atualizarPollDots(); mostrarSincronizando(false); return; }
+    const r = await fetch(odooProxyUrl() + '/jsonrpc', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc:'2.0', method:'call', id:2, params: {
+        service:'object', method:'execute_kw',
+        args: [cfg.odooDB, _odooUid, cfg.odooKey,
+          'project.project', 'search_read',
+          [[['stage_id.name', '=', 'To Do']]],
+          { fields: ['name','partner_id','user_id','create_date'], limit: 50 }
+        ]
+      }})
+    });
+    const d = await r.json();
+    if (d.error) { _odooStatus = 'err'; atualizarPollDots(); mostrarSincronizando(false); return; }
+    let novas = 0;
+    (d.result || []).forEach(p => {
+      if ([...projetos, ...concluidos].some(x => x.odooId === p.id)) return;
+      if (odooIgnorados().includes(p.id)) return;
+      const resp    = proxMembro();
+      const solic   = Array.isArray(p.user_id)    ? p.user_id[1]    : '';
+      const cliente = Array.isArray(p.partner_id) ? p.partner_id[1] : '';
+      projetos.unshift({
+        id: nextId++, nome: p.name,
+        resp, solic, odooId: p.id,
+        status:'fila', prior:'Nula', obs: cliente ? `Cliente: ${cliente}` : '', prazo: '',
+        nota:'', log:[{ t:now(), msg:`Criado via Odoo — atribuído a ${resp}`, tipo:'blue' }],
+        origem:'odoo'
+      });
+      novas++;
+    });
+    if (novas) { LS.save(); updateStats(); renderView(); toast(`${novas} novo(s) projeto(s) do Odoo`, 'ti-building'); }
+    _odooStatus = 'ok'; atualizarPollDots();
+  } catch(e) { _odooStatus = 'err'; atualizarPollDots(); }
+  mostrarSincronizando(false);
+}
+
+async function syncOdooManual() {
+  // Odoo é importado pelo servidor automaticamente; aqui só forçamos buscar o estado mais recente
+  const btn = document.getElementById('btn-odoo-sync');
+  if (btn) { btn.disabled = true; btn.querySelector('i').className = 'ti ti-loader-2'; }
+  const mudou = await pullState(true);
+  if (mudou) { renderView(); updateStats(); }
+  toast('Lista atualizada', 'ti-circle-check');
+  if (btn) { btn.disabled = false; btn.querySelector('i').className = 'ti ti-refresh'; }
+}
+
+function reiniciarPollOdoo() {
+  clearInterval(_odooTimer);
+  _odooTimer = null;
+  _odooUid = null;
+  _odooStatus = 'idle';
+  atualizarPollDots();
+  if (cfg.odooOn && cfg.odooUrl && cfg.odooKey) {
+    executarPollOdoo();
+    _odooTimer = setInterval(executarPollOdoo, cfg.odooInterval * 60 * 1000);
+  }
+}
+
+function limparIgnoradosOdoo() {
+  if (!confirm('Isso vai permitir que todos os projetos excluídos do dashboard sejam reimportados do Odoo. Continuar?')) return;
+  odooIgnoredList = [];
+  pushState(); // grava a lista vazia no servidor
+  toast('Lista de ignorados limpa — o servidor vai reimportar em até 2 min', 'ti-circle-check');
+}
+
+async function testarOdoo() {
+  if (!cfg.odooUrl || !cfg.odooKey) { toast('Configure as credenciais Odoo primeiro', 'ti-alert-circle'); return; }
+  salvarCfg();
+  _odooStatus = 'idle'; _odooUid = null; atualizarPollDots();
+  await executarPollOdoo();
+  atualizarPollDots();
+}
+
+// ─── INJETAR ENTRADA (normaliza payload vindo do WhatsApp/n8n) ────────────────
+function injetarEntrada(item) {
+  const nome = (item.nome || '').toUpperCase().trim();
+  if (!nome) return;
+  const k = ((item.who || item.solic || '?').split(' ')[0] || '?').toUpperCase().slice(0,2);
+  const av = k === 'TC' || k === 'TA' ? { cl:'av-t', in:'TC' }
+           : k === 'FG' || k === 'FA' ? { cl:'av-f', in:'FG' }
+           : k === 'GB' || k === 'GA' ? { cl:'av-g', in:'GB' }
+           : { cl:'av-s', in:k.slice(0,2) };
+  entradas.unshift({
+    id:    item.id || ('wpp_' + Date.now()),
+    who:   item.who   || item.solic || 'WhatsApp',
+    solic: item.solic || item.who   || '',
+    nome,
+    prior: ['Alta','Média','Nula'].includes(item.prior) ? item.prior : 'Nula',
+    prazo: item.prazo || '',
+    nota:  item.nota  || '',
+    msg:   item.msg   || '',
+    time:  item.time  || now(),
+    av
+  });
+}
+
+// ─── SIMULAR ENTRADA (botão no modal de config) ───────────────────────────────
+function simularEntrada() {
+  const raw = document.getElementById('sim-json').value.trim();
+  if (!raw) { toast('Cole um JSON para simular', 'ti-alert-circle'); return; }
+  try {
+    let parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) parsed = [parsed];
+    let novas = 0;
+    parsed.forEach(item => {
+      if (!item.id) item.id = 'sim_' + Date.now() + '_' + novas;
+      if (entradas.find(e => e.id === item.id)) return;
+      injetarEntrada(item); novas++;
+    });
+    if (novas) {
+      LS.save(); atualizarContadorEnt();
+      fecharCfg();
+      goTab('entradas');
+      toast(`${novas} entrada(s) simulada(s) com sucesso`, 'ti-circle-check');
+    } else {
+      toast('Nenhuma entrada nova (ID já existe?)', 'ti-info-circle');
+    }
+  } catch(e) { toast('JSON inválido: ' + e.message, 'ti-alert-circle'); }
+}
+
+// ─── POSTMESSAGE (para integração via iframe ou wrapper Electron/Node) ─────────
+window.addEventListener('message', (event) => {
+  if (!event.data || event.data.type !== 's1_entrada') return;
+  const lista = Array.isArray(event.data.data) ? event.data.data : [event.data.data];
+  let novas = 0;
+  lista.forEach(item => {
+    if (item && item.id && !entradas.find(e => e.id === item.id)) {
+      injetarEntrada(item); novas++;
+    }
+  });
+  if (novas) {
+    LS.save(); atualizarContadorEnt();
+    if (document.getElementById('panel-entradas').classList.contains('on')) renderEntradas();
+    toast(`${novas} entrada(s) recebida(s) via postMessage`, 'ti-brand-whatsapp');
+  }
+});
+
+// ─── API PÚBLICA (chamável de scripts externos, n8n via iframe, etc.) ──────────
+window.S1 = {
+  // Injeta uma ou mais entradas diretamente (array ou objeto único)
+  receberEntrada(payload) {
+    const lista = Array.isArray(payload) ? payload : [payload];
+    let novas = 0;
+    lista.forEach(item => {
+      if (item && item.id && !entradas.find(e => e.id === item.id)) {
+        injetarEntrada(item); novas++;
+      }
+    });
+    if (novas) {
+      LS.save(); atualizarContadorEnt();
+      if (document.getElementById('panel-entradas').classList.contains('on')) renderEntradas();
+      toast(`${novas} entrada(s) recebida(s)`, 'ti-brand-whatsapp');
+    }
+    return { recebidas: novas };
+  },
+  // Retorna snapshot do estado atual (útil para debug/integração)
+  getEstado() {
+    return {
+      projetos:   projetos.length,
+      concluidos: concluidos.length,
+      entradas:   entradas.length,
+      membros:    getMembros().map(m => ({ resp: m, carga: cargaAtiva(m) }))
+    };
+  }
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+if (LOGO_B64 && !LOGO_B64.startsWith('__')) {
+  document.getElementById('brandLogo').src = LOGO_B64;
+  const ll = document.getElementById('loginLogo');
+  if (ll) ll.src = LOGO_B64;
+}
+
+let _statePollTimer = null;
+
+// carrega o estado do servidor com tentativas, garantindo render
+async function carregarEstadoServidor(tentativas) {
+  if (!STATE_API) return false; // ambiente local sem servidor: usa só o cache
+  tentativas = tentativas || 4;
+  for (let i = 0; i < tentativas; i++) {
+    const ok = await pullState(true);
+    renderView();
+    updateStats();
+    if (ok) return true;
+    // se falhou, espera um pouco e tenta de novo
+    await new Promise(res => setTimeout(res, 1500));
+  }
+  // esgotou as tentativas e nunca conseguiu ler da API: avisa em vez de falhar calado
+  console.error('[state] não foi possível carregar dados da API após', tentativas, 'tentativas:', STATE_API);
+  toast('Não consegui carregar do servidor — mostrando dados locais', 'ti-cloud-off');
+  return false;
+}
+
+function iniciar() {
+  LS.load();
+  renderFiltrosProjetista();
+  popularSelectResp();
+  carregarCfg();
+  atualizarContadorEnt();
+  atualizarPollDots();
+  reiniciarPoll();
+  // renderiza imediatamente com o cache local (mostra projetos na hora)
+  renderView();
+  updateStats();
+  // carrega estado do servidor com tentativas (sem travar a interface)
+  carregarEstadoServidor();
+  // polling de estado compartilhado (todos os usuários veem em ~8s)
+  clearInterval(_statePollTimer);
+  _statePollTimer = setInterval(async () => {
+    if (document.getElementById('inline-pop')) return; // não atualiza durante edição inline
+    if (document.querySelector('.modal-overlay.open')) return; // não atualiza com modal aberto
+    const mudou = await pullState(false);
+    if (mudou) { renderView(); updateStats(); }
+  }, 8000);
+}
+
+verificarSessao();
+</script>
+</body>
+</html>

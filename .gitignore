@@ -1,0 +1,5 @@
+memory/
+*.txt
+odoo_projects.json
+node_modules/
+.env
