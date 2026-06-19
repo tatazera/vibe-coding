@@ -1145,8 +1145,8 @@ module STAND1_Memorial
     cmd.menu_text        = "STAND1_Memorial"
 
     icon_dir = File.join(__dir__, 'icons')
-    cmd.small_icon = File.join(icon_dir, 'icon_16.png')
-    cmd.large_icon = File.join(icon_dir, 'icon_24.png')
+    cmd.small_icon = File.join(icon_dir, 'icon_24.png')
+    cmd.large_icon = File.join(icon_dir, 'icon_32.png')
 
     menu = UI.menu("Plugins")
     menu.add_item(cmd)
@@ -1160,7 +1160,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.1.0 carregado"
+    puts "✅ STAND1_Memorial v6.2.0 carregado"
   end
 
 end
