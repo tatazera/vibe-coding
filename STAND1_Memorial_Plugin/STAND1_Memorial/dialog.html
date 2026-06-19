@@ -284,7 +284,7 @@
     <div class="ht"><h1>STAND1_Memorial</h1><p>Stand1 Produções</p></div>
   </div>
   <div>
-    <button class="hbtn hbtn-s" onclick="persistirEstado(); if(typeof sketchup!=='undefined') sketchup.fechar()">✕</button>
+    <button class="hbtn hbtn-s" onclick="criarTags()" title="Criar as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Tags</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnTema" onclick="toggleTema()" title="Modo claro/escuro">🌙</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnLock" onclick="toggleBloqueio()" title="Bloquear/desbloquear edição">🔓</button>
     <button class="hbtn hbtn-s" onclick="copiarMemorial()" title="Copiar memorial como texto (cola formatado no Bloco de Notas, Word, e-mail)">📋 Copiar</button>
@@ -307,7 +307,6 @@
 <div class="toolbar-modo">
   <button class="btn-modo" id="modoTudo" onclick="carregarTudo()">📋 Adicionar Tudo</button>
   <button class="btn-modo" id="modoSelecao" onclick="carregarSelecao()">🖱️ Adicionar Seleção</button>
-  <button class="btn-modo" onclick="criarTags()" title="Cria as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Criar Tags</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalLinear()">⚙ M Linear</button>
   <button class="btn-modo" onclick="abrirModalLinearAltura()">⚙ Área Lin×Alt</button>

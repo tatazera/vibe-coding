@@ -96,9 +96,9 @@ module STAND1_Memorial
     return UI.messagebox("Nenhum modelo aberto.") unless model
 
     suporta_folders = model.layers.respond_to?(:add_folder)
+    criadas = []; existentes = []
     model.start_operation("Stand1 — Criar Tags", true)
     begin
-      criadas = []; existentes = []
       pasta = nil
       if suporta_folders
         pasta = model.layers.folders.find { |f| f.name == NOME_GRUPO_TAGS }
@@ -116,21 +116,28 @@ module STAND1_Memorial
         end
         layer.color = Sketchup::Color.new(*cfg[:cor])
         layer.visible = true
-        pasta.add_layer(layer) if suporta_folders && pasta && layer.folder != pasta
+        if suporta_folders && pasta
+          begin
+            pasta.add_layer(layer) if layer.folder != pasta
+          rescue
+            # algumas versões usam API diferente para mover tag — ignora
+          end
+        end
       end
 
       model.commit_operation
-      Sketchup.send_action("showLayerManager:")
-
-      msg = "✅ Tags Stand1 prontas!\n\n"
-      msg += "Criadas (#{criadas.length}): #{criadas.join(', ')}\n\n" unless criadas.empty?
-      msg += "Já existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
-      msg += "Sem suporte a pastas de Tags (SketchUp < 2021): tags criadas soltas.\n" unless suporta_folders
-      UI.messagebox(msg)
     rescue => e
       model.abort_operation
-      UI.messagebox("Erro ao criar tags:\n#{e.message}")
+      return UI.messagebox("Erro ao criar tags:\n#{e.message}")
     end
+
+    # Pós-operação (não afeta o commit): abre painel de Tags e informa o resultado.
+    Sketchup.send_action("showLayerManager:") rescue nil
+    msg = "✅ Tags Stand1 prontas!\n\n"
+    msg += "Criadas (#{criadas.length}): #{criadas.join(', ')}\n\n" unless criadas.empty?
+    msg += "Já existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
+    msg += "Sem suporte a pastas de Tags (SketchUp < 2021): tags criadas soltas.\n" unless suporta_folders
+    UI.messagebox(msg)
   end
 
   # Padrão de fábrica para Revestimentos automáticos — editável dentro do plugin.
@@ -1160,7 +1167,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.2.0 carregado"
+    puts "✅ STAND1_Memorial v6.3.0 carregado"
   end
 
 end
