@@ -76,6 +76,63 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "palavras_linear_altura", lista.to_json)
   end
 
+  # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
+  NOME_GRUPO_TAGS = "0. Descritivo"
+  TAGS_PADRAO = [
+    { nome: "ESTRUTURAS",         cor: [43, 109, 184] },
+    { nome: "REVESTIMENTOS",      cor: [52, 168, 83]  },
+    { nome: "COMUNICAÇÃO VISUAL", cor: [234, 67, 53]  },
+    { nome: "MOBILIÁRIO",         cor: [251, 188, 5]  },
+    { nome: "EQUIPAMENTOS",       cor: [102, 60, 163] },
+    { nome: "ELÉTRICA",           cor: [255, 109, 0]  },
+    { nome: "LOCAÇÃO",            cor: [0, 188, 212]  },
+    { nome: "REFERÊNCIA",         cor: [158, 158, 158] }
+  ]
+
+  # Cria as Tags padrão Stand1 no modelo ativo, agrupadas na pasta "0. Descritivo".
+  # Tags existentes não são removidas (só têm a cor atualizada).
+  def self.criar_tags_padrao
+    model = Sketchup.active_model
+    return UI.messagebox("Nenhum modelo aberto.") unless model
+
+    suporta_folders = model.layers.respond_to?(:add_folder)
+    model.start_operation("Stand1 — Criar Tags", true)
+    begin
+      criadas = []; existentes = []
+      pasta = nil
+      if suporta_folders
+        pasta = model.layers.folders.find { |f| f.name == NOME_GRUPO_TAGS }
+        pasta ||= model.layers.add_folder(NOME_GRUPO_TAGS)
+        pasta.visible = true if pasta.respond_to?(:visible=)
+      end
+
+      TAGS_PADRAO.each do |cfg|
+        layer = model.layers[cfg[:nome]]
+        if layer
+          existentes << cfg[:nome]
+        else
+          layer = model.layers.add(cfg[:nome])
+          criadas << cfg[:nome]
+        end
+        layer.color = Sketchup::Color.new(*cfg[:cor])
+        layer.visible = true
+        pasta.add_layer(layer) if suporta_folders && pasta && layer.folder != pasta
+      end
+
+      model.commit_operation
+      Sketchup.send_action("showLayerManager:")
+
+      msg = "✅ Tags Stand1 prontas!\n\n"
+      msg += "Criadas (#{criadas.length}): #{criadas.join(', ')}\n\n" unless criadas.empty?
+      msg += "Já existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
+      msg += "Sem suporte a pastas de Tags (SketchUp < 2021): tags criadas soltas.\n" unless suporta_folders
+      UI.messagebox(msg)
+    rescue => e
+      model.abort_operation
+      UI.messagebox("Erro ao criar tags:\n#{e.message}")
+    end
+  end
+
   # Padrão de fábrica para Revestimentos automáticos — editável dentro do plugin.
   # Materiais do modelo cujo nome contém estas palavras entram automaticamente
   # na seção REVESTIMENTOS ao usar "Adicionar Tudo".
@@ -304,6 +361,10 @@ module STAND1_Memorial
 
     @dialog.add_action_callback("copiar_clipboard") do |_ctx, texto|
       copiar_para_clipboard(texto)
+    end
+
+    @dialog.add_action_callback("criar_tags") do |_ctx|
+      criar_tags_padrao
     end
 
     @dialog.add_action_callback("fechar") do |_ctx|
@@ -1099,7 +1160,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.0.0 carregado"
+    puts "✅ STAND1_Memorial v6.1.0 carregado"
   end
 
 end

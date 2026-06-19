@@ -307,6 +307,7 @@
 <div class="toolbar-modo">
   <button class="btn-modo" id="modoTudo" onclick="carregarTudo()">📋 Adicionar Tudo</button>
   <button class="btn-modo" id="modoSelecao" onclick="carregarSelecao()">🖱️ Adicionar Seleção</button>
+  <button class="btn-modo" onclick="criarTags()" title="Cria as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Criar Tags</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalLinear()">⚙ M Linear</button>
   <button class="btn-modo" onclick="abrirModalLinearAltura()">⚙ Área Lin×Alt</button>
@@ -1287,6 +1288,15 @@ function _doExportarTXT(ocultarMedidas){
   var nomeTxt=buildNomeExport('txt');
   if(typeof sketchup!=='undefined'&&sketchup.exportar_txt) sketchup.exportar_txt(t, nomeTxt);
   else navigator.clipboard.writeText(t).then(function(){alert('Copiado!');});
+}
+
+// Cria as Tags padrão Stand1 no modelo (delegado ao Ruby).
+function criarTags(){
+  if(typeof sketchup!=='undefined'&&sketchup.criar_tags){
+    sketchup.criar_tags();
+  } else {
+    mostrarToast('Disponível apenas dentro do SketchUp.');
+  }
 }
 
 // Copia o memorial (texto limpo, com quebras de linha) para a área de transferência.
