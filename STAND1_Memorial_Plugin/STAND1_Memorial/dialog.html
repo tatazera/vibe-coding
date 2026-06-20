@@ -119,6 +119,9 @@
   .linear-add { display: flex; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--borda); }
   .linear-add input { flex: 1; border: 1.5px solid var(--borda); border-radius: 6px; padding: 7px 11px; font-size: 12px; font-family: var(--font); color: #222; outline: none; }
   .linear-add input:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
+  .manual-input { border: 1.5px solid var(--borda); border-radius: 6px; padding: 8px 11px; font-size: 12.5px; font-family: var(--font); color: #222; outline: none; background: #fff; }
+  .manual-input:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
+  body.dark .manual-input { background: #15161c; border-color: #2e2f3a; color: #e4e4ea; }
   .modal-btns { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
   .modal-btns button { padding: 8px 20px; border-radius: 6px; border: none; font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; }
   .modal-btn-ok { background: var(--azul); color: #fff; }
@@ -307,6 +310,7 @@
 <div class="toolbar-modo">
   <button class="btn-modo" id="modoTudo" onclick="carregarTudo()">📋 Adicionar Tudo</button>
   <button class="btn-modo" id="modoSelecao" onclick="carregarSelecao()">🖱️ Adicionar Seleção</button>
+  <button class="btn-modo" onclick="abrirModalManual()" title="Adicionar um item manualmente (ex.: tomadas) — não precisa estar no modelo">➕ Item Manual</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalLinear()">⚙ M Linear</button>
   <button class="btn-modo" onclick="abrirModalLinearAltura()">⚙ Área Lin×Alt</button>
@@ -319,6 +323,40 @@
 <div class="scroll">
   <div id="preview">
     <div class="vazio"><img id="vazioLogo" alt=""><h3>Nenhum componente carregado</h3><p>Use os botões acima para adicionar componentes ao memorial.</p></div>
+  </div>
+</div>
+
+<div id="modalManual" class="modal-overlay" style="display:none">
+  <div class="modal-rev modal-linear">
+    <div class="mrev-header">
+      <span class="mrev-title">➕ Adicionar Item Manual</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharModalManual()">✕</button>
+      </div>
+    </div>
+    <div class="linear-desc">Itens que não estão no modelo (ex.: tomadas). Ficam marcados como <b>manuais</b> e <b>não somem</b> no Adicionar Tudo.</div>
+    <div style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+      <select id="manualSecao" class="manual-input">
+        <option value="ESTRUTURAS">ESTRUTURAS</option>
+        <option value="REVESTIMENTOS">REVESTIMENTOS</option>
+        <option value="COMUNICAÇÃO VISUAL">COMUNICAÇÃO VISUAL</option>
+        <option value="MOBILIÁRIO">MOBILIÁRIO</option>
+        <option value="EQUIPAMENTOS">EQUIPAMENTOS</option>
+        <option value="ELÉTRICA" selected>ELÉTRICA</option>
+      </select>
+      <input type="text" id="manualDesc" class="manual-input" placeholder="Descrição (ex.: Tomada 220V)" onkeydown="if(event.key==='Enter') adicionarItemManual()">
+      <div style="display:flex; gap:10px;">
+        <input type="number" id="manualQtd" class="manual-input" value="1" min="1" style="flex:1" placeholder="Qtd">
+        <select id="manualUnidade" class="manual-input" style="flex:1">
+          <option value="und.">und.</option>
+          <option value="m">m</option>
+          <option value="m²">m²</option>
+        </select>
+      </div>
+    </div>
+    <div class="linear-add">
+      <button class="mrev-btn mrev-btn-primary" onclick="adicionarItemManual()" style="flex:1">+ Adicionar ao memorial</button>
+    </div>
   </div>
 </div>
 
@@ -751,6 +789,34 @@ function salvarLarguraFita(){
   if(typeof sketchup!=='undefined'&&sketchup.salvar_largura_fita) sketchup.salvar_largura_fita(String(v));
   fecharModalFitaLed();
   mostrarToast('Largura da fita salva. Rode "Adicionar Tudo" para recalcular.');
+}
+
+// ── ITEM MANUAL (ex.: tomadas, itens não modelados) ──
+function abrirModalManual(){
+  document.getElementById('manualDesc').value='';
+  document.getElementById('manualQtd').value='1';
+  document.getElementById('manualUnidade').value='und.';
+  document.getElementById('manualSecao').value='ELÉTRICA';
+  document.getElementById('modalManual').style.display='flex';
+  setTimeout(function(){ var d=document.getElementById('manualDesc'); if(d) d.focus(); },50);
+}
+function fecharModalManual(){ document.getElementById('modalManual').style.display='none'; }
+function adicionarItemManual(){
+  var secao=document.getElementById('manualSecao').value;
+  var desc=document.getElementById('manualDesc').value.trim();
+  var qtd=parseInt(document.getElementById('manualQtd').value,10);
+  var und=document.getElementById('manualUnidade').value||'und.';
+  if(!desc){ mostrarToast('Informe a descrição.'); return; }
+  if(isNaN(qtd)||qtd<1) qtd=1;
+  var item={ descricao:desc, quantidade:qtd, unidade:und, origem:'manual',
+             chave:'manual_'+Date.now()+'_'+Math.floor(Math.random()*10000) };
+  var se=null;
+  for(var i=0;i<dadosMemorial.length;i++){ if(dadosMemorial[i].secao===secao){ se=dadosMemorial[i]; break; } }
+  if(!se){ se={secao:secao, itens:[]}; dadosMemorial.push(se); }
+  se.itens.push(item);
+  ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
+  fecharModalManual();
+  mostrarToast('Item manual adicionado.');
 }
 
 // ── REVESTIMENTOS AUTO — PALAVRAS-CHAVE ──
