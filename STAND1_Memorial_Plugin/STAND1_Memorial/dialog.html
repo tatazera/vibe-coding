@@ -312,6 +312,7 @@
   <button class="btn-modo" onclick="abrirModalLinearAltura()">⚙ Área Lin×Alt</button>
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
+  <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
 </div>
 
@@ -351,6 +352,22 @@
     <div class="linear-add">
       <input type="text" id="inputKwLinearAltura" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordLinearAltura()">
       <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordLinearAltura()">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalFitaLed" class="modal-overlay" style="display:none">
+  <div class="modal-rev modal-linear">
+    <div class="mrev-header">
+      <span class="mrev-title">⚙ Fita LED — Largura</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharModalFitaLed()">✕</button>
+      </div>
+    </div>
+    <div class="linear-desc">A <b>Fita LED</b> (ELÉTRICA) é medida em <b>metro linear</b> = área da textura ÷ largura. Defina a <b>largura da fita</b> (em metros). Padrão: <b>0.02</b> (2 cm).</div>
+    <div class="linear-add">
+      <input type="number" id="inputLarguraFita" step="0.001" min="0.001" placeholder="0.02" style="flex:1">
+      <button class="mrev-btn mrev-btn-primary" onclick="salvarLarguraFita()">Salvar</button>
     </div>
   </div>
 </div>
@@ -715,6 +732,23 @@ function removerKeywordMob(idx){
 function salvarKeywordsMobiliario(){
   if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_mobiliario)
     sketchup.salvar_palavras_mobiliario(JSON.stringify(palavrasMobiliario));
+}
+
+// ── FITA LED — LARGURA (m) ──
+var larguraFita = 0.02;
+function definirLarguraFita(v){ var n=parseFloat(v); if(!isNaN(n)&&n>0) larguraFita=n; }
+function abrirModalFitaLed(){
+  document.getElementById('inputLarguraFita').value = larguraFita;
+  document.getElementById('modalFitaLed').style.display='flex';
+}
+function fecharModalFitaLed(){ document.getElementById('modalFitaLed').style.display='none'; }
+function salvarLarguraFita(){
+  var v=parseFloat(document.getElementById('inputLarguraFita').value);
+  if(isNaN(v)||v<=0){ mostrarToast('Informe uma largura válida (m).'); return; }
+  larguraFita=v;
+  if(typeof sketchup!=='undefined'&&sketchup.salvar_largura_fita) sketchup.salvar_largura_fita(String(v));
+  fecharModalFitaLed();
+  mostrarToast('Largura da fita salva. Rode "Adicionar Tudo" para recalcular.');
 }
 
 // ── REVESTIMENTOS AUTO — PALAVRAS-CHAVE ──

@@ -42,6 +42,23 @@ module STAND1_Memorial
   # Palavras-chave para identificar fitas LED na seção Elétrica
   PALAVRAS_FITA_LED = ["fita led", "fita_led", "led cob", "led fita"]
 
+  # Largura da fita LED (m) — usada para converter área da textura em metro linear.
+  # metro linear = área da textura (um lado) ÷ largura. Editável no mini-painel.
+  LARGURA_FITA_LED_DEFAULT = 0.02
+  def self.largura_fita_led
+    v = Sketchup.read_default("STAND1_Memorial", "largura_fita_led", nil)
+    larg = v ? v.to_f : LARGURA_FITA_LED_DEFAULT
+    larg > 0 ? larg : LARGURA_FITA_LED_DEFAULT
+  rescue
+    LARGURA_FITA_LED_DEFAULT
+  end
+
+  def self.salvar_largura_fita_led(valor)
+    larg = valor.to_f
+    larg = LARGURA_FITA_LED_DEFAULT if larg <= 0
+    Sketchup.write_default("STAND1_Memorial", "largura_fita_led", larg)
+  end
+
   # Padrão de fábrica — editável pelo usuário dentro do plugin
   PALAVRAS_LINEAR_DEFAULT = [
     "brise", "coluna", "ts", "pergola", "sanca",
@@ -264,6 +281,7 @@ module STAND1_Memorial
       @dialog.execute_script("definirPalavrasMobiliario(#{lista_mob})") rescue nil
       lista_rev = palavras_revestimento.to_json
       @dialog.execute_script("definirPalavrasRevestimento(#{lista_rev})") rescue nil
+      @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
       tema = Sketchup.read_default("STAND1_Memorial", "tema_dark", "0")
       @dialog.execute_script("definirTema(#{tema == '1' ? 'true' : 'false'})") rescue nil
       # Restaurar estado salvo (arquivo AppData ou atributo do modelo)
@@ -310,6 +328,10 @@ module STAND1_Memorial
       Sketchup.write_default("STAND1_Memorial", "tema_dark", dark ? "1" : "0")
     end
 
+    @dialog.add_action_callback("salvar_largura_fita") do |_ctx, valor|
+      salvar_largura_fita_led(valor)
+    end
+
     # Carregar TUDO automaticamente (lê todas as tags)
     @dialog.add_action_callback("carregar_tudo") do |_ctx|
       model_atual = Sketchup.active_model
@@ -318,6 +340,7 @@ module STAND1_Memorial
         nome  = nome_do_arquivo(model_atual)
         payload = { secoes: dados, nome_arquivo: nome }.to_json
         @dialog.execute_script("carregarDados(#{payload})")
+        reenviar_listas
       end
     end
 
@@ -333,6 +356,7 @@ module STAND1_Memorial
           nome  = nome_do_arquivo(model_atual)
           payload = { secoes: dados, nome_arquivo: nome }.to_json
           @dialog.execute_script("adicionarDados(#{payload})")
+          reenviar_listas
         end
       end
     end
@@ -403,6 +427,18 @@ module STAND1_Memorial
     nome = nome_do_arquivo(model)
     payload = { secoes: dados, nome_arquivo: nome }.to_json
     @dialog.execute_script("atualizarDados(#{payload})")
+    reenviar_listas
+  end
+
+  # Reenvia as listas de palavras-chave salvas para a interface após cada scan,
+  # garantindo que elas nunca "sumam" ao rodar Adicionar Tudo/Atualizar.
+  def self.reenviar_listas
+    return unless @dialog
+    @dialog.execute_script("definirPalavrasLinear(#{palavras_linear_estrutural.to_json})") rescue nil
+    @dialog.execute_script("definirPalavrasLinearAltura(#{palavras_linear_altura.to_json})") rescue nil
+    @dialog.execute_script("definirPalavrasMobiliario(#{palavras_mobiliario.to_json})") rescue nil
+    @dialog.execute_script("definirPalavrasRevestimento(#{palavras_revestimento.to_json})") rescue nil
+    @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
   end
 
   # ── EXPORTAR PDF HEADLESS ────────────────────────────────────────────────────
@@ -504,6 +540,25 @@ module STAND1_Memorial
     model = Sketchup.active_model
     return unless model
 
+    # Itens agrupados por nome (MOBILIÁRIO/ELÉTRICA): chave "grp__nome" → seleciona
+    # todas as instâncias com aquele nome (qualquer tamanho).
+    if chave_item.to_s.start_with?("grp__")
+      nome_alvo = chave_item.to_s.sub("grp__", "")
+      encontrados = []
+      procurar_por_nome(model.entities, nome_alvo, encontrados)
+      if encontrados.empty?
+        UI.messagebox("Componente não encontrado no modelo:\n\n#{nome_alvo}")
+        return
+      end
+      model.selection.clear
+      model.selection.add(encontrados)
+      bounds = Geom::BoundingBox.new
+      encontrados.each { |e| bounds.add(e.bounds) }
+      model.active_view.zoom(bounds)
+      Sketchup.status_text = "STAND1: #{encontrados.size} componente(s) '#{nome_alvo}' selecionado(s)"
+      return
+    end
+
     partes = chave_item.to_s.split("__")
     return if partes.size < 4
 
@@ -558,6 +613,22 @@ module STAND1_Memorial
       elsif ent.is_a?(Sketchup::Group)
         tr = tr_pai ? tr_pai * ent.transformation : ent.transformation
         procurar_componente(ent.entities, nome_alvo, l_alvo, p_alvo, a_alvo, resultado, tr)
+      end
+    end
+  end
+
+  # Busca instâncias por nome (qualquer dimensão) — para itens agrupados por nome.
+  def self.procurar_por_nome(entities, nome_alvo, resultado)
+    nome_lc = nome_alvo.to_s.downcase
+    entities.each do |ent|
+      if ent.is_a?(Sketchup::ComponentInstance)
+        if ent.definition.name.to_s.downcase == nome_lc
+          resultado << ent
+        else
+          procurar_por_nome(ent.definition.entities, nome_alvo, resultado)
+        end
+      elsif ent.is_a?(Sketchup::Group)
+        procurar_por_nome(ent.entities, nome_alvo, resultado)
       end
     end
   end
@@ -721,13 +792,20 @@ module STAND1_Memorial
       if eh_piso
         # Piso (5B): projeção horizontal = largura × profundidade reais (prioridade)
         (largura * profund).round(2)
-      elsif palavras_linear_altura.any? { |kw| nome.downcase.include?(kw) }
-        # Área real das faces revestidas (uma por plano) — lida com paredes em L,
-        # com retorno e várias paredes. Fallback: maior dim. horizontal × altura.
-        a_rev = area_faces_revestidas_m2(inst, tr_pai)
-        a_rev > 0 ? a_rev : (largura * altura).round(2)
       else
-        area_total_faces_m2(inst)
+        # m² = tudo que está revestido: soma as faces com material de revestimento
+        # (geometria real, uma por plano, escala aplicada). Lida com salas, paredes
+        # em L, depósitos, backdrops revestidos — identifica pelas faces pintadas.
+        a_rev = area_faces_revestidas_m2(inst, tr_pai)
+        if a_rev > 0
+          a_rev
+        elsif palavras_linear_altura.any? { |kw| nome.downcase.include?(kw) }
+          # Sem revestimento detectado, mas é peça linear (parede/sanca): L × altura.
+          (largura * altura).round(2)
+        else
+          # Sem revestimento e não-linear: superfície total das faces (comportamento antigo).
+          area_total_faces_m2(inst)
+        end
       end
     else
       (largura * altura).round(2)
@@ -776,11 +854,27 @@ module STAND1_Memorial
       return
     end
 
-    # ── DEMAIS SEÇÕES: agrupa por componente ──
-    chave = "#{nome}__#{chave_dims}"
+    # ── FITA LED (ELÉTRICA): metro linear = área da textura (um lado) ÷ largura ──
+    eh_fita = secao == "ELÉTRICA" && PALAVRAS_FITA_LED.any? { |kw| nome.downcase.include?(kw) }
+    metros_fita = 0.0
+    if eh_fita
+      area_tex = area_faces_material_m2(inst, tr_pai)  # qualquer face com textura
+      metros_fita = (area_tex / largura_fita_led).round(2) if area_tex > 0
+    end
+
+    # ── AGRUPAMENTO ──
+    # MOBILIÁRIO e ELÉTRICA agrupam só pelo NOME (medida = 1ª peça com aquele nome).
+    # Demais seções agrupam por nome + dimensões (tamanhos diferentes = linhas distintas).
+    chave = if ["MOBILIÁRIO", "ELÉTRICA"].include?(secao)
+      "grp__#{nome.downcase}"
+    else
+      "#{nome}__#{chave_dims}"
+    end
 
     if secoes_raw[secao][chave]
       secoes_raw[secao][chave][:quantidade] += 1
+      # Fita LED: soma o comprimento real de cada instância
+      secoes_raw[secao][chave][:metros_fita] += metros_fita if eh_fita
     else
       secoes_raw[secao][chave] = {
         nome:               nome,
@@ -790,6 +884,7 @@ module STAND1_Memorial
         area_face_frontal:  area_face_frontal,
         area_material:      area_material,
         comprimento_linear: comprimento_linear,
+        metros_fita:        metros_fita,
         quantidade:         1,
         chave:              chave
       }
@@ -923,11 +1018,12 @@ module STAND1_Memorial
     when "EQUIPAMENTOS"
       build_item(nome, qtd, "und.")
 
-    # ELÉTRICA: fitas LED em metro linear, demais em und.
+    # ELÉTRICA: fitas LED em metro linear (área da textura ÷ largura), demais em und.
     when "ELÉTRICA"
       eh_fita = PALAVRAS_FITA_LED.any? { |kw| nome_lower.include?(kw) }
       if eh_fita
-        total_m = (comp * qtd).round(2)
+        total_m = (item[:metros_fita] || 0.0).round(2)
+        total_m = (comp * qtd).round(2) if total_m <= 0  # fallback: sem textura detectada
         desc = "#{nome} (#{fmt(total_m)}m)"
         build_item(desc, 1, "und.")
       else
@@ -1036,18 +1132,39 @@ module STAND1_Memorial
   # uma face por plano (remove faces coplanares duplicadas), com a escala da
   # instância/pais aplicada. Lida com paredes em L, com retorno e várias paredes,
   # pois mede a geometria real — não a caixa delimitadora.
-  def self.area_faces_revestidas_m2(inst, tr_pai = nil)
+  # Área (m²) das faces com material, uma por plano, escala aplicada.
+  # kws = nil  → qualquer face com material (ex.: textura da fita LED).
+  # kws = [..] → só faces cujo material casa com as palavras (ex.: revestimentos).
+  def self.area_faces_material_m2(inst, tr_pai = nil, kws = nil)
     tr = tr_pai ? tr_pai * inst.transformation : inst.transformation
     planos = {}
-    acumular_faces_revestidas(inst.definition.entities, tr, planos)
+    acumular_faces_material(inst.definition.entities, tr, planos, kws)
     total_pol2 = planos.values.inject(0.0) { |s, a| s + a }
     (total_pol2 * POL2_PARA_M2).round(2)
   end
 
-  def self.acumular_faces_revestidas(entities, tr, planos)
+  # Área das faces revestidas = faces com material da lista de Revestimentos.
+  def self.area_faces_revestidas_m2(inst, tr_pai = nil)
+    kws = palavras_revestimento.map { |k| k.to_s.downcase }.reject(&:empty?)
+    return 0.0 if kws.empty?
+    area_faces_material_m2(inst, tr_pai, kws)
+  end
+
+  # Face com material? Se kws dado, exige que o nome do material case com alguma.
+  def self.face_tem_material?(face, kws)
+    mats = [face.material, face.back_material].compact
+    return false if mats.empty?
+    return true if kws.nil?
+    mats.any? do |m|
+      nome = (m.respond_to?(:display_name) ? m.display_name : m.name).to_s.downcase
+      kws.any? { |kw| nome.include?(kw) }
+    end
+  end
+
+  def self.acumular_faces_material(entities, tr, planos, kws)
     entities.each do |ent|
       if ent.is_a?(Sketchup::Face)
-        next unless ent.material || ent.back_material   # só faces revestidas
+        next unless face_tem_material?(ent, kws)
         pts  = ent.outer_loop.vertices.map { |v| v.position.transform(tr) }
         area = area_poligono_3d(pts)
         next if area <= 1e-9
@@ -1055,9 +1172,9 @@ module STAND1_Memorial
         # uma face por plano: mantém a maior área no mesmo plano (descarta duplicadas)
         planos[chave] = area if area > (planos[chave] || 0.0)
       elsif ent.is_a?(Sketchup::Group)
-        acumular_faces_revestidas(ent.entities, tr * ent.transformation, planos)
+        acumular_faces_material(ent.entities, tr * ent.transformation, planos, kws)
       elsif ent.is_a?(Sketchup::ComponentInstance)
-        acumular_faces_revestidas(ent.definition.entities, tr * ent.transformation, planos)
+        acumular_faces_material(ent.definition.entities, tr * ent.transformation, planos, kws)
       end
     end
   end
@@ -1167,7 +1284,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.3.0 carregado"
+    puts "✅ STAND1_Memorial v6.4.0 carregado"
   end
 
 end
