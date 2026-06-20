@@ -573,7 +573,9 @@ function mesclarInteligente(novos){
 function carregarDados(p){
   nomeArquivo=p.nome_arquivo||nomeArquivo;
   if(!nomeProjeto){nomeProjeto=nomeArquivo; document.getElementById('nomeProjeto').value=nomeProjeto;}
-  mesclarSecoes(p.secoes||[], true);
+  // Fusão inteligente: remove itens órfãos (ex.: chaves antigas), evita duplicar,
+  // preserva itens manuais e movidos de seção.
+  mesclarInteligente(p.secoes||[]);
   atualizarStatus(); renderizar(); persistirEstado();
 }
 

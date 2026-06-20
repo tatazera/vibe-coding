@@ -655,6 +655,10 @@ module STAND1_Memorial
     # nem os componentes com tag REVESTIMENTOS — só complementa)
     adicionar_revestimentos_auto(model, secoes_raw)
 
+    # Fita LED automática: lê a textura "Fita LED" no modelo (mesmo sem tag) e
+    # adiciona em ELÉTRICA como metro linear (área ÷ largura).
+    adicionar_fita_led_auto(model, secoes_raw)
+
     montar_resultado(secoes_raw)
   end
 
@@ -680,6 +684,38 @@ module STAND1_Memorial
         chave:         chave
       }
     end
+  end
+
+  # Varre os materiais do modelo procurando a textura de Fita LED (pelo nome) e
+  # adiciona um item em ELÉTRICA em metro linear = área da textura ÷ largura.
+  # Funciona mesmo sem o componente estar tagueado (a fita é só textura).
+  def self.adicionar_fita_led_auto(model, secoes_raw)
+    larg = largura_fita_led
+    return if larg <= 0
+
+    area_total = 0.0
+    listar_materiais_revestimentos(model).each do |m|
+      nome = m["nome"].to_s.downcase
+      area_total += m["area"].to_f if PALAVRAS_FITA_LED.any? { |kw| nome.include?(kw) }
+    end
+    return if area_total <= 0
+
+    metros = (area_total / larg).round(2)
+    chave  = "fita_led_auto"
+    return if secoes_raw["ELÉTRICA"][chave]
+
+    secoes_raw["ELÉTRICA"][chave] = {
+      nome:               "Fita LED",
+      largura:            0.0,
+      profund:            0.0,
+      altura:             0.0,
+      area_face_frontal:  0.0,
+      area_material:      area_total.round(2),
+      comprimento_linear: metros,
+      metros_fita:        metros,
+      quantidade:         1,
+      chave:              chave
+    }
   end
 
   # ── COLETA DE DADOS (SELEÇÃO) ──────────────────────────────────────────────
@@ -1284,7 +1320,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.4.0 carregado"
+    puts "✅ STAND1_Memorial v6.5.0 carregado"
   end
 
 end
