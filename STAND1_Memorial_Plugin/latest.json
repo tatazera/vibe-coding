@@ -1,5 +1,5 @@
 ﻿{
-    "versao":  "6.7.10",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.10.rbz",
-    "notas":  "Botao de atualizacao movido para o cabecalho (ao lado de Tags)."
+    "versao":  "6.7.11",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.11.rbz",
+    "notas":  "Auto-update agora usa a rede nativa do SketchUp (corrige falha de verificacao no Windows)."
 }

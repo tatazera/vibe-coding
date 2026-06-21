@@ -15,7 +15,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "6.7.10"
+  VERSAO        = "6.7.11"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # Compara "a.b.c" numericamente: remota > local?
@@ -28,64 +28,91 @@ module STAND1_Memorial
     (r <=> l) > 0
   end
 
-  # GET HTTPS com follow de redirect e verificação de cert tolerante (o OpenSSL
-  # de algumas builds do SketchUp no Windows falha na cadeia de certificados).
-  def self.http_get(url, limite = 4)
+  # GET assíncrono. Prioriza Sketchup::Http (pilha de rede nativa do Windows —
+  # respeita proxy/TLS do sistema, sem depender do OpenSSL do SketchUp, que falha
+  # o handshake com o GitHub em muitas builds). Faz fallback para Net::HTTP.
+  # Chama on_body.call(corpo_string_ou_nil, ok_booleano).
+  def self.http_async(url, &on_body)
+    if defined?(Sketchup::Http) && defined?(Sketchup::Http::Request)
+      req = Sketchup::Http::Request.new(url, Sketchup::Http::GET)
+      req.start do |_request, response|
+        code = response.respond_to?(:status_code) ? response.status_code.to_i : 0
+        if code >= 200 && code < 400 && response.body
+          on_body.call(response.body, true)
+        else
+          on_body.call(nil, false)
+        end
+      end
+    else
+      body = http_get_net(url) rescue nil
+      on_body.call(body, !body.nil?)
+    end
+  rescue
+    on_body.call(nil, false)
+  end
+
+  # Fallback síncrono (SketchUp sem Sketchup::Http): Net::HTTP com cert tolerante.
+  def self.http_get_net(url, limite = 4)
     require 'net/http'
     require 'openssl'
     raise "muitos redirecionamentos" if limite <= 0
     uri  = URI(url)
     http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl     = (uri.scheme == "https")
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.use_ssl      = (uri.scheme == "https")
+    http.verify_mode  = OpenSSL::SSL::VERIFY_NONE
     http.open_timeout = 8
     http.read_timeout = 60
     resp = http.get(uri.request_uri)
     case resp
-    when Net::HTTPSuccess      then resp
-    when Net::HTTPRedirection  then http_get(resp["location"], limite - 1)
+    when Net::HTTPSuccess     then resp.body
+    when Net::HTTPRedirection then http_get_net(resp["location"], limite - 1)
     else raise "HTTP #{resp.code}"
     end
-  end
-
-  def self.buscar_manifesto
-    resp = http_get(URL_MANIFESTO)
-    JSON.parse(resp.body)
-  rescue
-    nil
   end
 
   # Verifica versão e sinaliza o diálogo. manual=true mostra também "sem update".
   def self.verificar_atualizacao(manual = false)
     return unless @dialog
-    info = buscar_manifesto
-    if info.nil?
-      @dialog.execute_script("avisoUpdateErro()") rescue nil if manual
-      return
-    end
-    nova = info["versao"].to_s
-    if versao_maior?(nova, VERSAO)
-      payload = { versao: nova, notas: info["notas"].to_s, rbz: info["rbz"].to_s }.to_json
-      @dialog.execute_script("mostrarUpdate(#{payload})") rescue nil
-    elsif manual
-      @dialog.execute_script("avisoSemUpdate(#{VERSAO.to_json})") rescue nil
+    http_async(URL_MANIFESTO) do |body, ok|
+      next (@dialog.execute_script("avisoUpdateErro()") rescue nil) if (!ok || body.nil?) && manual
+      next unless ok && body
+      begin
+        info = JSON.parse(body)
+        nova = info["versao"].to_s
+        if versao_maior?(nova, VERSAO)
+          payload = { versao: nova, notas: info["notas"].to_s, rbz: info["rbz"].to_s }.to_json
+          @dialog.execute_script("mostrarUpdate(#{payload})") rescue nil
+        elsif manual
+          @dialog.execute_script("avisoSemUpdate(#{VERSAO.to_json})") rescue nil
+        end
+      rescue
+        @dialog.execute_script("avisoUpdateErro()") rescue nil if manual
+      end
     end
   end
 
   # Baixa o .rbz e instala via API nativa; fallback abre a URL no navegador.
   def self.baixar_e_instalar_update(url)
-    resp    = http_get(url)
-    destino = File.join(Dir.tmpdir, "STAND1_Memorial_update.rbz")
-    File.open(destino, "wb") { |f| f.write(resp.body) }
-    if Sketchup.respond_to?(:install_from_archive)
-      Sketchup.install_from_archive(destino)
-      UI.messagebox("✅ Atualização instalada!\n\nReinicie o SketchUp para concluir.")
-    else
-      UI.openURL(url)
+    http_async(url) do |body, ok|
+      if !ok || body.nil?
+        UI.messagebox("Não foi possível baixar a atualização.\nAbrindo o download no navegador.")
+        UI.openURL(url) rescue nil
+        next
+      end
+      begin
+        destino = File.join(Dir.tmpdir, "STAND1_Memorial_update.rbz")
+        File.open(destino, "wb") { |f| f.write(body) }
+        if Sketchup.respond_to?(:install_from_archive)
+          Sketchup.install_from_archive(destino)
+          UI.messagebox("✅ Atualização instalada!\n\nReinicie o SketchUp para concluir.")
+        else
+          UI.openURL(url)
+        end
+      rescue => e
+        UI.messagebox("Falha ao instalar a atualização:\n#{e.message}\n\nAbrindo o download no navegador.")
+        UI.openURL(url) rescue nil
+      end
     end
-  rescue => e
-    UI.messagebox("Não foi possível atualizar automaticamente:\n#{e.message}\n\nAbrindo o download no navegador.")
-    UI.openURL(url) rescue nil
   end
 
   # Apenas estas 6 tags são exportadas — na ordem correta
