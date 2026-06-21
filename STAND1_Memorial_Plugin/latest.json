@@ -1,5 +1,5 @@
 ﻿{
-    "versao":  "6.7.11",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.11.rbz",
-    "notas":  "Auto-update agora usa a rede nativa do SketchUp (corrige falha de verificacao no Windows)."
+    "versao":  "6.7.12",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.12.rbz",
+    "notas":  "Correcao do auto-update: retem a requisicao de rede (evita falha silenciosa) + diagnostico."
 }

@@ -15,7 +15,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "6.7.11"
+  VERSAO        = "6.7.12"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # Compara "a.b.c" numericamente: remota > local?
@@ -35,19 +35,27 @@ module STAND1_Memorial
   def self.http_async(url, &on_body)
     if defined?(Sketchup::Http) && defined?(Sketchup::Http::Request)
       req = Sketchup::Http::Request.new(url, Sketchup::Http::GET)
-      req.start do |_request, response|
+      # Retém a requisição: sem isso o GC a coleta antes do callback assíncrono
+      # disparar e a chamada morre em silêncio (bug clássico do Sketchup::Http).
+      (@http_reqs ||= []) << req
+      req.start do |request, response|
+        (@http_reqs ||= []).delete(request) rescue nil
         code = response.respond_to?(:status_code) ? response.status_code.to_i : 0
-        if code >= 200 && code < 400 && response.body
-          on_body.call(response.body, true)
+        body = response.respond_to?(:body) ? response.body : nil
+        puts "[STAND1] update GET #{url} -> status #{code}, #{body ? body.bytesize : 0} bytes"
+        if code >= 200 && code < 400 && body && !body.empty?
+          on_body.call(body, true)
         else
           on_body.call(nil, false)
         end
       end
     else
+      puts "[STAND1] Sketchup::Http indisponivel - fallback Net::HTTP"
       body = http_get_net(url) rescue nil
       on_body.call(body, !body.nil?)
     end
-  rescue
+  rescue => e
+    puts "[STAND1] update erro: #{e.class}: #{e.message}"
     on_body.call(nil, false)
   end
 
