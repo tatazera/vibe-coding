@@ -1230,7 +1230,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.5 carregado"
+    puts "✅ STAND1_Memorial v6.7.6 carregado"
   end
 
 end

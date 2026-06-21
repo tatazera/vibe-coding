@@ -530,7 +530,10 @@ function mesclarSecoes(novos, setQtd){
         var f=false;
         for(var j=0;j<se.itens.length;j++){
           if(se.itens[j].chave===ni.chave){
-            se.itens[j].descricao=ni.descricao;
+            // não sobrescreve descrição de itens manuais/editados (tag de controle)
+            if(se.itens[j].origem!=='manual' && !se.itens[j].editado){
+              se.itens[j].descricao=ni.descricao;
+            }
             se.itens[j].quantidade=setQtd?ni.quantidade:se.itens[j].quantidade+ni.quantidade;
             f=true; break;
           }
@@ -577,7 +580,12 @@ function mesclarInteligente(novos){
       ni.origem='modelo';
       var ex=existentes[ni.chave];
       if(ex){
-        ex.quantidade=ni.quantidade; // atualiza contagem do modelo
+        // itens manuais ou editados à mão são preservados (têm a tag de controle);
+        // os demais recalculam medidas/formato e contagem a partir do modelo
+        if(ex.origem!=='manual' && !ex.editado){
+          ex.descricao=ni.descricao;
+          ex.quantidade=ni.quantidade;
+        }
       } else {
         var se=null;
         for(var i=0;i<dadosMemorial.length;i++){if(dadosMemorial[i].secao===ns.secao){se=dadosMemorial[i];break;}}
@@ -979,7 +987,8 @@ function salvarQuantidade(el){
       for(var j=0;j<dadosMemorial[i].itens.length;j++){
         if(dadosMemorial[i].itens[j].chave===ch){
           dadosMemorial[i].itens[j].quantidade=val;
-          persistirEstado(); return;
+          dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
+          persistirEstado(); renderizar(); return;
         }
       }
     }
@@ -996,7 +1005,8 @@ function salvarDescricao(el){
       for(var j=0;j<dadosMemorial[i].itens.length;j++){
         if(dadosMemorial[i].itens[j].chave===ch){
           dadosMemorial[i].itens[j].descricao=val;
-          persistirEstado(); return;
+          dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
+          persistirEstado(); renderizar(); return;
         }
       }
     }
@@ -1137,7 +1147,7 @@ function renderizar(){
       var qtdHtml='<span class="item-qtd-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarQuantidade(this)" title="Clique para editar a quantidade">'+fmtQtd(item.quantidade)+'</span>';
       var descHtml='<span class="item-desc-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarDescricao(this)" title="Clique para editar a descrição">'+escaparAttr(fmtMedidas(item.descricao))+'</span>';
       var handle='<span class="drag-handle" draggable="true" ondragstart="dragItem(event,this.parentNode)" title="Arrastar para reordenar">⋮</span>';
-      var badge=item.origem==='manual'?'<span class="badge-manual" title="Item manual — nunca é alterado pelo Atualizar">✎</span>':'';
+      var badge=(item.origem==='manual'||item.editado)?'<span class="badge-manual" title="Item manual ou editado — preservado no Atualizar">✎</span>':'';
       return '<li data-sn="'+escaparAttr(sn)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+lupa+btnObs+exc+obsWrap+obsPrint+'</li>';
     }).join('');
     return '<div class="secao" data-sn="'+escaparAttr(sn)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+sn+'</div><ul class="itens">'+ih+'</ul></div>';
