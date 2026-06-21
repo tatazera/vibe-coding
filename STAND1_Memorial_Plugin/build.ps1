@@ -36,5 +36,7 @@ if (Test-Path $manifesto) {
 }
 $rbzUrl = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v$ver.rbz"
 $obj = [ordered]@{ versao = $ver; rbz = $rbzUrl; notas = $notas }
-($obj | ConvertTo-Json) | Out-File -FilePath $manifesto -Encoding utf8
+# Grava SEM BOM: o Out-File -Encoding utf8 do PowerShell 5.1 adiciona BOM (EF BB BF),
+# e o JSON.parse do Ruby falha com BOM no inicio. UTF8Encoding($false) = sem BOM.
+[System.IO.File]::WriteAllText($manifesto, ($obj | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "Manifesto atualizado: $manifesto (v$ver)"

@@ -85,7 +85,9 @@ module STAND1_Memorial
       next (@dialog.execute_script("avisoUpdateErro()") rescue nil) if (!ok || body.nil?) && manual
       next unless ok && body
       begin
-        info = JSON.parse(body)
+        # Remove BOM (UTF-8) eventual no inicio — senao o JSON.parse falha.
+        limpo = body.to_s.dup.force_encoding("UTF-8").sub(/\A\xEF\xBB\xBF/n, "").sub(/\A﻿/, "")
+        info = JSON.parse(limpo)
         nova = info["versao"].to_s
         if versao_maior?(nova, VERSAO)
           payload = { versao: nova, notas: info["notas"].to_s, rbz: info["rbz"].to_s }.to_json
