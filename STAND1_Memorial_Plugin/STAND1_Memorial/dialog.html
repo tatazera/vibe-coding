@@ -307,6 +307,7 @@
   </div>
   <div>
     <button class="hbtn hbtn-s" onclick="criarTags()" title="Criar as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Tags</button>
+    <button class="hbtn hbtn-s" onclick="verificarUpdate()" title="Verificar se há nova versão no GitHub">🔄 Atualização</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnTema" onclick="toggleTema()" title="Modo claro/escuro">🌙</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnLock" onclick="toggleBloqueio()" title="Bloquear/desbloquear edição">🔓</button>
     <button class="hbtn hbtn-s" onclick="copiarMemorial()" title="Copiar memorial como texto (cola formatado no Bloco de Notas, Word, e-mail)">📋 Copiar</button>
@@ -335,7 +336,6 @@
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
-  <button class="btn-modo" onclick="verificarUpdate()" title="Verificar se há nova versão no GitHub">🔄 Verificar atualização</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
 </div>
 

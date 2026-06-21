@@ -1,5 +1,5 @@
 ﻿{
-    "versao":  "6.7.9",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.9.rbz",
-    "notas":  "Mobiliario com reformatacao instantanea + auto-update via GitHub."
+    "versao":  "6.7.10",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.10.rbz",
+    "notas":  "Botao de atualizacao movido para o cabecalho (ao lado de Tags)."
 }
