@@ -3,3 +3,4 @@ memory/
 odoo_projects.json
 node_modules/
 .env
+*.tmp
