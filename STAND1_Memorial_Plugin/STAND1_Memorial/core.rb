@@ -15,7 +15,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "6.7.12"
+  VERSAO        = "6.7.13"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # Compara "a.b.c" numericamente: remota > local?
