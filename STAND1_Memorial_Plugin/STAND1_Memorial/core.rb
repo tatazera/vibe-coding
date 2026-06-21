@@ -981,7 +981,8 @@ module STAND1_Memorial
         desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt(af)}m²"
         build_item(desc, qtd, "und.")
       elsif eh_linear
-        desc = "#{nome} (#{fmt(comp)}m)"
+        # medidas da peça + valor em metro linear no lugar do m²
+        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(comp)}m"
         build_item(desc, qtd, "und.")
       else
         desc = "#{nome} - #{fmt(af)}m²"
@@ -1229,7 +1230,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.4 carregado"
+    puts "✅ STAND1_Memorial v6.7.5 carregado"
   end
 
 end
