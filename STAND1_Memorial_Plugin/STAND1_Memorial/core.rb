@@ -61,8 +61,11 @@ module STAND1_Memorial
 
   # Padrão de fábrica — editável pelo usuário dentro do plugin
   PALAVRAS_LINEAR_DEFAULT = [
-    "brise", "coluna", "pergola", "ripa", "pilar", "viga", "barrote"
+    "brise", "coluna", "moldura", "pergola", "ripa", "pilar",
+    "sanca", "viga", "barrote"
   ]
+
+  PALAVRAS_HORIZONTAL_DEFAULT = ["forro", "teto"]
 
   def self.palavras_linear_estrutural
     json = Sketchup.read_default("STAND1_Memorial", "palavras_linear", nil)
@@ -160,6 +163,18 @@ module STAND1_Memorial
   # ── PERSISTÊNCIA DE ESTADO (arquivo por projeto) ────────────────────────────
 
   @ultimo_estado_json = nil
+  @cache = {}
+
+  def self.limpar_cache
+    @cache = {}
+  end
+
+  def self.scale_sig(tr)
+    m = tr.to_a
+    [(m[0]**2+m[1]**2+m[2]**2).round(4),
+     (m[4]**2+m[5]**2+m[6]**2).round(4),
+     (m[8]**2+m[9]**2+m[10]**2).round(4)]
+  end
 
   def self.pasta_estados
     dir = File.join(ENV['APPDATA'] || Dir.tmpdir, "STAND1_Memorial", "estados")
@@ -619,6 +634,7 @@ module STAND1_Memorial
 
   def self.coletar_dados(model)
     @ultimo_modo = :tudo
+    limpar_cache
     secoes_raw = {}
     SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
 
@@ -626,25 +642,19 @@ module STAND1_Memorial
       processar_entidade(ent, secoes_raw)
     end
 
-    # Revestimentos automáticos por palavra-chave (não substitui o fluxo manual
-    # nem os componentes com tag REVESTIMENTOS — só complementa)
-    adicionar_revestimentos_auto(model, secoes_raw)
-
-    # Fita LED automática: lê a textura "Fita LED" no modelo (mesmo sem tag) e
-    # adiciona em ELÉTRICA como metro linear (área ÷ largura).
-    adicionar_fita_led_auto(model, secoes_raw)
+    # listar_materiais_revestimentos é chamado uma única vez e reaproveitado
+    materiais = listar_materiais_revestimentos(model)
+    adicionar_revestimentos_auto(secoes_raw, materiais)
+    adicionar_fita_led_auto(secoes_raw, materiais)
 
     montar_resultado(secoes_raw)
   end
 
-  # Varre os materiais do modelo e adiciona à seção REVESTIMENTOS os que casam
-  # com as palavras-chave configuradas. Usa a mesma chave do fluxo por tag
-  # (rev_mat__nome) — se o material já entrou via componente taggeado, não duplica.
-  def self.adicionar_revestimentos_auto(model, secoes_raw)
+  def self.adicionar_revestimentos_auto(secoes_raw, materiais)
     kws = palavras_revestimento.map { |k| k.to_s.downcase }.reject(&:empty?)
     return if kws.empty?
 
-    listar_materiais_revestimentos(model).each do |m|
+    materiais.each do |m|
       nome = m["nome"].to_s
       next unless kws.any? { |kw| nome.downcase.include?(kw) }
 
@@ -661,15 +671,12 @@ module STAND1_Memorial
     end
   end
 
-  # Varre os materiais do modelo procurando a textura de Fita LED (pelo nome) e
-  # adiciona um item em ELÉTRICA em metro linear = área da textura ÷ largura.
-  # Funciona mesmo sem o componente estar tagueado (a fita é só textura).
-  def self.adicionar_fita_led_auto(model, secoes_raw)
+  def self.adicionar_fita_led_auto(secoes_raw, materiais)
     larg = largura_fita_led
     return if larg <= 0
 
     area_total = 0.0
-    listar_materiais_revestimentos(model).each do |m|
+    materiais.each do |m|
       nome = m["nome"].to_s.downcase
       area_total += m["area"].to_f if PALAVRAS_FITA_LED.any? { |kw| nome.include?(kw) }
     end
@@ -697,6 +704,7 @@ module STAND1_Memorial
 
   def self.coletar_dados_selecao(model, selection)
     @ultimo_modo = :selecao
+    limpar_cache
     secoes_raw = {}
     SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
 
@@ -794,29 +802,26 @@ module STAND1_Memorial
     chave_dims = Dimensoes.chave_dims(largura, profund, altura)
     _ck = [largura, profund, altura].sort.reverse
 
-    eh_piso = secao == "ESTRUTURAS" && nome.downcase.include?("piso")
-
-    eh_linear = secao == "ESTRUTURAS" && palavras_linear_estrutural.any? { |kw| nome.downcase.include?(kw) }
+    nome_lower_c = nome.downcase
+    eh_horizontal = secao == "ESTRUTURAS" && (
+      nome_lower_c.include?("piso") ||
+      PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower_c.include?(kw) }
+    )
+    eh_linear = secao == "ESTRUTURAS" && palavras_linear_estrutural.any? { |kw| nome_lower_c.include?(kw) }
 
     area_face_frontal = if secao == "COMUNICAÇÃO VISUAL"
       # CV mantém "2 maiores dimensões" (lonas/logos: espessura é a menor dim)
       (_ck[0] * _ck[1]).round(2)
     elsif secao == "ESTRUTURAS"
-      if eh_piso
-        # 1. Piso: projeção horizontal = largura × profundidade reais
+      if eh_horizontal
+        # 1. Piso/forro/teto: projeção horizontal = largura × profundidade
         (largura * profund).round(2)
       elsif eh_linear
-        # 2. Perfil estrutural (coluna, viga, ripa...): comprimento real (maior dim)
+        # 2. Perfil estrutural (coluna, viga, sanca...): comprimento real (maior dim)
         comprimento_linear
       else
-        # 3. Superfície revestida: soma faces com material de revestimento
-        a_rev = area_faces_revestidas_m2(inst, tr_pai)
-        if a_rev > 0
-          a_rev
-        else
-          # 4. Resto: superfície total das faces
-          area_total_faces_m2(inst)
-        end
+        # 3. Parede/painel/testeira/backdrop e similares: 2 maiores dimensões (face frontal)
+        (_ck[0] * _ck[1]).round(2)
       end
     else
       (largura * altura).round(2)
@@ -988,11 +993,12 @@ module STAND1_Memorial
 
     case secao
 
-    # ESTRUTURAS: piso=L×P m²; perfil=comprimento und.; demais=m² revestida ou total
+    # ESTRUTURAS: horizontal=L×P m²; linear=comprimento und.; demais=m² face
     when "ESTRUTURAS"
-      eh_piso   = nome_lower.include?("piso")
-      eh_linear = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
-      if eh_piso
+      eh_horizontal = nome_lower.include?("piso") ||
+                      PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower.include?(kw) }
+      eh_linear     = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
+      if eh_horizontal
         desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt(af)}m²"
         build_item(desc, qtd, "und.")
       elsif eh_linear
@@ -1121,8 +1127,10 @@ module STAND1_Memorial
 
   # Soma a área de TODAS as faces do componente (superfície total)
   def self.area_total_faces_m2(inst)
+    k = [:atf, inst.definition.object_id]
+    return @cache[k] if @cache.key?(k)
     total_pol2 = somar_faces_recursivo(inst.definition.entities)
-    (total_pol2 * POL2_PARA_M2).round(2)
+    @cache[k] = (total_pol2 * POL2_PARA_M2).round(2)
   end
 
   def self.somar_faces_recursivo(entities)
@@ -1149,10 +1157,12 @@ module STAND1_Memorial
   # kws = [..] → só faces cujo material casa com as palavras (ex.: revestimentos).
   def self.area_faces_material_m2(inst, tr_pai = nil, kws = nil)
     tr = tr_pai ? tr_pai * inst.transformation : inst.transformation
+    k = [:afm, inst.definition.object_id, scale_sig(tr), kws ? kws.sort : nil]
+    return @cache[k] if @cache.key?(k)
     planos = {}
     acumular_faces_material(inst.definition.entities, tr, planos, kws)
     total_pol2 = planos.values.inject(0.0) { |s, a| s + a }
-    (total_pol2 * POL2_PARA_M2).round(2)
+    @cache[k] = (total_pol2 * POL2_PARA_M2).round(2)
   end
 
   # Área das faces revestidas = faces com material da lista de Revestimentos.
@@ -1296,7 +1306,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.0 carregado"
+    puts "✅ STAND1_Memorial v6.7.3 carregado"
   end
 
 end
