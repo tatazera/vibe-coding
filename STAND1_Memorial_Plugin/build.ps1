@@ -11,6 +11,14 @@ if (-not $ver) { throw "Versão não encontrada no loader." }
 $out = Join-Path $root "STAND1_Memorial_v$ver.rbz"
 if (Test-Path $out) { Remove-Item $out -Force }
 
+# Arquiva versoes anteriores: mantem so o .rbz atual na pasta principal,
+# move os demais para versoes_anteriores/.
+$arquivo = Join-Path $root "versoes_anteriores"
+New-Item -ItemType Directory -Force $arquivo | Out-Null
+Get-ChildItem -Path $root -Filter "STAND1_Memorial_v*.rbz" | Where-Object { $_.Name -ne "STAND1_Memorial_v$ver.rbz" } | ForEach-Object {
+  Move-Item $_.FullName (Join-Path $arquivo $_.Name) -Force
+}
+
 $tmp = Join-Path $env:TEMP "s1mem_build.zip"
 if (Test-Path $tmp) { Remove-Item $tmp -Force }
 
