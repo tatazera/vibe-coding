@@ -28,15 +28,38 @@ module STAND1_Memorial
     "mdf", "compensado", "alumínio", "aluminio", "metalon"
   ]
 
-  def self.palavras_mobiliario
-    json = Sketchup.read_default("STAND1_Memorial", "palavras_mobiliario", nil)
-    json ? JSON.parse(json) : PALAVRAS_MOBILIARIO_DEFAULT.dup
+  # Persistência robusta de listas de palavras-chave em Sketchup defaults.
+  # Armazena uma palavra por linha (sem aspas/colchetes): o registro do SketchUp
+  # aplica escaping em strings JSON, fazendo a releitura falhar e resetar para o
+  # padrão (bug do reset ao "Adicionar Tudo"). Lê o formato legado JSON também.
+  def self.ler_lista(chave, padrao)
+    raw = Sketchup.read_default("STAND1_Memorial", chave, nil)
+    return padrao.dup if raw.nil?
+    s = raw.to_s
+    if s.lstrip.start_with?("[")
+      begin
+        v = JSON.parse(s)
+        return v if v.is_a?(Array)
+      rescue
+      end
+      return padrao.dup # JSON legado corrompido pelo registro → padrão
+    end
+    s.split("\n").map { |x| x.strip }.reject(&:empty?)
   rescue
-    PALAVRAS_MOBILIARIO_DEFAULT.dup
+    padrao.dup
+  end
+
+  def self.salvar_lista(chave, lista)
+    arr = Array(lista).map { |x| x.to_s.strip }.reject(&:empty?)
+    Sketchup.write_default("STAND1_Memorial", chave, arr.join("\n"))
+  end
+
+  def self.palavras_mobiliario
+    ler_lista("palavras_mobiliario", PALAVRAS_MOBILIARIO_DEFAULT)
   end
 
   def self.salvar_palavras_mobiliario(lista)
-    Sketchup.write_default("STAND1_Memorial", "palavras_mobiliario", lista.to_json)
+    salvar_lista("palavras_mobiliario", lista)
   end
 
   # Palavras-chave para identificar fitas LED na seção Elétrica
@@ -59,38 +82,65 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "largura_fita_led", larg)
   end
 
-  # M Linear por COMPRIMENTO (postes/vigas): metro linear = maior dimensão.
-  # Editável pelo usuário dentro do plugin.
-  PALAVRAS_LINEAR_DEFAULT = [
-    "brise", "coluna", "pergola", "ripa", "pilar", "viga", "barrote"
-  ]
+  # ── REGRAS DE MEDIÇÃO (ESTRUTURAS) ──────────────────────────────────────────
+  # Editor único: cada regra mapeia uma palavra-chave → fórmula de medição.
+  # A 1ª regra (de cima p/ baixo) cujo nome do item contenha a palavra vence;
+  # itens sem regra usam o fallback "face" (largura × altura).
+  # Fórmulas (= dropdown na interface):
+  #   horizontal       L×P                  m²   piso/forro/teto
+  #   face             largura×altura       m²   painel/backdrop/parede (fallback)
+  #   recinto          2×(L+P)×altura       m²   sala/cabine (fechado)*
+  #   faixa            (L+P)×altura         m²   testeira/fachada*
+  #   comprimento      maior dimensão       m    coluna/viga/pilar
+  #   perimetro        2×(2 maiores)        m    moldura/sanca
+  #   desenvolvimento  L+P                  m    trilho/barra aberta
+  #   volume           L×P×altura           m³   blocos/bases
+  #   unidade          —                    und. item avulso
+  # * recinto/faixa só aplicam a fórmula de perímetro se a menor dimensão
+  #   horizontal ≥ GUARDA_FOOTPRINT_M (footprint real); abaixo disso caem em
+  #   "face" — protege painel/parede fino de dobrar a área indevidamente.
+  GUARDA_FOOTPRINT_M = 0.30
 
-  # M Linear por PERÍMETRO (molduras/sancas): metro linear = 2 × (2 maiores dims).
-  # Editável pelo usuário dentro do plugin.
-  PALAVRAS_PERIMETRO_DEFAULT = ["moldura", "sanca"]
+  FORMULAS_VALIDAS = %w[
+    horizontal face recinto faixa comprimento perimetro desenvolvimento volume unidade
+  ].freeze
 
-  PALAVRAS_HORIZONTAL_DEFAULT = ["forro", "teto"]
+  REGRAS_MEDICAO_DEFAULT = [
+    ["piso", "horizontal"], ["forro", "horizontal"], ["teto", "horizontal"],
+    ["deck", "horizontal"], ["tablado", "horizontal"], ["palco", "horizontal"],
+    ["estrado", "horizontal"],
+    ["coluna", "comprimento"], ["viga", "comprimento"], ["pilar", "comprimento"],
+    ["brise", "comprimento"], ["ripa", "comprimento"], ["pergola", "comprimento"],
+    ["barrote", "comprimento"], ["montante", "comprimento"], ["travessa", "comprimento"],
+    ["moldura", "perimetro"], ["sanca", "perimetro"], ["rodapé", "perimetro"],
+    ["friso", "perimetro"], ["arremate", "perimetro"],
+    ["sala", "recinto"], ["cabine", "recinto"], ["depósito", "recinto"], ["copa", "recinto"],
+    ["testeira", "faixa"], ["fachada", "faixa"],
+    ["painel", "face"], ["backdrop", "face"], ["parede", "face"], ["placa", "face"],
+    ["fechamento", "face"], ["caixaria", "face"], ["divisória", "face"], ["totem", "face"]
+  ].freeze
 
-  def self.palavras_linear_estrutural
-    json = Sketchup.read_default("STAND1_Memorial", "palavras_linear", nil)
-    json ? JSON.parse(json) : PALAVRAS_LINEAR_DEFAULT.dup
+  # Regras lidas do registro como "palavra=formula" por linha (formato à prova do
+  # escaping que corrompe JSON no registro do SketchUp — ver ler_lista).
+  def self.regras_medicao
+    raw = Sketchup.read_default("STAND1_Memorial", "regras_medicao", nil)
+    return REGRAS_MEDICAO_DEFAULT.map(&:dup) if raw.nil?
+    pares = raw.to_s.split("\n").map do |ln|
+      k, v = ln.split("=", 2)
+      [k.to_s.strip.downcase, v.to_s.strip]
+    end.reject { |k, v| k.empty? || !FORMULAS_VALIDAS.include?(v) }
+    pares.empty? ? REGRAS_MEDICAO_DEFAULT.map(&:dup) : pares
   rescue
-    PALAVRAS_LINEAR_DEFAULT.dup
+    REGRAS_MEDICAO_DEFAULT.map(&:dup)
   end
 
-  def self.salvar_palavras_linear(lista)
-    Sketchup.write_default("STAND1_Memorial", "palavras_linear", lista.to_json)
-  end
-
-  def self.palavras_perimetro
-    json = Sketchup.read_default("STAND1_Memorial", "palavras_perimetro", nil)
-    json ? JSON.parse(json) : PALAVRAS_PERIMETRO_DEFAULT.dup
-  rescue
-    PALAVRAS_PERIMETRO_DEFAULT.dup
-  end
-
-  def self.salvar_palavras_perimetro(lista)
-    Sketchup.write_default("STAND1_Memorial", "palavras_perimetro", lista.to_json)
+  def self.salvar_regras_medicao(pares)
+    linhas = Array(pares).map do |par|
+      pal = par[0].to_s.strip.downcase
+      frm = par[1].to_s.strip
+      (pal.empty? || !FORMULAS_VALIDAS.include?(frm)) ? nil : "#{pal}=#{frm}"
+    end.compact
+    Sketchup.write_default("STAND1_Memorial", "regras_medicao", linhas.join("\n"))
   end
 
   # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
@@ -165,14 +215,11 @@ module STAND1_Memorial
   ]
 
   def self.palavras_revestimento
-    json = Sketchup.read_default("STAND1_Memorial", "palavras_revestimento", nil)
-    json ? JSON.parse(json) : PALAVRAS_REVESTIMENTO_DEFAULT.dup
-  rescue
-    PALAVRAS_REVESTIMENTO_DEFAULT.dup
+    ler_lista("palavras_revestimento", PALAVRAS_REVESTIMENTO_DEFAULT)
   end
 
   def self.salvar_palavras_revestimento(lista)
-    Sketchup.write_default("STAND1_Memorial", "palavras_revestimento", lista.to_json)
+    salvar_lista("palavras_revestimento", lista)
   end
 
   # ── PERSISTÊNCIA DE ESTADO (arquivo por projeto) ────────────────────────────
@@ -191,14 +238,50 @@ module STAND1_Memorial
      (m[8]**2+m[9]**2+m[10]**2).round(4)]
   end
 
-  # Listas de palavras lidas do registro são cacheadas durante o scan,
-  # evitando read_default + JSON.parse a cada componente.
-  def self.kw_linear_cached
-    @cache[:kw_linear] ||= palavras_linear_estrutural.map { |k| k.to_s.downcase }
+  # Regras de medição lidas do registro são cacheadas durante o scan.
+  def self.regras_medicao_cached
+    @cache[:regras] ||= regras_medicao
   end
 
-  def self.kw_perimetro_cached
-    @cache[:kw_perimetro] ||= palavras_perimetro.map { |k| k.to_s.downcase }
+  # Fórmula da 1ª regra cujo nome contenha a palavra (ou "face" como fallback).
+  def self.formula_do_item(nome_lower)
+    regra = regras_medicao_cached.find { |pal, _f| nome_lower.include?(pal) }
+    regra ? regra[1] : "face"
+  end
+
+  # Monta a descrição de um item de ESTRUTURAS conforme a fórmula da regra.
+  # l = largura (maior horizontal), p = profundidade (menor horizontal),
+  # a = altura (eixo vertical Z do modelo — lógica construtiva, não a menor dim).
+  def self.descricao_estrutura(nome, l, p, a)
+    formula = formula_do_item(nome.downcase)
+    d       = [l, p, a].sort.reverse        # 3 dimensões, maior → menor
+    dim3    = "(#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)"
+
+    # Recinto/Faixa exigem footprint real; senão viram face (não dobram peça fina).
+    if (formula == "recinto" || formula == "faixa") && [l, p].min < GUARDA_FOOTPRINT_M
+      formula = "face"
+    end
+
+    case formula
+    when "horizontal"
+      "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt((l * p).round(2))}m²"
+    when "recinto"
+      "#{nome} #{dim3} - #{fmt((2 * (l + p) * a).round(2))}m²"
+    when "faixa"
+      "#{nome} #{dim3} - #{fmt(((l + p) * a).round(2))}m²"
+    when "comprimento"
+      "#{nome} #{dim3} - #{fmt(d[0])}m"
+    when "perimetro"
+      "#{nome} #{dim3} - #{fmt((2 * (d[0] + d[1])).round(2))}m"
+    when "desenvolvimento"
+      "#{nome} #{dim3} - #{fmt((l + p).round(2))}m"
+    when "volume"
+      "#{nome} #{dim3} - #{fmt((l * p * a).round(2))}m³"
+    when "unidade"
+      nome
+    else # face: largura × altura
+      "#{nome} #{dim3} - #{fmt((l * a).round(2))}m²"
+    end
   end
 
   def self.pasta_estados
@@ -295,10 +378,7 @@ module STAND1_Memorial
     @dialog.add_action_callback("dialog_pronto") do |_ctx|
       nome_arquivo = nome_do_arquivo(model)
       @dialog.execute_script("definirNomeArquivo('#{nome_arquivo.gsub("'","\\\\'")}')") rescue nil
-      lista_lin = palavras_linear_estrutural.to_json
-      @dialog.execute_script("definirPalavrasLinear(#{lista_lin})") rescue nil
-      lista_per = palavras_perimetro.to_json
-      @dialog.execute_script("definirPalavrasPerimetro(#{lista_per})") rescue nil
+      @dialog.execute_script("definirRegrasMedicao(#{regras_medicao.to_json})") rescue nil
       lista_mob = palavras_mobiliario.to_json
       @dialog.execute_script("definirPalavrasMobiliario(#{lista_mob})") rescue nil
       lista_rev = palavras_revestimento.to_json
@@ -330,12 +410,13 @@ module STAND1_Memorial
       end
     end
 
-    @dialog.add_action_callback("salvar_palavras_linear") do |_ctx, json_lista|
-      salvar_palavras_linear(JSON.parse(json_lista))
+    @dialog.add_action_callback("salvar_regras_medicao") do |_ctx, json_regras|
+      salvar_regras_medicao(JSON.parse(json_regras))
     end
 
-    @dialog.add_action_callback("salvar_palavras_perimetro") do |_ctx, json_lista|
-      salvar_palavras_perimetro(JSON.parse(json_lista))
+    @dialog.add_action_callback("restaurar_regras_medicao") do |_ctx, _arg|
+      Sketchup.write_default("STAND1_Memorial", "regras_medicao", nil)
+      @dialog.execute_script("definirRegrasMedicao(#{REGRAS_MEDICAO_DEFAULT.to_json}); renderizarRegras();") rescue nil
     end
 
     @dialog.add_action_callback("salvar_palavras_mobiliario") do |_ctx, json_lista|
@@ -456,8 +537,7 @@ module STAND1_Memorial
   # garantindo que elas nunca "sumam" ao rodar Adicionar Tudo/Atualizar.
   def self.reenviar_listas
     return unless @dialog
-    @dialog.execute_script("definirPalavrasLinear(#{palavras_linear_estrutural.to_json})") rescue nil
-    @dialog.execute_script("definirPalavrasPerimetro(#{palavras_perimetro.to_json})") rescue nil
+    @dialog.execute_script("definirRegrasMedicao(#{regras_medicao.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasMobiliario(#{palavras_mobiliario.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasRevestimento(#{palavras_revestimento.to_json})") rescue nil
     @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
@@ -833,35 +913,12 @@ module STAND1_Memorial
     # Chave: dims ordenadas — agrupa a mesma peça em qualquer orientação/espelho
     chave_dims = Dimensoes.chave_dims(largura, profund, altura)
     _ck = [largura, profund, altura].sort.reverse
-    comprimento_linear = _ck[0]  # maior dimensão (metro linear de perfis)
+    comprimento_linear = _ck[0]  # maior dimensão (fallback de m linear p/ fita LED)
 
-    nome_lower_c = nome.downcase
-    eh_horizontal = secao == "ESTRUTURAS" && (
-      nome_lower_c.include?("piso") ||
-      PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower_c.include?(kw) }
-    )
-    eh_linear = secao == "ESTRUTURAS" && (
-      kw_linear_cached.any? { |kw| nome_lower_c.include?(kw) } ||
-      kw_perimetro_cached.any? { |kw| nome_lower_c.include?(kw) }
-    )
-
-    area_face_frontal = if secao == "COMUNICAÇÃO VISUAL"
-      # CV mantém "2 maiores dimensões" (lonas/logos: espessura é a menor dim)
-      (_ck[0] * _ck[1]).round(2)
-    elsif secao == "ESTRUTURAS"
-      if eh_horizontal
-        # 1. Piso/forro/teto: projeção horizontal = largura × profundidade
-        (largura * profund).round(2)
-      elsif eh_linear
-        # 2. Perfil estrutural (coluna, viga, sanca...): comprimento real (maior dim)
-        comprimento_linear
-      else
-        # 3. Parede/painel/testeira/backdrop e similares: 2 maiores dimensões (face frontal)
-        (_ck[0] * _ck[1]).round(2)
-      end
-    else
-      (largura * altura).round(2)
-    end
+    # area_face_frontal: usado só por COMUNICAÇÃO VISUAL ("2 maiores dimensões":
+    # lonas/logos, espessura é a menor dim). ESTRUTURAS calcula a medida na
+    # formatação, via regras de medição (descricao_estrutura).
+    area_face_frontal = secao == "COMUNICAÇÃO VISUAL" ? (_ck[0] * _ck[1]).round(2) : 0.0
 
     # ── REVESTIMENTOS: agrupa por ID do MATERIAL (não por componente) ──
     if secao == "REVESTIMENTOS"
@@ -1001,31 +1058,9 @@ module STAND1_Memorial
 
     case secao
 
-    # ESTRUTURAS: horizontal=L×P m²; perímetro=2×(2 maiores) m;
-    # comprimento=maior dim m; demais=L×P×A + m²
+    # ESTRUTURAS: medida definida pelas Regras de Medição (palavra-chave → fórmula).
     when "ESTRUTURAS"
-      eh_horizontal  = nome_lower.include?("piso") ||
-                       PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower.include?(kw) }
-      eh_perimetro   = palavras_perimetro.any? { |kw| nome_lower.include?(kw) }
-      eh_comprimento = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
-      if eh_horizontal
-        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt(af)}m²"
-        build_item(desc, qtd, "und.")
-      elsif eh_perimetro
-        # moldura/sanca: metro linear = perímetro = 2 × (2 maiores dimensões)
-        d = [l, p, a].sort.reverse
-        perim = (2 * (d[0] + d[1])).round(2)
-        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(perim)}m"
-        build_item(desc, qtd, "und.")
-      elsif eh_comprimento
-        # coluna/viga/pilar/barrote...: metro linear = maior dimensão
-        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(comp)}m"
-        build_item(desc, qtd, "und.")
-      else
-        # parede/painel/testeira/backdrop: mantém as medidas escritas + m²
-        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(af)}m²"
-        build_item(desc, qtd, "und.")
-      end
+      build_item(descricao_estrutura(nome, l, p, a), qtd, "und.")
 
     # REVESTIMENTOS: Nome do Material (ID da textura) + m² + und.
     when "REVESTIMENTOS"
@@ -1268,7 +1303,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.7 carregado"
+    puts "✅ STAND1_Memorial v6.7.8 carregado"
   end
 
 end
