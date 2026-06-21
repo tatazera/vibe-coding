@@ -176,6 +176,12 @@ module STAND1_Memorial
      (m[8]**2+m[9]**2+m[10]**2).round(4)]
   end
 
+  # Listas de palavras lidas do registro são cacheadas durante o scan,
+  # evitando read_default + JSON.parse a cada componente.
+  def self.kw_linear_cached
+    @cache[:kw_linear] ||= palavras_linear_estrutural.map { |k| k.to_s.downcase }
+  end
+
   def self.pasta_estados
     dir = File.join(ENV['APPDATA'] || Dir.tmpdir, "STAND1_Memorial", "estados")
     FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
@@ -801,13 +807,14 @@ module STAND1_Memorial
     # Chave: dims ordenadas — agrupa a mesma peça em qualquer orientação/espelho
     chave_dims = Dimensoes.chave_dims(largura, profund, altura)
     _ck = [largura, profund, altura].sort.reverse
+    comprimento_linear = _ck[0]  # maior dimensão (metro linear de perfis)
 
     nome_lower_c = nome.downcase
     eh_horizontal = secao == "ESTRUTURAS" && (
       nome_lower_c.include?("piso") ||
       PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower_c.include?(kw) }
     )
-    eh_linear = secao == "ESTRUTURAS" && palavras_linear_estrutural.any? { |kw| nome_lower_c.include?(kw) }
+    eh_linear = secao == "ESTRUTURAS" && kw_linear_cached.any? { |kw| nome_lower_c.include?(kw) }
 
     area_face_frontal = if secao == "COMUNICAÇÃO VISUAL"
       # CV mantém "2 maiores dimensões" (lonas/logos: espessura é a menor dim)
@@ -826,8 +833,6 @@ module STAND1_Memorial
     else
       (largura * altura).round(2)
     end
-    area_material = calcular_area_material(inst).round(2)
-    comprimento_linear = [largura, profund, altura].max
 
     # ── REVESTIMENTOS: agrupa por ID do MATERIAL (não por componente) ──
     if secao == "REVESTIMENTOS"
@@ -898,7 +903,7 @@ module STAND1_Memorial
         profund:            profund,
         altura:             altura,
         area_face_frontal:  area_face_frontal,
-        area_material:      area_material,
+        area_material:      0.0,  # não usado nesta seção; mantido por compatibilidade do estado
         comprimento_linear: comprimento_linear,
         metros_fita:        metros_fita,
         quantidade:         1,
@@ -908,16 +913,6 @@ module STAND1_Memorial
   end
 
   # ── CÁLCULO DE ÁREA (m²) A PARTIR DAS TEXTURAS/MATERIAIS ──────────────────
-
-  # Retorna a área total de todas as faces com material (recursivo)
-  def self.calcular_area_material(inst)
-    total = 0.0
-    mat_instancia = inst.material
-    inst.definition.entities.each do |ent|
-      total += somar_area_entidade(ent, mat_instancia)
-    end
-    total.round(2)
-  end
 
   # Retorna hash { "nome_material" => area_m2 } agrupado por material
   # Leva em conta:
@@ -936,21 +931,6 @@ module STAND1_Memorial
       resultado[nome] = (area_pol2 * POL2_PARA_M2).round(2)
     end
     resultado
-  end
-
-  def self.somar_area_entidade(ent, mat_herdado)
-    total = 0.0
-    if ent.is_a?(Sketchup::Face)
-      mat = ent.material || ent.back_material || mat_herdado
-      total += ent.area * POL2_PARA_M2 if mat
-    elsif ent.is_a?(Sketchup::Group)
-      mat_grupo = ent.material || mat_herdado
-      ent.entities.each { |sub| total += somar_area_entidade(sub, mat_grupo) }
-    elsif ent.is_a?(Sketchup::ComponentInstance)
-      mat_comp = ent.material || mat_herdado
-      ent.definition.entities.each { |sub| total += somar_area_entidade(sub, mat_comp) }
-    end
-    total
   end
 
   def self.coletar_materiais_recursivo(entities, mat_herdado, resultado)
@@ -987,7 +967,6 @@ module STAND1_Memorial
     a     = item[:altura]
     qtd   = item[:quantidade]
     af    = item[:area_face_frontal]
-    am    = item[:area_material]
     comp  = item[:comprimento_linear]
     nome_lower = nome.downcase
 
@@ -1061,10 +1040,6 @@ module STAND1_Memorial
     }
   end
 
-  def self.metro(polegadas)
-    (polegadas.to_f * POLEGADA_PARA_METRO).round(2)
-  end
-
   # ── LISTAR MATERIAIS DE REVESTIMENTOS (para painel de seleção) ───────────────
 
   def self.listar_materiais_revestimentos(model)
@@ -1102,51 +1077,6 @@ module STAND1_Memorial
     end
   end
 
-  # ── MAIOR FACE (para Comunicação Visual) ────────────────────────────────────
-
-  def self.maior_face_area_m2(inst)
-    max_pol2 = maior_face_recursivo(inst.definition.entities)
-    (max_pol2 * POL2_PARA_M2).round(2)
-  end
-
-  def self.maior_face_recursivo(entities)
-    max = 0.0
-    entities.each do |ent|
-      if ent.is_a?(Sketchup::Face)
-        max = ent.area if ent.area > max
-      elsif ent.is_a?(Sketchup::Group)
-        sub = maior_face_recursivo(ent.entities)
-        max = sub if sub > max
-      elsif ent.is_a?(Sketchup::ComponentInstance)
-        sub = maior_face_recursivo(ent.definition.entities)
-        max = sub if sub > max
-      end
-    end
-    max
-  end
-
-  # Soma a área de TODAS as faces do componente (superfície total)
-  def self.area_total_faces_m2(inst)
-    k = [:atf, inst.definition.object_id]
-    return @cache[k] if @cache.key?(k)
-    total_pol2 = somar_faces_recursivo(inst.definition.entities)
-    @cache[k] = (total_pol2 * POL2_PARA_M2).round(2)
-  end
-
-  def self.somar_faces_recursivo(entities)
-    total = 0.0
-    entities.each do |ent|
-      if ent.is_a?(Sketchup::Face)
-        total += ent.area
-      elsif ent.is_a?(Sketchup::Group)
-        total += somar_faces_recursivo(ent.entities)
-      elsif ent.is_a?(Sketchup::ComponentInstance)
-        total += somar_faces_recursivo(ent.definition.entities)
-      end
-    end
-    total
-  end
-
   # ── ÁREA REAL DAS FACES REVESTIDAS (paredes/sancas/testeiras em L) ───────────
   # Soma a área real das faces que têm material aplicado (a "pintura"/lona),
   # uma face por plano (remove faces coplanares duplicadas), com a escala da
@@ -1163,13 +1093,6 @@ module STAND1_Memorial
     acumular_faces_material(inst.definition.entities, tr, planos, kws)
     total_pol2 = planos.values.inject(0.0) { |s, a| s + a }
     @cache[k] = (total_pol2 * POL2_PARA_M2).round(2)
-  end
-
-  # Área das faces revestidas = faces com material da lista de Revestimentos.
-  def self.area_faces_revestidas_m2(inst, tr_pai = nil)
-    kws = palavras_revestimento.map { |k| k.to_s.downcase }.reject(&:empty?)
-    return 0.0 if kws.empty?
-    area_faces_material_m2(inst, tr_pai, kws)
   end
 
   # Face com material? Se kws dado, exige que o nome do material case com alguma.
@@ -1306,7 +1229,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.3 carregado"
+    puts "✅ STAND1_Memorial v6.7.4 carregado"
   end
 
 end
