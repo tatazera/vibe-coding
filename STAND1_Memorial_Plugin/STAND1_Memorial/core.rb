@@ -61,8 +61,7 @@ module STAND1_Memorial
 
   # Padrão de fábrica — editável pelo usuário dentro do plugin
   PALAVRAS_LINEAR_DEFAULT = [
-    "brise", "coluna", "ts", "pergola", "sanca",
-    "ripa", "pilar", "viga", "vidro", "barrote"
+    "brise", "coluna", "pergola", "ripa", "pilar", "viga", "barrote"
   ]
 
   def self.palavras_linear_estrutural
@@ -74,23 +73,6 @@ module STAND1_Memorial
 
   def self.salvar_palavras_linear(lista)
     Sketchup.write_default("STAND1_Memorial", "palavras_linear", lista.to_json)
-  end
-
-  # Padrão de fábrica — itens de ESTRUTURAS cujo m² é "metro linear × altura",
-  # ou seja, projeção frontal = maior dimensão horizontal × altura. Editável no plugin.
-  PALAVRAS_LINEAR_ALTURA_DEFAULT = [
-    "parede", "sanca", "testeira", "mureta", "rodapé", "rodape"
-  ]
-
-  def self.palavras_linear_altura
-    json = Sketchup.read_default("STAND1_Memorial", "palavras_linear_altura", nil)
-    json ? JSON.parse(json) : PALAVRAS_LINEAR_ALTURA_DEFAULT.dup
-  rescue
-    PALAVRAS_LINEAR_ALTURA_DEFAULT.dup
-  end
-
-  def self.salvar_palavras_linear_altura(lista)
-    Sketchup.write_default("STAND1_Memorial", "palavras_linear_altura", lista.to_json)
   end
 
   # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
@@ -275,8 +257,6 @@ module STAND1_Memorial
       @dialog.execute_script("definirNomeArquivo('#{nome_arquivo.gsub("'","\\\\'")}')") rescue nil
       lista_lin = palavras_linear_estrutural.to_json
       @dialog.execute_script("definirPalavrasLinear(#{lista_lin})") rescue nil
-      lista_lin_alt = palavras_linear_altura.to_json
-      @dialog.execute_script("definirPalavrasLinearAltura(#{lista_lin_alt})") rescue nil
       lista_mob = palavras_mobiliario.to_json
       @dialog.execute_script("definirPalavrasMobiliario(#{lista_mob})") rescue nil
       lista_rev = palavras_revestimento.to_json
@@ -310,10 +290,6 @@ module STAND1_Memorial
 
     @dialog.add_action_callback("salvar_palavras_linear") do |_ctx, json_lista|
       salvar_palavras_linear(JSON.parse(json_lista))
-    end
-
-    @dialog.add_action_callback("salvar_palavras_linear_altura") do |_ctx, json_lista|
-      salvar_palavras_linear_altura(JSON.parse(json_lista))
     end
 
     @dialog.add_action_callback("salvar_palavras_mobiliario") do |_ctx, json_lista|
@@ -435,7 +411,6 @@ module STAND1_Memorial
   def self.reenviar_listas
     return unless @dialog
     @dialog.execute_script("definirPalavrasLinear(#{palavras_linear_estrutural.to_json})") rescue nil
-    @dialog.execute_script("definirPalavrasLinearAltura(#{palavras_linear_altura.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasMobiliario(#{palavras_mobiliario.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasRevestimento(#{palavras_revestimento.to_json})") rescue nil
     @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
@@ -821,25 +796,25 @@ module STAND1_Memorial
 
     eh_piso = secao == "ESTRUTURAS" && nome.downcase.include?("piso")
 
+    eh_linear = secao == "ESTRUTURAS" && palavras_linear_estrutural.any? { |kw| nome.downcase.include?(kw) }
+
     area_face_frontal = if secao == "COMUNICAÇÃO VISUAL"
       # CV mantém "2 maiores dimensões" (lonas/logos: espessura é a menor dim)
       (_ck[0] * _ck[1]).round(2)
     elsif secao == "ESTRUTURAS"
       if eh_piso
-        # Piso (5B): projeção horizontal = largura × profundidade reais (prioridade)
+        # 1. Piso: projeção horizontal = largura × profundidade reais
         (largura * profund).round(2)
+      elsif eh_linear
+        # 2. Perfil estrutural (coluna, viga, ripa...): comprimento real (maior dim)
+        comprimento_linear
       else
-        # m² = tudo que está revestido: soma as faces com material de revestimento
-        # (geometria real, uma por plano, escala aplicada). Lida com salas, paredes
-        # em L, depósitos, backdrops revestidos — identifica pelas faces pintadas.
+        # 3. Superfície revestida: soma faces com material de revestimento
         a_rev = area_faces_revestidas_m2(inst, tr_pai)
         if a_rev > 0
           a_rev
-        elsif palavras_linear_altura.any? { |kw| nome.downcase.include?(kw) }
-          # Sem revestimento detectado, mas é peça linear (parede/sanca): L × altura.
-          (largura * altura).round(2)
         else
-          # Sem revestimento e não-linear: superfície total das faces (comportamento antigo).
+          # 4. Resto: superfície total das faces
           area_total_faces_m2(inst)
         end
       end
@@ -1013,19 +988,20 @@ module STAND1_Memorial
 
     case secao
 
-    # ESTRUTURAS: piso só L×P (horizontais); linear = 2 maiores dims (7B); demais = L×P×A
+    # ESTRUTURAS: piso=L×P m²; perfil=comprimento und.; demais=m² revestida ou total
     when "ESTRUTURAS"
       eh_piso   = nome_lower.include?("piso")
       eh_linear = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
       if eh_piso
         desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt(af)}m²"
+        build_item(desc, qtd, "und.")
       elsif eh_linear
-        d1, d2 = Dimensoes.dims_lineares(l, p, a)
-        desc = "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m) - #{fmt(af)}m²"
+        desc = "#{nome} (#{fmt(comp)}m)"
+        build_item(desc, qtd, "und.")
       else
-        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(af)}m²"
+        desc = "#{nome} - #{fmt(af)}m²"
+        build_item(desc, qtd, "und.")
       end
-      build_item(desc, qtd, "und.")
 
     # REVESTIMENTOS: Nome do Material (ID da textura) + m² + und.
     when "REVESTIMENTOS"
@@ -1320,7 +1296,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.6.0 carregado"
+    puts "✅ STAND1_Memorial v6.7.0 carregado"
   end
 
 end

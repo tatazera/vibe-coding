@@ -313,7 +313,6 @@
   <button class="btn-modo" onclick="abrirModalManual()" title="Adicionar um item manualmente (ex.: tomadas) — não precisa estar no modelo">➕ Item Manual</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalLinear()">⚙ M Linear</button>
-  <button class="btn-modo" onclick="abrirModalLinearAltura()">⚙ Área Lin×Alt</button>
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
@@ -368,28 +367,11 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalLinear()">✕</button>
       </div>
     </div>
-    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras usam o formato <b>M linear × Altura</b>.</div>
+    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras são exibidos como <b>comprimento (m) × quantidade</b> em vez de m².</div>
     <div class="kw-list" id="listaKwLinear"></div>
     <div class="linear-add">
       <input type="text" id="inputKwLinear" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordLinear()">
       <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordLinear()">+ Adicionar</button>
-    </div>
-  </div>
-</div>
-
-<div id="modalLinearAltura" class="modal-overlay" style="display:none">
-  <div class="modal-rev modal-linear">
-    <div class="mrev-header">
-      <span class="mrev-title">⚙ Área m² — Metro linear × Altura</span>
-      <div class="mrev-actions">
-        <button class="mrev-btn mrev-btn-sec" onclick="fecharModalLinearAltura()">✕</button>
-      </div>
-    </div>
-    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras têm o <b>m²</b> calculado como <b>metro linear × altura</b> (maior dimensão horizontal × altura). O <b>piso</b> sempre tem prioridade.</div>
-    <div class="kw-list" id="listaKwLinearAltura"></div>
-    <div class="linear-add">
-      <input type="text" id="inputKwLinearAltura" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordLinearAltura()">
-      <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordLinearAltura()">+ Adicionar</button>
     </div>
   </div>
 </div>
@@ -688,48 +670,6 @@ function salvarKeywordsLinear(){
     sketchup.salvar_palavras_linear(JSON.stringify(palavrasLinear));
 }
 
-// ── ÁREA m² LINEAR×ALTURA — gestão de palavras-chave ─────────────────────────
-var palavrasLinearAltura = [];
-
-function definirPalavrasLinearAltura(lista){ palavrasLinearAltura = lista || []; }
-
-function abrirModalLinearAltura(){
-  renderizarChipsLinearAltura();
-  document.getElementById('modalLinearAltura').style.display='flex';
-  document.getElementById('inputKwLinearAltura').value='';
-}
-
-function fecharModalLinearAltura(){ document.getElementById('modalLinearAltura').style.display='none'; }
-
-function renderizarChipsLinearAltura(){
-  var el=document.getElementById('listaKwLinearAltura');
-  if(!palavrasLinearAltura.length){ el.innerHTML='<span class="kw-vazio">Nenhuma palavra-chave definida.</span>'; return; }
-  el.innerHTML=palavrasLinearAltura.map(function(kw,i){
-    return '<span class="kw-chip">'+kw+'<button class="kw-chip-del" onclick="removerKeywordLinearAltura('+i+')" title="Remover">×</button></span>';
-  }).join('');
-}
-
-function adicionarKeywordLinearAltura(){
-  var inp=document.getElementById('inputKwLinearAltura');
-  var val=inp.value.trim().toLowerCase();
-  if(!val) return;
-  if(palavrasLinearAltura.indexOf(val)>=0){ inp.value=''; return; }
-  palavrasLinearAltura.push(val);
-  inp.value='';
-  renderizarChipsLinearAltura();
-  salvarKeywordsLinearAltura();
-}
-
-function removerKeywordLinearAltura(idx){
-  palavrasLinearAltura.splice(idx,1);
-  renderizarChipsLinearAltura();
-  salvarKeywordsLinearAltura();
-}
-
-function salvarKeywordsLinearAltura(){
-  if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_linear_altura)
-    sketchup.salvar_palavras_linear_altura(JSON.stringify(palavrasLinearAltura));
-}
 
 // ── MOBILIÁRIO — gestão de palavras-chave ────────────────────────────────────
 var palavrasMobiliario = [];
