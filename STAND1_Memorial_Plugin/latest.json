@@ -1,5 +1,5 @@
 {
-    "versao":  "6.7.14",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.14.rbz",
-    "notas":  "Versao de TESTE do auto-update (temporaria) - validacao do banner e instalacao automatica."
+    "versao":  "6.7.15",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v6.7.15.rbz",
+    "notas":  "Auto-update estavel (rede nativa, sem BOM) + botao de atualizacao no cabecalho + mobiliario instantaneo."
 }
