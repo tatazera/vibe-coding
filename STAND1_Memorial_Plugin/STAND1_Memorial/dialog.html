@@ -127,6 +127,14 @@
   .regra-btn:hover { color: var(--azul); border-color: var(--azul); }
   .regra-del:hover { color: #e74c3c; border-color: #e74c3c; }
   body.dark .regra-row input.regra-pal, body.dark .regra-row select.regra-frm { background: #15161c; border-color: #2e2f3a; color: #e4e4ea; }
+  /* Banner de atualização */
+  .update-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 14px 8px; padding: 9px 14px; background: #eaf4ff; border: 1.5px solid #4DA8F0; border-radius: 8px; font-size: 12.5px; color: #1c4e80; font-weight: 600; }
+  .update-acts { display: flex; gap: 8px; flex-shrink: 0; }
+  .upd-btn { padding: 6px 14px; border-radius: 6px; border: none; font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; }
+  .upd-ok { background: var(--azul); color: #fff; }
+  .upd-no { background: #dfe7ef; color: #557; }
+  body.dark .update-banner { background: #142433; border-color: #2f6da3; color: #bcdcff; }
+  body.dark .upd-no { background: #243140; color: #9fb3c6; }
   .linear-add { display: flex; gap: 8px; padding: 10px 16px 14px; border-top: 1px solid var(--borda); }
   .linear-add input { flex: 1; border: 1.5px solid var(--borda); border-radius: 6px; padding: 7px 11px; font-size: 12px; font-family: var(--font); color: #222; outline: none; }
   .linear-add input:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
@@ -327,7 +335,16 @@
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
+  <button class="btn-modo" onclick="verificarUpdate()" title="Verificar se há nova versão no GitHub">🔄 Verificar atualização</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
+</div>
+
+<div id="updateBanner" class="update-banner" style="display:none">
+  <span id="updateMsg"></span>
+  <div class="update-acts">
+    <button class="upd-btn upd-ok" id="updateBtn" onclick="baixarUpdate()">⬇ Atualizar agora</button>
+    <button class="upd-btn upd-no" onclick="fecharUpdateBanner()">Depois</button>
+  </div>
 </div>
 
 <div class="scroll">
@@ -598,6 +615,11 @@ function mesclarInteligente(novos){
           ex.descricao=ni.descricao;
           ex.quantidade=ni.quantidade;
         }
+        // sempre refresca os campos crus do Mobiliário (p/ reformatação instantânea),
+        // mesmo em item editado: são dados de medida, não a descrição.
+        if(typeof ni.dim_l!=='undefined'){
+          ex.nome_base=ni.nome_base; ex.dim_l=ni.dim_l; ex.dim_p=ni.dim_p; ex.dim_a=ni.dim_a;
+        }
       } else {
         var se=null;
         for(var i=0;i<dadosMemorial.length;i++){if(dadosMemorial[i].secao===ns.secao){se=dadosMemorial[i];break;}}
@@ -769,17 +791,68 @@ function adicionarKeywordMobiliario(){
   inp.value='';
   renderizarChipsMob();
   salvarKeywordsMobiliario();
+  reformatarMobiliario();
 }
 
 function removerKeywordMob(idx){
   palavrasMobiliario.splice(idx,1);
   renderizarChipsMob();
   salvarKeywordsMobiliario();
+  reformatarMobiliario();
 }
 
 function salvarKeywordsMobiliario(){
   if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_mobiliario)
     sketchup.salvar_palavras_mobiliario(JSON.stringify(palavrasMobiliario));
+}
+
+// Reformata SÓ a seção MOBILIÁRIO no cliente (sem reler o modelo): cada item
+// carrega nome_base + dim_l/p/a; preserva itens manuais e editados.
+function reformatarMobiliario(){
+  var sec=null;
+  for(var i=0;i<dadosMemorial.length;i++){ if(dadosMemorial[i].secao==='MOBILIÁRIO'){ sec=dadosMemorial[i]; break; } }
+  if(!sec) return;
+  sec.itens.forEach(function(it){
+    if(it.origem==='manual'||it.editado) return;
+    if(typeof it.dim_l==='undefined'||!it.nome_base) return;
+    var nl=it.nome_base.toLowerCase();
+    var tem=palavrasMobiliario.some(function(kw){ return nl.indexOf(kw)>=0; });
+    it.descricao = tem
+      ? it.nome_base+' ('+(+it.dim_l).toFixed(2)+'m x '+(+it.dim_p).toFixed(2)+'m x '+(+it.dim_a).toFixed(2)+'m)'
+      : it.nome_base;
+  });
+  persistirEstado();
+  renderizar();
+}
+
+// ── AUTO-UPDATE (GitHub) ─────────────────────────────────────────────────────
+var updateUrlRbz = '';
+
+function verificarUpdate(){
+  if(typeof sketchup!=='undefined'&&sketchup.verificar_update){
+    mostrarToast('Verificando atualização...');
+    sketchup.verificar_update('');
+  }
+}
+
+// Chamado pelo Ruby quando há versão nova disponível.
+function mostrarUpdate(info){
+  updateUrlRbz = info.rbz || '';
+  var notas = info.notas ? ' — '+info.notas : '';
+  document.getElementById('updateMsg').innerHTML = '🔔 Nova versão <b>v'+info.versao+'</b> disponível'+notas;
+  document.getElementById('updateBanner').style.display='flex';
+}
+
+function avisoSemUpdate(v){ mostrarToast('Você já está na versão mais recente (v'+v+').'); }
+function avisoUpdateErro(){ mostrarToast('Não foi possível verificar agora. Tente mais tarde.'); }
+function fecharUpdateBanner(){ document.getElementById('updateBanner').style.display='none'; }
+
+function baixarUpdate(){
+  if(!updateUrlRbz){ return; }
+  var b=document.getElementById('updateBtn');
+  b.textContent='Baixando...'; b.disabled=true;
+  if(typeof sketchup!=='undefined'&&sketchup.baixar_update)
+    sketchup.baixar_update(updateUrlRbz);
 }
 
 // ── FITA LED — LARGURA (m) ──

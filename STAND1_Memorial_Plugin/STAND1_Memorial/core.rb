@@ -6,12 +6,87 @@ require 'sketchup.rb'
 require 'json'
 require 'fileutils'
 require 'digest'
+require 'tmpdir'
 require_relative 'dimensoes'
 
 module STAND1_Memorial
 
   POLEGADA_PARA_METRO = 0.0254
   POL2_PARA_M2        = 0.0254 * 0.0254
+
+  # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
+  VERSAO        = "6.7.9"
+  URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
+
+  # Compara "a.b.c" numericamente: remota > local?
+  def self.versao_maior?(remota, local)
+    r = remota.to_s.split(".").map { |x| x.to_i }
+    l = local.to_s.split(".").map { |x| x.to_i }
+    n = [r.size, l.size].max
+    r += [0] * (n - r.size)
+    l += [0] * (n - l.size)
+    (r <=> l) > 0
+  end
+
+  # GET HTTPS com follow de redirect e verificação de cert tolerante (o OpenSSL
+  # de algumas builds do SketchUp no Windows falha na cadeia de certificados).
+  def self.http_get(url, limite = 4)
+    require 'net/http'
+    require 'openssl'
+    raise "muitos redirecionamentos" if limite <= 0
+    uri  = URI(url)
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl     = (uri.scheme == "https")
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.open_timeout = 8
+    http.read_timeout = 60
+    resp = http.get(uri.request_uri)
+    case resp
+    when Net::HTTPSuccess      then resp
+    when Net::HTTPRedirection  then http_get(resp["location"], limite - 1)
+    else raise "HTTP #{resp.code}"
+    end
+  end
+
+  def self.buscar_manifesto
+    resp = http_get(URL_MANIFESTO)
+    JSON.parse(resp.body)
+  rescue
+    nil
+  end
+
+  # Verifica versão e sinaliza o diálogo. manual=true mostra também "sem update".
+  def self.verificar_atualizacao(manual = false)
+    return unless @dialog
+    info = buscar_manifesto
+    if info.nil?
+      @dialog.execute_script("avisoUpdateErro()") rescue nil if manual
+      return
+    end
+    nova = info["versao"].to_s
+    if versao_maior?(nova, VERSAO)
+      payload = { versao: nova, notas: info["notas"].to_s, rbz: info["rbz"].to_s }.to_json
+      @dialog.execute_script("mostrarUpdate(#{payload})") rescue nil
+    elsif manual
+      @dialog.execute_script("avisoSemUpdate(#{VERSAO.to_json})") rescue nil
+    end
+  end
+
+  # Baixa o .rbz e instala via API nativa; fallback abre a URL no navegador.
+  def self.baixar_e_instalar_update(url)
+    resp    = http_get(url)
+    destino = File.join(Dir.tmpdir, "STAND1_Memorial_update.rbz")
+    File.open(destino, "wb") { |f| f.write(resp.body) }
+    if Sketchup.respond_to?(:install_from_archive)
+      Sketchup.install_from_archive(destino)
+      UI.messagebox("✅ Atualização instalada!\n\nReinicie o SketchUp para concluir.")
+    else
+      UI.openURL(url)
+    end
+  rescue => e
+    UI.messagebox("Não foi possível atualizar automaticamente:\n#{e.message}\n\nAbrindo o download no navegador.")
+    UI.openURL(url) rescue nil
+  end
 
   # Apenas estas 6 tags são exportadas — na ordem correta
   SECOES_PERMITIDAS = [
@@ -396,6 +471,8 @@ module STAND1_Memorial
           # JSON inválido — ignora e abre em branco
         end
       end
+      # Checagem de atualização adiada (não bloqueia a abertura do diálogo).
+      UI.start_timer(1.5, false) { verificar_atualizacao(false) } rescue nil
     end
 
     @dialog.add_action_callback("salvar_estado") do |_ctx, json|
@@ -417,6 +494,14 @@ module STAND1_Memorial
     @dialog.add_action_callback("restaurar_regras_medicao") do |_ctx, _arg|
       Sketchup.write_default("STAND1_Memorial", "regras_medicao", nil)
       @dialog.execute_script("definirRegrasMedicao(#{REGRAS_MEDICAO_DEFAULT.to_json}); renderizarRegras();") rescue nil
+    end
+
+    @dialog.add_action_callback("verificar_update") do |_ctx, _arg|
+      verificar_atualizacao(true)
+    end
+
+    @dialog.add_action_callback("baixar_update") do |_ctx, url|
+      baixar_e_instalar_update(url)
     end
 
     @dialog.add_action_callback("salvar_palavras_mobiliario") do |_ctx, json_lista|
@@ -1079,11 +1164,15 @@ module STAND1_Memorial
       desc = "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m) - #{fmt(af)}m²"
       build_item(desc, qtd, "und.")
 
-    # MOBILIÁRIO: mostra dimensões apenas para itens com palavras-chave configuradas
+    # MOBILIÁRIO: mostra dimensões apenas para itens com palavras-chave configuradas.
+    # Carrega nome_base + dims crus p/ a interface reformatar sem reler o modelo.
     when "MOBILIÁRIO"
       tem = palavras_mobiliario.any? { |kw| nome_lower.include?(kw) }
       desc = tem ? "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)" : nome
-      build_item(desc, qtd, "und.")
+      it = build_item(desc, qtd, "und.")
+      it["nome_base"] = nome
+      it["dim_l"] = l; it["dim_p"] = p; it["dim_a"] = a
+      it
 
     # EQUIPAMENTOS: apenas nome + quantidade
     when "EQUIPAMENTOS"
@@ -1303,7 +1392,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.8 carregado"
+    puts "✅ STAND1_Memorial v#{VERSAO} carregado"
   end
 
 end

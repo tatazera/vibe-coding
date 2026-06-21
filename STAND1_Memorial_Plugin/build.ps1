@@ -19,3 +19,14 @@ Compress-Archive -Path $loader, (Join-Path $root "STAND1_Memorial") -Destination
 Move-Item $tmp $out
 
 Write-Host "Gerado: $out"
+
+# Atualiza o manifesto de auto-update (versao + url do .rbz), preservando as notas.
+$manifesto = Join-Path $root "latest.json"
+$notas = "Atualizacao do STAND1_Memorial."
+if (Test-Path $manifesto) {
+  try { $j = Get-Content $manifesto -Raw | ConvertFrom-Json; if ($j.notas) { $notas = $j.notas } } catch {}
+}
+$rbzUrl = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v$ver.rbz"
+$obj = [ordered]@{ versao = $ver; rbz = $rbzUrl; notas = $notas }
+($obj | ConvertTo-Json) | Out-File -FilePath $manifesto -Encoding utf8
+Write-Host "Manifesto atualizado: $manifesto (v$ver)"
