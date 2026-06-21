@@ -59,11 +59,15 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "largura_fita_led", larg)
   end
 
-  # Padrão de fábrica — editável pelo usuário dentro do plugin
+  # M Linear por COMPRIMENTO (postes/vigas): metro linear = maior dimensão.
+  # Editável pelo usuário dentro do plugin.
   PALAVRAS_LINEAR_DEFAULT = [
-    "brise", "coluna", "moldura", "pergola", "ripa", "pilar",
-    "sanca", "viga", "barrote"
+    "brise", "coluna", "pergola", "ripa", "pilar", "viga", "barrote"
   ]
+
+  # M Linear por PERÍMETRO (molduras/sancas): metro linear = 2 × (2 maiores dims).
+  # Editável pelo usuário dentro do plugin.
+  PALAVRAS_PERIMETRO_DEFAULT = ["moldura", "sanca"]
 
   PALAVRAS_HORIZONTAL_DEFAULT = ["forro", "teto"]
 
@@ -76,6 +80,17 @@ module STAND1_Memorial
 
   def self.salvar_palavras_linear(lista)
     Sketchup.write_default("STAND1_Memorial", "palavras_linear", lista.to_json)
+  end
+
+  def self.palavras_perimetro
+    json = Sketchup.read_default("STAND1_Memorial", "palavras_perimetro", nil)
+    json ? JSON.parse(json) : PALAVRAS_PERIMETRO_DEFAULT.dup
+  rescue
+    PALAVRAS_PERIMETRO_DEFAULT.dup
+  end
+
+  def self.salvar_palavras_perimetro(lista)
+    Sketchup.write_default("STAND1_Memorial", "palavras_perimetro", lista.to_json)
   end
 
   # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
@@ -182,6 +197,10 @@ module STAND1_Memorial
     @cache[:kw_linear] ||= palavras_linear_estrutural.map { |k| k.to_s.downcase }
   end
 
+  def self.kw_perimetro_cached
+    @cache[:kw_perimetro] ||= palavras_perimetro.map { |k| k.to_s.downcase }
+  end
+
   def self.pasta_estados
     dir = File.join(ENV['APPDATA'] || Dir.tmpdir, "STAND1_Memorial", "estados")
     FileUtils.mkdir_p(dir) unless Dir.exist?(dir)
@@ -278,6 +297,8 @@ module STAND1_Memorial
       @dialog.execute_script("definirNomeArquivo('#{nome_arquivo.gsub("'","\\\\'")}')") rescue nil
       lista_lin = palavras_linear_estrutural.to_json
       @dialog.execute_script("definirPalavrasLinear(#{lista_lin})") rescue nil
+      lista_per = palavras_perimetro.to_json
+      @dialog.execute_script("definirPalavrasPerimetro(#{lista_per})") rescue nil
       lista_mob = palavras_mobiliario.to_json
       @dialog.execute_script("definirPalavrasMobiliario(#{lista_mob})") rescue nil
       lista_rev = palavras_revestimento.to_json
@@ -311,6 +332,10 @@ module STAND1_Memorial
 
     @dialog.add_action_callback("salvar_palavras_linear") do |_ctx, json_lista|
       salvar_palavras_linear(JSON.parse(json_lista))
+    end
+
+    @dialog.add_action_callback("salvar_palavras_perimetro") do |_ctx, json_lista|
+      salvar_palavras_perimetro(JSON.parse(json_lista))
     end
 
     @dialog.add_action_callback("salvar_palavras_mobiliario") do |_ctx, json_lista|
@@ -432,6 +457,7 @@ module STAND1_Memorial
   def self.reenviar_listas
     return unless @dialog
     @dialog.execute_script("definirPalavrasLinear(#{palavras_linear_estrutural.to_json})") rescue nil
+    @dialog.execute_script("definirPalavrasPerimetro(#{palavras_perimetro.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasMobiliario(#{palavras_mobiliario.to_json})") rescue nil
     @dialog.execute_script("definirPalavrasRevestimento(#{palavras_revestimento.to_json})") rescue nil
     @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
@@ -814,7 +840,10 @@ module STAND1_Memorial
       nome_lower_c.include?("piso") ||
       PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower_c.include?(kw) }
     )
-    eh_linear = secao == "ESTRUTURAS" && kw_linear_cached.any? { |kw| nome_lower_c.include?(kw) }
+    eh_linear = secao == "ESTRUTURAS" && (
+      kw_linear_cached.any? { |kw| nome_lower_c.include?(kw) } ||
+      kw_perimetro_cached.any? { |kw| nome_lower_c.include?(kw) }
+    )
 
     area_face_frontal = if secao == "COMUNICAÇÃO VISUAL"
       # CV mantém "2 maiores dimensões" (lonas/logos: espessura é a menor dim)
@@ -972,20 +1001,29 @@ module STAND1_Memorial
 
     case secao
 
-    # ESTRUTURAS: horizontal=L×P m²; linear=comprimento und.; demais=m² face
+    # ESTRUTURAS: horizontal=L×P m²; perímetro=2×(2 maiores) m;
+    # comprimento=maior dim m; demais=L×P×A + m²
     when "ESTRUTURAS"
-      eh_horizontal = nome_lower.include?("piso") ||
-                      PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower.include?(kw) }
-      eh_linear     = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
+      eh_horizontal  = nome_lower.include?("piso") ||
+                       PALAVRAS_HORIZONTAL_DEFAULT.any? { |kw| nome_lower.include?(kw) }
+      eh_perimetro   = palavras_perimetro.any? { |kw| nome_lower.include?(kw) }
+      eh_comprimento = palavras_linear_estrutural.any? { |kw| nome_lower.include?(kw) }
       if eh_horizontal
         desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt(af)}m²"
         build_item(desc, qtd, "und.")
-      elsif eh_linear
-        # medidas da peça + valor em metro linear no lugar do m²
+      elsif eh_perimetro
+        # moldura/sanca: metro linear = perímetro = 2 × (2 maiores dimensões)
+        d = [l, p, a].sort.reverse
+        perim = (2 * (d[0] + d[1])).round(2)
+        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(perim)}m"
+        build_item(desc, qtd, "und.")
+      elsif eh_comprimento
+        # coluna/viga/pilar/barrote...: metro linear = maior dimensão
         desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(comp)}m"
         build_item(desc, qtd, "und.")
       else
-        desc = "#{nome} - #{fmt(af)}m²"
+        # parede/painel/testeira/backdrop: mantém as medidas escritas + m²
+        desc = "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m) - #{fmt(af)}m²"
         build_item(desc, qtd, "und.")
       end
 
@@ -1230,7 +1268,7 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v6.7.6 carregado"
+    puts "✅ STAND1_Memorial v6.7.7 carregado"
   end
 
 end

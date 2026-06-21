@@ -313,6 +313,7 @@
   <button class="btn-modo" onclick="abrirModalManual()" title="Adicionar um item manualmente (ex.: tomadas) — não precisa estar no modelo">➕ Item Manual</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalLinear()">⚙ M Linear</button>
+  <button class="btn-modo" onclick="abrirModalPerimetro()">⚙ M Linear (Perímetro)</button>
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
@@ -367,11 +368,28 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalLinear()">✕</button>
       </div>
     </div>
-    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras são exibidos como <b>comprimento (m) × quantidade</b> em vez de m².</div>
+    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras têm o metro linear = <b>maior dimensão</b> (postes/vigas: coluna, viga, pilar, barrote...).</div>
     <div class="kw-list" id="listaKwLinear"></div>
     <div class="linear-add">
       <input type="text" id="inputKwLinear" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordLinear()">
       <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordLinear()">+ Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalPerimetro" class="modal-overlay" style="display:none">
+  <div class="modal-rev modal-linear">
+    <div class="mrev-header">
+      <span class="mrev-title">⚙ M Linear (Perímetro) — Palavras-chave</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharModalPerimetro()">✕</button>
+      </div>
+    </div>
+    <div class="linear-desc">Componentes em <b>ESTRUTURAS</b> cujo nome contém estas palavras têm o metro linear = <b>perímetro = 2 × (2 maiores dimensões)</b> (molduras/sancas que contornam uma área).</div>
+    <div class="kw-list" id="listaKwPerimetro"></div>
+    <div class="linear-add">
+      <input type="text" id="inputKwPerimetro" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordPerimetro()">
+      <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordPerimetro()">+ Adicionar</button>
     </div>
   </div>
 </div>
@@ -676,6 +694,50 @@ function removerKeyword(idx){
 function salvarKeywordsLinear(){
   if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_linear)
     sketchup.salvar_palavras_linear(JSON.stringify(palavrasLinear));
+}
+
+
+// ── M LINEAR (PERÍMETRO) — gestão de palavras-chave ──────────────────────────
+var palavrasPerimetro = [];
+
+function definirPalavrasPerimetro(lista){ palavrasPerimetro = lista || []; }
+
+function abrirModalPerimetro(){
+  renderizarChipsPerimetro();
+  document.getElementById('modalPerimetro').style.display='flex';
+  document.getElementById('inputKwPerimetro').value='';
+}
+
+function fecharModalPerimetro(){ document.getElementById('modalPerimetro').style.display='none'; }
+
+function renderizarChipsPerimetro(){
+  var el=document.getElementById('listaKwPerimetro');
+  if(!palavrasPerimetro.length){ el.innerHTML='<span class="kw-vazio">Nenhuma palavra-chave definida.</span>'; return; }
+  el.innerHTML=palavrasPerimetro.map(function(kw,i){
+    return '<span class="kw-chip">'+kw+'<button class="kw-chip-del" onclick="removerKeywordPerimetro('+i+')" title="Remover">×</button></span>';
+  }).join('');
+}
+
+function adicionarKeywordPerimetro(){
+  var inp=document.getElementById('inputKwPerimetro');
+  var val=inp.value.trim().toLowerCase();
+  if(!val) return;
+  if(palavrasPerimetro.indexOf(val)>=0){ inp.value=''; return; }
+  palavrasPerimetro.push(val);
+  inp.value='';
+  renderizarChipsPerimetro();
+  salvarKeywordsPerimetro();
+}
+
+function removerKeywordPerimetro(idx){
+  palavrasPerimetro.splice(idx,1);
+  renderizarChipsPerimetro();
+  salvarKeywordsPerimetro();
+}
+
+function salvarKeywordsPerimetro(){
+  if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_perimetro)
+    sketchup.salvar_palavras_perimetro(JSON.stringify(palavrasPerimetro));
 }
 
 
