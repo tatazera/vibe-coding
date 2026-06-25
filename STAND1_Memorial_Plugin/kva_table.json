@@ -1,88 +1,384 @@
 {
-  "instalacoes": [
-    { "nome": "Tomada",         "kva": 0.150, "por": "unidade" },
-    { "nome": "Tomada 10A",     "kva": 0.150, "por": "unidade" },
-    { "nome": "Tomada 20A",     "kva": 0.200, "por": "unidade" },
-    { "nome": "Tomada USB",     "kva": 0.005, "por": "unidade" }
-  ],
-  "iluminacao": [
-    { "nome": "Fita LED",               "kva": 0.012, "por": "metro" },
-    { "nome": "Fita LED SMD3014",       "kva": 0.012, "por": "metro" },
-    { "nome": "Fita LED SMD3528",       "kva": 0.009, "por": "metro" },
-    { "nome": "Fita LED SMD5050",       "kva": 0.014, "por": "metro" },
-    { "nome": "Neon",                   "kva": 0.030, "por": "metro" },
-    { "nome": "Refletor LED",           "kva": 0.050, "por": "unidade" },
-    { "nome": "Refletor LED 10w",       "kva": 0.010, "por": "unidade" },
-    { "nome": "Refletor LED 20w",       "kva": 0.020, "por": "unidade" },
-    { "nome": "Refletor LED 30w",       "kva": 0.030, "por": "unidade" },
-    { "nome": "Refletor LED 50w",       "kva": 0.050, "por": "unidade" },
-    { "nome": "Refletor LED 100w",      "kva": 0.100, "por": "unidade" },
-    { "nome": "Refletor LED 200w",      "kva": 0.200, "por": "unidade" },
-    { "nome": "Dicróica",               "kva": 0.009, "por": "unidade" },
-    { "nome": "Dicróica LED 3w",        "kva": 0.003, "por": "unidade" },
-    { "nome": "Dicróica LED 5w",        "kva": 0.005, "por": "unidade" },
-    { "nome": "Dicróica LED 7w",        "kva": 0.007, "por": "unidade" },
-    { "nome": "Dicróica LED 9w",        "kva": 0.009, "por": "unidade" },
-    { "nome": "Dicróica LED 12w",       "kva": 0.012, "por": "unidade" },
-    { "nome": "Dicróica Halógena 50w",  "kva": 0.050, "por": "unidade" },
-    { "nome": "Paflon",                 "kva": 0.018, "por": "unidade" },
-    { "nome": "Paflon LED 9w",          "kva": 0.009, "por": "unidade" },
-    { "nome": "Paflon LED 18w",         "kva": 0.018, "por": "unidade" },
-    { "nome": "Paflon LED 36w",         "kva": 0.036, "por": "unidade" },
-    { "nome": "AR111 75w",              "kva": 0.075, "por": "unidade" },
-    { "nome": "AR111 100w",             "kva": 0.100, "por": "unidade" },
-    { "nome": "Par38",                  "kva": 0.018, "por": "unidade" },
-    { "nome": "HQI 150w",              "kva": 0.150, "por": "unidade" },
-    { "nome": "HQI 250w",              "kva": 0.250, "por": "unidade" },
-    { "nome": "Canhão de Luz",          "kva": 0.600, "por": "unidade" },
-    { "nome": "Canhão de Luz 300w",     "kva": 0.300, "por": "unidade" },
-    { "nome": "Canhão de Luz 500w",     "kva": 0.500, "por": "unidade" },
-    { "nome": "Canhão de Luz 1000w",    "kva": 1.000, "por": "unidade" }
-  ],
-  "climatizacao": [
-    { "nome": "Ar Condicionado",          "kva": 1.900, "por": "unidade" },
-    { "nome": "Ar Condicionado 7000 Btu", "kva": 1.050, "por": "unidade" },
-    { "nome": "Ar Condicionado 7500 Btu", "kva": 1.100, "por": "unidade" },
-    { "nome": "Ar Condicionado 10000 Btu","kva": 1.500, "por": "unidade" },
-    { "nome": "Ar Condicionado 12000 Btu","kva": 1.900, "por": "unidade" },
-    { "nome": "Ar Condicionado 18000 Btu","kva": 2.500, "por": "unidade" },
-    { "nome": "Ar Condicionado 24000 Btu","kva": 3.600, "por": "unidade" },
-    { "nome": "Ar Condicionado 30000 Btu","kva": 4.000, "por": "unidade" },
-    { "nome": "Split 60000 BTU",          "kva": 6.000, "por": "unidade" },
-    { "nome": "Split 80000 BTU",          "kva": 8.000, "por": "unidade" },
-    { "nome": "Cortina de Ar",            "kva": 0.300, "por": "unidade" },
-    { "nome": "Ventilador",               "kva": 0.300, "por": "unidade" }
-  ],
-  "eletronicos": [
-    { "nome": "TV LED",          "kva": 0.255, "por": "unidade" },
-    { "nome": "TV LED 32",       "kva": 0.160, "por": "unidade" },
-    { "nome": "TV LED 40",       "kva": 0.230, "por": "unidade" },
-    { "nome": "TV LED 50",       "kva": 0.280, "por": "unidade" },
-    { "nome": "TV LED 55",       "kva": 0.350, "por": "unidade" },
-    { "nome": "Painel LED",      "kva": 1.400, "por": "unidade" },
-    { "nome": "Vídeo Wall",      "kva": 12.500,"por": "unidade" },
-    { "nome": "Projetor",        "kva": 0.400, "por": "unidade" },
-    { "nome": "Movie Light",     "kva": 0.600, "por": "unidade" },
-    { "nome": "Notebook",        "kva": 0.100, "por": "unidade" },
-    { "nome": "Computador",      "kva": 0.300, "por": "unidade" }
-  ],
-  "alimentacao": [
-    { "nome": "Frigobar",              "kva": 0.300, "por": "unidade" },
-    { "nome": "Geladeira",             "kva": 0.100, "por": "unidade" },
-    { "nome": "Geladeira 253L",        "kva": 0.090, "por": "unidade" },
-    { "nome": "Geladeira 280L",        "kva": 0.100, "por": "unidade" },
-    { "nome": "Geladeira 310L",        "kva": 0.120, "por": "unidade" },
-    { "nome": "Geladeira Duplex 430L", "kva": 0.150, "por": "unidade" },
-    { "nome": "Freezer",               "kva": 0.330, "por": "unidade" },
-    { "nome": "Freezer 170L",          "kva": 0.170, "por": "unidade" },
-    { "nome": "Freezer 220L",          "kva": 0.220, "por": "unidade" },
-    { "nome": "Freezer 330L",          "kva": 0.330, "por": "unidade" },
-    { "nome": "Freezer 480L",          "kva": 0.480, "por": "unidade" },
-    { "nome": "Chopeira",              "kva": 0.500, "por": "unidade" },
-    { "nome": "Cafeteira",             "kva": 1.500, "por": "unidade" },
-    { "nome": "Cafeteira Comercial",   "kva": 4.500, "por": "unidade" },
-    { "nome": "Microondas",            "kva": 1.200, "por": "unidade" },
-    { "nome": "Máquina de Gelo",       "kva": 0.792, "por": "unidade" },
-    { "nome": "Máquina de Sucos",      "kva": 0.300, "por": "unidade" }
+  "personalizado": [
+    {
+      "nome": "Tomada",
+      "kva": 0.15,
+      "por": "unidade"
+    },
+    {
+      "nome": "Tomada 10A",
+      "kva": 0.15,
+      "por": "unidade"
+    },
+    {
+      "nome": "Tomada 20A",
+      "kva": 0.2,
+      "por": "unidade"
+    },
+    {
+      "nome": "Tomada USB",
+      "kva": 0.005,
+      "por": "unidade"
+    },
+    {
+      "nome": "Fita LED",
+      "kva": 0.012,
+      "por": "metro"
+    },
+    {
+      "nome": "Fita LED SMD3014",
+      "kva": 0.012,
+      "por": "metro"
+    },
+    {
+      "nome": "Fita LED SMD3528",
+      "kva": 0.009,
+      "por": "metro"
+    },
+    {
+      "nome": "Fita LED SMD5050",
+      "kva": 0.014,
+      "por": "metro"
+    },
+    {
+      "nome": "Neon",
+      "kva": 0.03,
+      "por": "metro"
+    },
+    {
+      "nome": "Refletor LED",
+      "kva": 0.05,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 10w",
+      "kva": 0.01,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 20w",
+      "kva": 0.02,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 30w",
+      "kva": 0.03,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 50w",
+      "kva": 0.05,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 100w",
+      "kva": 0.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Refletor LED 200w",
+      "kva": 0.2,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica",
+      "kva": 0.009,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica LED 3w",
+      "kva": 0.003,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica LED 5w",
+      "kva": 0.005,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica LED 7w",
+      "kva": 0.007,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica LED 9w",
+      "kva": 0.009,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica LED 12w",
+      "kva": 0.012,
+      "por": "unidade"
+    },
+    {
+      "nome": "Dicróica Halógena 50w",
+      "kva": 0.05,
+      "por": "unidade"
+    },
+    {
+      "nome": "Paflon",
+      "kva": 0.018,
+      "por": "unidade"
+    },
+    {
+      "nome": "Paflon LED 9w",
+      "kva": 0.009,
+      "por": "unidade"
+    },
+    {
+      "nome": "Paflon LED 18w",
+      "kva": 0.018,
+      "por": "unidade"
+    },
+    {
+      "nome": "Paflon LED 36w",
+      "kva": 0.036,
+      "por": "unidade"
+    },
+    {
+      "nome": "AR111 75w",
+      "kva": 0.075,
+      "por": "unidade"
+    },
+    {
+      "nome": "AR111 100w",
+      "kva": 0.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Par38",
+      "kva": 0.018,
+      "por": "unidade"
+    },
+    {
+      "nome": "HQI 150w",
+      "kva": 0.15,
+      "por": "unidade"
+    },
+    {
+      "nome": "HQI 250w",
+      "kva": 0.25,
+      "por": "unidade"
+    },
+    {
+      "nome": "Canhão de Luz",
+      "kva": 0.6,
+      "por": "unidade"
+    },
+    {
+      "nome": "Canhão de Luz 300w",
+      "kva": 0.3,
+      "por": "unidade"
+    },
+    {
+      "nome": "Canhão de Luz 500w",
+      "kva": 0.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Canhão de Luz 1000w",
+      "kva": 1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado",
+      "kva": 1.9,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 7000 Btu",
+      "kva": 1.05,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 7500 Btu",
+      "kva": 1.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 10000 Btu",
+      "kva": 1.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 12000 Btu",
+      "kva": 1.9,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 18000 Btu",
+      "kva": 2.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 24000 Btu",
+      "kva": 3.6,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ar Condicionado 30000 Btu",
+      "kva": 4,
+      "por": "unidade"
+    },
+    {
+      "nome": "Split 60000 BTU",
+      "kva": 6,
+      "por": "unidade"
+    },
+    {
+      "nome": "Split 80000 BTU",
+      "kva": 8,
+      "por": "unidade"
+    },
+    {
+      "nome": "Cortina de Ar",
+      "kva": 0.3,
+      "por": "unidade"
+    },
+    {
+      "nome": "Ventilador",
+      "kva": 0.3,
+      "por": "unidade"
+    },
+    {
+      "nome": "TV LED",
+      "kva": 0.255,
+      "por": "unidade"
+    },
+    {
+      "nome": "TV LED 32",
+      "kva": 0.16,
+      "por": "unidade"
+    },
+    {
+      "nome": "TV LED 40",
+      "kva": 0.23,
+      "por": "unidade"
+    },
+    {
+      "nome": "TV LED 50",
+      "kva": 0.28,
+      "por": "unidade"
+    },
+    {
+      "nome": "TV LED 55",
+      "kva": 0.35,
+      "por": "unidade"
+    },
+    {
+      "nome": "Painel LED",
+      "kva": 1.4,
+      "por": "unidade"
+    },
+    {
+      "nome": "Vídeo Wall",
+      "kva": 12.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Projetor",
+      "kva": 0.4,
+      "por": "unidade"
+    },
+    {
+      "nome": "Movie Light",
+      "kva": 0.6,
+      "por": "unidade"
+    },
+    {
+      "nome": "Notebook",
+      "kva": 0.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Computador",
+      "kva": 0.3,
+      "por": "unidade"
+    },
+    {
+      "nome": "Frigobar",
+      "kva": 0.3,
+      "por": "unidade"
+    },
+    {
+      "nome": "Geladeira",
+      "kva": 0.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Geladeira 253L",
+      "kva": 0.09,
+      "por": "unidade"
+    },
+    {
+      "nome": "Geladeira 280L",
+      "kva": 0.1,
+      "por": "unidade"
+    },
+    {
+      "nome": "Geladeira 310L",
+      "kva": 0.12,
+      "por": "unidade"
+    },
+    {
+      "nome": "Geladeira Duplex 430L",
+      "kva": 0.15,
+      "por": "unidade"
+    },
+    {
+      "nome": "Freezer",
+      "kva": 0.33,
+      "por": "unidade"
+    },
+    {
+      "nome": "Freezer 170L",
+      "kva": 0.17,
+      "por": "unidade"
+    },
+    {
+      "nome": "Freezer 220L",
+      "kva": 0.22,
+      "por": "unidade"
+    },
+    {
+      "nome": "Freezer 330L",
+      "kva": 0.33,
+      "por": "unidade"
+    },
+    {
+      "nome": "Freezer 480L",
+      "kva": 0.48,
+      "por": "unidade"
+    },
+    {
+      "nome": "Chopeira",
+      "kva": 0.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Cafeteira",
+      "kva": 1.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Cafeteira Comercial",
+      "kva": 4.5,
+      "por": "unidade"
+    },
+    {
+      "nome": "Microondas",
+      "kva": 1.2,
+      "por": "unidade"
+    },
+    {
+      "nome": "Máquina de Gelo",
+      "kva": 0.792,
+      "por": "unidade"
+    },
+    {
+      "nome": "Máquina de Sucos",
+      "kva": 0.3,
+      "por": "unidade"
+    }
   ]
 }
