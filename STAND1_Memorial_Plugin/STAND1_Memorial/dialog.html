@@ -1738,6 +1738,10 @@ function receberResultadoKVA(res){
 function abrirPainelKVA(){
   document.getElementById('painelKVA').style.display='flex';
   renderizarKVA();
+  // Se não há dados calculados ainda, pede ao Ruby para recalcular agora
+  if(!_dadosKVA || !_dadosKVA.secoes || !_dadosKVA.secoes.length){
+    if(typeof sketchup!=='undefined'&&sketchup.calcular_kva_atual) sketchup.calcular_kva_atual();
+  }
 }
 
 function fecharPainelKVA(){
