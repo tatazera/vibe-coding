@@ -1648,6 +1648,7 @@ function carregarMultiEspaco(){
 function alertaSemEspacosMarcados(){
   mostrarToast('Nenhum grupo marcado como espaço. Abra o painel Multi-Espaço e marque os grupos.');
 }
+function alertaSemGruposEspaco(){ alertaSemEspacosMarcados(); }
 
 function carregarDadosMultiEspaco(payload){
   _dadosMultiEspaco = payload.espacos || [];
