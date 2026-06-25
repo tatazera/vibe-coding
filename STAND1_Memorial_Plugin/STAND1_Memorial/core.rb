@@ -1,5 +1,6 @@
 # =============================================================================
-# Stand1 Memorial Descritivo — core.rb v5.5.0
+# Stand1 Memorial Descritivo — core.rb v7.0.0
+# Novidades: Multi-Espaço · Diff de Revisão · Cálculo de KVA
 # =============================================================================
 
 require 'sketchup.rb'
@@ -15,8 +16,13 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "6.7.15"
+  VERSAO        = "7.0.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
+
+  # ── KVA ─────────────────────────────────────────────────────────────────────
+  URL_KVA_RAW = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/kva_table.json"
+  URL_KVA_API = "https://api.github.com/repos/tatazera/vibe-coding/contents/STAND1_Memorial_Plugin/kva_table.json"
+  KVA_SECOES  = ["EQUIPAMENTOS", "ELÉTRICA"].freeze
 
   # Compara "a.b.c" numericamente: remota > local?
   def self.versao_maior?(remota, local)
@@ -505,8 +511,20 @@ module STAND1_Memorial
           # JSON inválido — ignora e abre em branco
         end
       end
+      # Envia tabela KVA local e token para a interface
+      tabela = kva_table_local
+      token  = token_github
+      @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token.to_json})") rescue nil
+      # Modo multi-espaço
+      multi = modo_multi_espaco?
+      if multi
+        grupos = listar_grupos_raiz(model)
+        @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},true)") rescue nil
+      end
       # Checagem de atualização adiada (não bloqueia a abertura do diálogo).
       UI.start_timer(1.5, false) { verificar_atualizacao(false) } rescue nil
+      # Busca tabela KVA do GitHub em background (atualiza sem bloquear)
+      UI.start_timer(3.0, false) { buscar_kva_github } rescue nil
     end
 
     @dialog.add_action_callback("salvar_estado") do |_ctx, json|
@@ -563,6 +581,10 @@ module STAND1_Memorial
         payload = { secoes: dados, nome_arquivo: nome }.to_json
         @dialog.execute_script("carregarDados(#{payload})")
         reenviar_listas
+        diff = snapshot_anterior ? comparar_memoriais(snapshot_anterior, dados) : []
+        @dialog.execute_script("receberDiffRevisao(#{diff.to_json})")
+        resultado_kva = calcular_kva(dados)
+        @dialog.execute_script("receberResultadoKVA(#{resultado_kva.to_json})")
       end
     end
 
@@ -624,6 +646,95 @@ module STAND1_Memorial
       @dialog.close
     end
 
+    # ── MULTI-ESPAÇO ──────────────────────────────────────────────────────────
+
+    @dialog.add_action_callback("toggle_multi_espaco") do |_ctx, ativo|
+      salvar_modo_multi_espaco(ativo.to_s == "true")
+      model_atual = Sketchup.active_model
+      if model_atual
+        grupos = listar_grupos_raiz(model_atual)
+        @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{ativo.to_s == 'true' ? 'true' : 'false'})")
+      end
+    end
+
+    @dialog.add_action_callback("listar_grupos_espaco") do |_ctx|
+      model_atual = Sketchup.active_model
+      if model_atual
+        grupos = listar_grupos_raiz(model_atual)
+        @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{modo_multi_espaco? ? 'true' : 'false'})")
+      end
+    end
+
+    @dialog.add_action_callback("marcar_grupo_espaco") do |_ctx, pid, ativo|
+      model_atual = Sketchup.active_model
+      marcar_grupo_espaco(pid, ativo.to_s == "true", model_atual) if model_atual
+    end
+
+    @dialog.add_action_callback("carregar_multi_espaco") do |_ctx|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      dados_anteriores = @ultimo_resultado_multi
+      resultado = coletar_dados_multi_espaco(model_atual)
+      if resultado.nil?
+        @dialog.execute_script("alertaSemEspacosMarcados()")
+        next
+      end
+      @ultimo_resultado_multi = resultado
+      nome = nome_do_arquivo(model_atual)
+      payload = { espacos: resultado, nome_arquivo: nome }.to_json
+      @dialog.execute_script("carregarDadosMultiEspaco(#{payload})")
+      diff = dados_anteriores ? comparar_memoriais_multi(dados_anteriores, resultado) : []
+      @dialog.execute_script("receberDiffRevisao(#{diff.to_json})")
+    end
+
+    # ── DIFF DE REVISÃO ──────────────────────────────────────────────────────
+
+    @dialog.add_action_callback("exportar_pdf_revisao") do |_ctx, html_conteudo, nome_sug|
+      exportar_pdf_headless(html_conteudo, nome_sug || "Revisao_Interna.pdf")
+    end
+
+    # ── KVA ──────────────────────────────────────────────────────────────────
+
+    @dialog.add_action_callback("salvar_token_github") do |_ctx, token|
+      salvar_token_github(token)
+    end
+
+    @dialog.add_action_callback("buscar_kva_github") do |_ctx|
+      buscar_kva_github
+    end
+
+    @dialog.add_action_callback("publicar_kva_github") do |_ctx, json|
+      tabela = JSON.parse(json)
+      salvar_kva_table_local(tabela)
+      publicar_kva_github(json)
+    end
+
+    @dialog.add_action_callback("calcular_kva_atual") do |_ctx|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      secoes = if modo_multi_espaco? && @ultimo_resultado_multi
+        @ultimo_resultado_multi.flat_map { |e| e["secoes"] }
+      else
+        @ultimo_resultado || []
+      end
+      resultado_kva = calcular_kva(secoes)
+      @dialog.execute_script("receberResultadoKVA(#{resultado_kva.to_json})")
+    end
+
+    @dialog.add_action_callback("exportar_relatorio_kva") do |_ctx, html_conteudo, nome_sug|
+      exportar_pdf_headless(html_conteudo, nome_sug || "Relatorio_KVA.pdf")
+    end
+
+    @dialog.add_action_callback("exportar_relatorio_kva_txt") do |_ctx, texto, nome_sug|
+      exportar_arquivo_txt(texto, nome_sug || "Relatorio_KVA.txt")
+    end
+
+    @dialog.add_action_callback("carregar_kva_table_local") do |_ctx|
+      tabela = kva_table_local
+      token  = token_github
+      @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token.to_json})")
+    end
+
     @dialog.set_on_closed do
       @dialog = nil
     end
@@ -650,6 +761,10 @@ module STAND1_Memorial
     payload = { secoes: dados, nome_arquivo: nome }.to_json
     @dialog.execute_script("atualizarDados(#{payload})")
     reenviar_listas
+    diff = snapshot_anterior ? comparar_memoriais(snapshot_anterior, dados) : []
+    @dialog.execute_script("receberDiffRevisao(#{diff.to_json})")
+    resultado_kva = calcular_kva(dados)
+    @dialog.execute_script("receberResultadoKVA(#{resultado_kva.to_json})")
   end
 
   # Reenvia as listas de palavras-chave salvas para a interface após cada scan,
@@ -878,7 +993,10 @@ module STAND1_Memorial
     adicionar_revestimentos_auto(secoes_raw, materiais)
     adicionar_fita_led_auto(secoes_raw, materiais)
 
-    montar_resultado(secoes_raw)
+    resultado = montar_resultado(secoes_raw)
+    tirar_snapshot(@ultimo_resultado) if @ultimo_resultado
+    @ultimo_resultado = resultado
+    resultado
   end
 
   def self.adicionar_revestimentos_auto(secoes_raw, materiais)
@@ -1400,6 +1518,286 @@ module STAND1_Memorial
     puts "Dica: se 'total' >> 'maior' e há faces em back/herdado, o excedente"
     puts "vem do verso/bordas do sólido ou da tinta aplicada na instância."
     dados.size
+  end
+
+  # ── MULTI-ESPAÇO ────────────────────────────────────────────────────────────
+
+  def self.modo_multi_espaco?
+    Sketchup.read_default("STAND1_Memorial", "modo_multi_espaco", "0") == "1"
+  end
+
+  def self.salvar_modo_multi_espaco(ativo)
+    Sketchup.write_default("STAND1_Memorial", "modo_multi_espaco", ativo ? "1" : "0")
+  end
+
+  # Retorna todos os grupos de primeiro nível do modelo com nome e status de marcação.
+  def self.listar_grupos_raiz(model)
+    grupos = []
+    model.entities.each do |ent|
+      next unless ent.is_a?(Sketchup::Group)
+      nome    = ent.name.to_s.strip
+      nome    = "(sem nome)" if nome.empty?
+      marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
+      grupos << { "id" => ent.persistent_id.to_s, "nome" => nome, "marcado" => (marcado == true || marcado == "true") }
+    end
+    grupos
+  end
+
+  # Marca ou desmarca um grupo como espaço via persistent_id.
+  def self.marcar_grupo_espaco(pid, ativo, model)
+    model.start_operation("STAND1 — Marcar Espaço", true)
+    model.entities.each do |ent|
+      next unless ent.is_a?(Sketchup::Group)
+      if ent.persistent_id.to_s == pid.to_s
+        ent.set_attribute("STAND1_Memorial", "espaco", ativo)
+        model.commit_operation
+        return true
+      end
+    end
+    model.abort_operation
+    false
+  end
+
+  # Coleta dados separados por espaço (grupos marcados com atributo "espaco").
+  # Retorna array de { "espaco" => nome, "secoes" => [...] }.
+  def self.coletar_dados_multi_espaco(model)
+    @ultimo_modo = :tudo
+    limpar_cache
+
+    grupos = []
+    model.entities.each do |ent|
+      next unless ent.is_a?(Sketchup::Group)
+      marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
+      next unless marcado == true || marcado == "true"
+      nome = ent.name.to_s.strip
+      nome = "Espaço #{grupos.size + 1}" if nome.empty?
+      grupos << { grupo: ent, nome: nome }
+    end
+
+    return nil if grupos.empty?  # fallback para modo padrão
+
+    resultado = []
+    grupos.each do |gs|
+      secoes_raw = {}
+      SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
+      gs[:grupo].entities.each { |ent| processar_entidade(ent, secoes_raw) }
+      materiais = listar_materiais_revestimentos_grupo(gs[:grupo])
+      adicionar_revestimentos_auto(secoes_raw, materiais)
+      adicionar_fita_led_auto(secoes_raw, materiais)
+      secoes = montar_resultado(secoes_raw)
+      resultado << { "espaco" => gs[:nome], "secoes" => secoes } unless secoes.empty?
+    end
+    resultado
+  end
+
+  # Versão de listar_materiais_revestimentos restrita a um grupo específico.
+  def self.listar_materiais_revestimentos_grupo(grupo)
+    materiais_pol2 = Hash.new(0.0)
+    grupo.entities.each { |ent| varrer_para_revestimentos(ent, materiais_pol2) }
+    materiais_pol2.map do |mat, area|
+      c   = mat.color
+      cor = '#%02x%02x%02x' % [c.red, c.green, c.blue]
+      { "nome" => mat.display_name, "area" => (area * POL2_PARA_M2).round(2), "cor" => cor }
+    end.sort_by { |m| m["nome"] }
+  end
+
+  # ── DIFF DE REVISÃO ──────────────────────────────────────────────────────────
+
+  @snapshot_anterior = nil
+
+  def self.snapshot_anterior
+    @snapshot_anterior
+  end
+
+  # Salva o estado atual antes de uma nova leitura.
+  def self.tirar_snapshot(resultado)
+    @snapshot_anterior = Marshal.load(Marshal.dump(resultado)) rescue resultado.dup
+  rescue
+    @snapshot_anterior = nil
+  end
+
+  # Compara dois resultados de memorial e retorna lista de alterações.
+  # Cada alteração: { tipo: "novo"|"removido"|"alterado", secao:, ... }
+  def self.comparar_memoriais(anterior, novo)
+    return [] if anterior.nil? || novo.nil?
+
+    mapa_ant = {}
+    mapa_nov = {}
+
+    Array(anterior).each do |sec|
+      sn = sec["secao"] || sec[:secao].to_s
+      Array(sec["itens"] || sec[:itens]).each do |it|
+        ch = it["chave"] || it[:chave]
+        mapa_ant["#{sn}||#{ch}"] = { secao: sn, desc: it["descricao"], qtd: it["quantidade"] }
+      end
+    end
+
+    Array(novo).each do |sec|
+      sn = sec["secao"] || sec[:secao].to_s
+      Array(sec["itens"] || sec[:itens]).each do |it|
+        ch = it["chave"] || it[:chave]
+        mapa_nov["#{sn}||#{ch}"] = { secao: sn, desc: it["descricao"], qtd: it["quantidade"] }
+      end
+    end
+
+    alteracoes = []
+    (mapa_ant.keys - mapa_nov.keys).each do |k|
+      d = mapa_ant[k]; alteracoes << { tipo: "removido", secao: d[:secao], desc: d[:desc], qtd_ant: d[:qtd] }
+    end
+    (mapa_nov.keys - mapa_ant.keys).each do |k|
+      d = mapa_nov[k]; alteracoes << { tipo: "novo", secao: d[:secao], desc: d[:desc], qtd_nov: d[:qtd] }
+    end
+    (mapa_ant.keys & mapa_nov.keys).each do |k|
+      a = mapa_ant[k]; n = mapa_nov[k]
+      next if a[:desc] == n[:desc] && a[:qtd] == n[:qtd]
+      alteracoes << { tipo: "alterado", secao: a[:secao], desc_ant: a[:desc], desc_nov: n[:desc], qtd_ant: a[:qtd], qtd_nov: n[:qtd] }
+    end
+    alteracoes
+  end
+
+  # Compara dois resultados multi-espaço e retorna diff por espaço.
+  def self.comparar_memoriais_multi(anterior, novo)
+    return [] if anterior.nil? || novo.nil?
+    ant_map = {}; anterior.each { |e| ant_map[e["espaco"]] = e["secoes"] }
+    nov_map = {}; novo.each     { |e| nov_map[e["espaco"]] = e["secoes"] }
+    todos = (ant_map.keys + nov_map.keys).uniq
+    todos.flat_map do |espaco|
+      diff = comparar_memoriais(ant_map[espaco], nov_map[espaco])
+      diff.map { |d| d.merge(espaco: espaco) }
+    end
+  end
+
+  # ── KVA ──────────────────────────────────────────────────────────────────────
+
+  def self.token_github
+    Sketchup.read_default("STAND1_Memorial", "github_token", "").to_s.strip
+  end
+
+  def self.salvar_token_github(token)
+    Sketchup.write_default("STAND1_Memorial", "github_token", token.to_s.strip)
+  end
+
+  def self.kva_table_local
+    raw = Sketchup.read_default("STAND1_Memorial", "kva_table", nil)
+    return {} if raw.nil? || raw.strip.empty?
+    JSON.parse(raw)
+  rescue
+    {}
+  end
+
+  def self.salvar_kva_table_local(tabela)
+    Sketchup.write_default("STAND1_Memorial", "kva_table", tabela.to_json)
+  end
+
+  # Busca tabela KVA do GitHub e atualiza local (assíncrono).
+  def self.buscar_kva_github
+    http_async(URL_KVA_RAW) do |body, ok|
+      next unless ok && body
+      begin
+        tabela = JSON.parse(body)
+        salvar_kva_table_local(tabela)
+        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json})") rescue nil
+      rescue
+      end
+    end
+  end
+
+  # Publica tabela KVA no GitHub via API (síncrono, roda em thread separada).
+  def self.publicar_kva_github(tabela_json)
+    token = token_github
+    if token.empty?
+      @dialog.execute_script("erroKVAGitHub('Token não configurado. Configure em KVA > GitHub.')") rescue nil
+      return
+    end
+    Thread.new do
+      begin
+        require 'net/http'
+        require 'openssl'
+        require 'base64'
+        uri  = URI(URL_KVA_API)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true; http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+        http.open_timeout = 10; http.read_timeout = 30
+
+        req_get = Net::HTTP::Get.new(uri.request_uri)
+        req_get["Authorization"] = "token #{token}"
+        req_get["User-Agent"] = "STAND1_Memorial/#{VERSAO}"
+        resp_get = http.request(req_get)
+        sha = JSON.parse(resp_get.body)["sha"] rescue nil
+
+        tabela_obj = JSON.parse(tabela_json)
+        conteudo_b64 = Base64.strict_encode64(JSON.pretty_generate(tabela_obj))
+        body_put = { message: "kva_table: atualizado pelo plugin v#{VERSAO}", content: conteudo_b64 }
+        body_put[:sha] = sha if sha
+
+        req_put = Net::HTTP::Put.new(uri.request_uri)
+        req_put["Authorization"] = "token #{token}"
+        req_put["User-Agent"] = "STAND1_Memorial/#{VERSAO}"
+        req_put["Content-Type"] = "application/json"
+        req_put.body = body_put.to_json
+        resp_put = http.request(req_put)
+
+        if resp_put.code.to_i.between?(200, 201)
+          @dialog.execute_script("sucessoKVAGitHub()") rescue nil
+        else
+          msg = JSON.parse(resp_put.body)["message"] rescue resp_put.body
+          @dialog.execute_script("erroKVAGitHub(#{msg.to_json})") rescue nil
+        end
+      rescue => e
+        @dialog.execute_script("erroKVAGitHub(#{e.message.to_json})") rescue nil
+      end
+    end
+  end
+
+  # Calcula KVA de Equipamentos e Elétrica usando a tabela local.
+  # Retorna { total:, secoes: [ { secao:, itens: [...], subtotal: } ] }
+  def self.calcular_kva(secoes_resultado)
+    tabela = kva_table_local
+    return { "total" => 0, "secoes" => [], "sem_tabela" => true } if tabela.empty?
+
+    # Achata todas as entradas e ordena do mais específico (nome mais longo) para o genérico.
+    entradas = []
+    tabela.each do |_cat, lista|
+      Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] }
+    end
+    entradas.sort_by! { |e| -e["nome"].to_s.length }
+
+    total_geral = 0.0
+    secoes_kva  = []
+
+    KVA_SECOES.each do |nome_secao|
+      secao = secoes_resultado.find { |s| (s["secao"] || s[:secao]).to_s == nome_secao }
+      next unless secao
+
+      itens_kva = []
+      Array(secao["itens"] || secao[:itens]).each do |item|
+        desc = (item["descricao"] || item[:descricao]).to_s
+        qtd  = (item["quantidade"] || item[:quantidade]).to_f
+
+        entrada = entradas.find { |e| desc.downcase.include?(e["nome"].to_s.downcase) }
+
+        if entrada
+          kva_unit = entrada["kva"].to_f
+          por      = entrada["por"].to_s
+          if por == "metro"
+            metros = desc.match(/\(([\d.,]+)\s*m\)/)&.captures&.first&.tr(",", ".")&.to_f || qtd
+            kva_total = (kva_unit * metros).round(3)
+          else
+            kva_total = (kva_unit * qtd).round(3)
+          end
+          itens_kva << { "desc" => desc, "qtd" => qtd, "kva_unit" => kva_unit,
+                         "por" => por, "kva_total" => kva_total, "match" => entrada["nome"] }
+          total_geral += kva_total
+        else
+          itens_kva << { "desc" => desc, "qtd" => qtd, "kva_total" => 0, "sem_cadastro" => true }
+        end
+      end
+
+      subtotal = itens_kva.sum { |i| i["kva_total"].to_f }.round(3)
+      secoes_kva << { "secao" => nome_secao, "itens" => itens_kva, "subtotal" => subtotal }
+    end
+
+    { "total" => total_geral.round(3), "secoes" => secoes_kva }
   end
 
   # ── MENU E BARRA DE FERRAMENTAS ─────────────────────────────────────────────
