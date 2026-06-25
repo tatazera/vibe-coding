@@ -84,6 +84,24 @@
   .item-desc-edit:focus { background: rgba(255,255,255,0.12); border-bottom-color: rgba(255,255,255,0.5); }
   .hbtn-lock { font-size: 15px; padding: 0 7px !important; opacity: .85; }
   .hbtn-lock:hover { opacity: 1; }
+  .h-sep-v { width: 1px; height: 20px; background: rgba(255,255,255,.25); margin: 0 4px; flex-shrink: 0; }
+  .hbtn-toggle { font-size: 11px; padding: 3px 8px; }
+  .hbtn-toggle.ativo { background: rgba(255,255,255,.40); font-weight: 700; }
+  .hbtn-kva { font-size: 11px; padding: 3px 8px; background: rgba(255,220,50,.22); border-color: rgba(255,220,50,.5); }
+  .hbtn-diff { font-size: 11px; padding: 3px 8px; background: rgba(255,120,50,.22); border-color: rgba(255,120,50,.5); }
+  .kva-sec { margin-bottom:12px; }
+  .kva-sec-titulo { font-size:11px; font-weight:700; letter-spacing:.06em; opacity:.65; margin-bottom:6px; }
+  .kva-item { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,.06); gap:8px; }
+  .kva-item.sem-cad { opacity:.45; font-style:italic; }
+  .kva-subtotal { display:flex; justify-content:flex-end; font-size:12px; font-weight:700; margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,.18); }
+  .kva-total { font-size:14px; font-weight:700; text-align:center; margin:12px 0 4px; }
+  .diff-item { display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; align-items:flex-start; }
+  .diff-novo { color: #7FD97F; }
+  .diff-removido { color: #FF8080; }
+  .diff-alterado { color: #FFD070; }
+  .grupo-espaco-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(0,0,0,.15); border-radius:6px; margin-bottom:6px; cursor:pointer; }
+  .grupo-espaco-item input[type=checkbox] { cursor:pointer; width:15px; height:15px; flex-shrink:0; }
+  .grupo-espaco-item label { cursor:pointer; font-size:13px; flex:1; }
   body.bloqueado .item-desc-edit,
   body.bloqueado .item-qtd-edit { pointer-events: none; border-bottom: none; cursor: default; }
   body.bloqueado .btn-excluir,
@@ -305,13 +323,17 @@
     <div class="h-logo"><img id="headerLogo" alt="S1"></div>
     <div class="ht"><h1>STAND1_Memorial</h1><p>Stand1 Produções</p></div>
   </div>
-  <div>
+  <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
     <button class="hbtn hbtn-s" onclick="criarTags()" title="Criar as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Tags</button>
     <button class="hbtn hbtn-s" onclick="verificarUpdate()" title="Verificar se há nova versão no GitHub">🔄 Atualização</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnTema" onclick="toggleTema()" title="Modo claro/escuro">🌙</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnLock" onclick="toggleBloqueio()" title="Bloquear/desbloquear edição">🔓</button>
     <button class="hbtn hbtn-s" onclick="copiarMemorial()" title="Copiar memorial como texto (cola formatado no Bloco de Notas, Word, e-mail)">📋 Copiar</button>
     <button class="hbtn hbtn-p" onclick="exportarPDFDireto()">⬇ PDF</button>
+    <div class="h-sep-v"></div>
+    <button id="btnMultiEspaco" class="hbtn hbtn-s hbtn-toggle" onclick="toggleMultiEspaco()" title="Alternar modo Multi-Espaço">⊞ Padrão</button>
+    <button id="btnKVA" class="hbtn hbtn-s hbtn-kva" onclick="abrirPainelKVA()" title="Carga elétrica calculada (clique para detalhes)" style="display:none">⚡ — KVA</button>
+    <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="exportarPDFDireto()" title="Há alterações em relação à leitura anterior" style="display:none">🔄 —</button>
   </div>
 </header>
 
@@ -466,13 +488,86 @@
       </div>
     </div>
     <div class="linear-desc" style="margin-bottom:14px">Escolha as opções antes de exportar:</div>
-    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(0,0,0,0.18);border-radius:8px;margin-bottom:18px">
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(0,0,0,0.18);border-radius:8px;margin-bottom:10px">
       <input type="checkbox" id="chkOcultarMedidas" style="width:16px;height:16px;cursor:pointer">
       <span style="font-size:13px">Ocultar medidas e m² <small style="opacity:.65">(somente descrição + quantidade)</small></span>
     </label>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">Cancelar</button>
-      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">Exportar</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 Exportar PDF cliente</button>
+      <button class="mrev-btn mrev-btn-sec" onclick="_doExportarTXT(document.getElementById('chkOcultarMedidas').checked);fecharModalExportar()">📋 TXT</button>
+    </div>
+
+    <div id="secaoDiffExport" style="display:none;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;margin-top:4px">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:10px">🔄 REVISÃO — <span id="diffContador">0</span> ALTERAÇÃO(ÕES)</div>
+      <div id="listaDiff" style="max-height:180px;overflow-y:auto;font-size:12px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="mrev-btn mrev-btn-sec" onclick="exportarPDFRevisao()">📄 PDF revisão interna</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL MULTI-ESPAÇO ──────────────────────────────────────────────────── -->
+<div id="modalMultiEspaco" class="modal-overlay" style="display:none">
+  <div class="modal-rev" style="max-width:400px">
+    <div class="mrev-header">
+      <span class="mrev-title">⊞ Multi-Espaço</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharModalMultiEspaco()">✕</button>
+      </div>
+    </div>
+    <div class="linear-desc" style="margin-bottom:10px">Marque os grupos que representam ambientes independentes:</div>
+    <div id="listaGruposEspaco" style="max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="mrev-btn mrev-btn-sec" onclick="fecharModalMultiEspaco()">Fechar</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="carregarMultiEspaco()">📋 Carregar Espaços</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PAINEL KVA ─────────────────────────────────────────────────────────── -->
+<div id="painelKVA" class="modal-overlay" style="display:none">
+  <div class="modal-rev" style="max-width:480px">
+    <div class="mrev-header">
+      <span class="mrev-title">⚡ Carga Elétrica</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="abrirEditorKVA()" title="Editar tabela de KVA">✏️ Tabela</button>
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharPainelKVA()">✕</button>
+      </div>
+    </div>
+    <div id="corpoKVA" style="max-height:400px;overflow-y:auto;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="mrev-btn mrev-btn-sec" onclick="exportarRelatorioKVATXT()">📋 TXT</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="exportarRelatorioKVA()">📄 PDF Relatório de Carga</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── EDITOR TABELA KVA ──────────────────────────────────────────────────── -->
+<div id="modalEditorKVA" class="modal-overlay" style="display:none">
+  <div class="modal-rev" style="max-width:560px">
+    <div class="mrev-header">
+      <span class="mrev-title">⚡ Tabela KVA</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="buscarKVAGitHub()" title="Buscar tabela atualizada do GitHub">↻ GitHub</button>
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharEditorKVA()">✕</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;opacity:.6;margin-bottom:6px">Token GitHub (para salvar no repositório colaborativo):</div>
+      <div style="display:flex;gap:6px">
+        <input type="password" id="inputGithubToken" placeholder="ghp_xxxxxxxxxxxx" style="flex:1;font-size:12px;padding:5px 8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:inherit">
+        <button class="mrev-btn mrev-btn-sec" onclick="salvarTokenGitHub()">Salvar</button>
+      </div>
+    </div>
+    <div style="font-size:11px;opacity:.6;margin-bottom:6px">Itens (um por linha: <code>Nome | KVA | unidade|metro</code>):</div>
+    <textarea id="textoEditorKVA" style="width:100%;height:300px;font-size:11px;font-family:monospace;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:inherit;padding:8px;resize:vertical" placeholder="Frigobar | 0.300 | unidade&#10;Fita LED | 0.012 | metro"></textarea>
+    <div id="msgEditorKVA" style="font-size:11px;margin-top:6px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="mrev-btn mrev-btn-sec" onclick="fecharEditorKVA()">Cancelar</button>
+      <button class="mrev-btn mrev-btn-sec" onclick="salvarKVALocal()">💾 Salvar Local</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="publicarKVAGitHub()">☁ Publicar no GitHub</button>
     </div>
   </div>
 </div>
@@ -1497,6 +1592,325 @@ function copiarMemorial(){
     mostrarToast('Não foi possível copiar.');
   }
 }
+
+// ── MULTI-ESPAÇO ─────────────────────────────────────────────────────────────
+
+var _modoMultiEspaco = false;
+var _gruposEspaco    = [];
+var _dadosMultiEspaco = null;
+
+function toggleMultiEspaco(){
+  _modoMultiEspaco = !_modoMultiEspaco;
+  var btn = document.getElementById('btnMultiEspaco');
+  if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
+  if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco){
+    sketchup.toggle_multi_espaco(_modoMultiEspaco.toString());
+  }
+  if(_modoMultiEspaco) abrirModalMultiEspaco();
+}
+
+function abrirModalMultiEspaco(){
+  document.getElementById('modalMultiEspaco').style.display='flex';
+  if(typeof sketchup!=='undefined'&&sketchup.listar_grupos_espaco) sketchup.listar_grupos_espaco();
+}
+
+function fecharModalMultiEspaco(){
+  document.getElementById('modalMultiEspaco').style.display='none';
+}
+
+function receberGruposEspaco(grupos, modoAtivo){
+  _gruposEspaco = grupos || [];
+  _modoMultiEspaco = !!modoAtivo;
+  var btn = document.getElementById('btnMultiEspaco');
+  if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
+  var lista = document.getElementById('listaGruposEspaco');
+  if(!lista) return;
+  if(!_gruposEspaco.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo encontrado no modelo.</div>'; return; }
+  lista.innerHTML = _gruposEspaco.map(function(g){
+    return '<div class="grupo-espaco-item" onclick="toggleGrupoEspaco(\''+g.id+'\',this)">'
+      +'<input type="checkbox" id="ge_'+g.id+'" '+(g.marcado?'checked':'')+'>'
+      +'<label for="ge_'+g.id+'">'+escaparAttr(g.nome)+'</label></div>';
+  }).join('');
+}
+
+function toggleGrupoEspaco(pid, el){
+  var chk = el.querySelector('input[type=checkbox]');
+  if(!chk) return;
+  var ativo = chk.checked;
+  if(typeof sketchup!=='undefined'&&sketchup.marcar_grupo_espaco) sketchup.marcar_grupo_espaco(pid, ativo.toString());
+}
+
+function carregarMultiEspaco(){
+  fecharModalMultiEspaco();
+  if(typeof sketchup!=='undefined'&&sketchup.carregar_multi_espaco) sketchup.carregar_multi_espaco();
+}
+
+function alertaSemEspacosMarcados(){
+  mostrarToast('Nenhum grupo marcado como espaço. Abra o painel Multi-Espaço e marque os grupos.');
+}
+
+function carregarDadosMultiEspaco(payload){
+  _dadosMultiEspaco = payload.espacos || [];
+  // Flatten para uso do memorial: agrupa seções com prefixo de espaço
+  dadosMemorial = [];
+  _dadosMultiEspaco.forEach(function(esp){
+    (esp.secoes||[]).forEach(function(sec){
+      dadosMemorial.push({ secao: '['+esp.espaco+'] '+sec.secao, itens: sec.itens, _espaco: esp.espaco });
+    });
+  });
+  if(payload.nome_arquivo) nomeArquivo = payload.nome_arquivo;
+  atualizarStatus();
+  renderizar();
+  persistirEstado();
+}
+
+// ── DIFF DE REVISÃO ──────────────────────────────────────────────────────────
+
+var _diffAtual = [];
+
+function receberDiffRevisao(diff){
+  _diffAtual = diff || [];
+  var btn = document.getElementById('btnDiff');
+  if(!btn) return;
+  if(!_diffAtual.length){ btn.style.display='none'; document.getElementById('secaoDiffExport').style.display='none'; return; }
+  btn.style.display='';
+  btn.textContent = '🔄 ' + _diffAtual.length + ' alt.';
+  var secao = document.getElementById('secaoDiffExport');
+  if(secao){ secao.style.display=''; }
+  document.getElementById('diffContador').textContent = _diffAtual.length;
+  var lista = document.getElementById('listaDiff');
+  if(!lista) return;
+  lista.innerHTML = _diffAtual.map(function(d){
+    if(d.tipo==='novo')
+      return '<div class="diff-item diff-novo"><span>★</span><span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_nov||d.desc)+'</span><span style="white-space:nowrap">+'+fmtQtd(d.qtd_nov||0)+'</span></div>';
+    if(d.tipo==='removido')
+      return '<div class="diff-item diff-removido"><span>✕</span><span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_ant||d.desc)+'</span><span style="white-space:nowrap">-'+fmtQtd(d.qtd_ant||0)+'</span></div>';
+    // alterado
+    var mudou = '';
+    if(d.qtd_ant !== d.qtd_nov) mudou += fmtQtd(d.qtd_ant)+'→'+fmtQtd(d.qtd_nov);
+    var arrow = (d.qtd_nov||0) > (d.qtd_ant||0) ? '▲' : '▼';
+    return '<div class="diff-item diff-alterado"><span>'+arrow+'</span>'
+      +'<span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_nov||d.desc_ant)+'</span>'
+      +(mudou?'<span style="white-space:nowrap">'+mudou+'</span>':'')+'</div>';
+  }).join('');
+}
+
+function exportarPDFRevisao(){
+  if(!_diffAtual.length){ mostrarToast('Sem alterações registradas.'); return; }
+  var proj = nomeProjeto||nomeArquivo;
+  var html = buildHTMLRevisao(proj, _diffAtual);
+  var nome = 'Revisao_'+((proj||'Projeto').trim().replace(/\s+/g,'_'))+'_Rev'+(revisao||'00')+'.pdf';
+  if(typeof sketchup!=='undefined'&&sketchup.exportar_pdf_revisao) sketchup.exportar_pdf_revisao(html, nome);
+  else { var o=document.title; document.title=nome.replace('.pdf',''); window.print(); document.title=o; }
+}
+
+function buildHTMLRevisao(proj, diff){
+  var linhas = diff.map(function(d){
+    if(d.tipo==='novo')
+      return '<tr style="color:#2a7a2a"><td>★ Novo</td><td>'+escaparAttr(d.secao)+'</td><td>'+escaparAttr(d.desc_nov||d.desc)+'</td><td>—</td><td>'+fmtQtd(d.qtd_nov||0)+'</td></tr>';
+    if(d.tipo==='removido')
+      return '<tr style="color:#aa0000"><td>✕ Removido</td><td>'+escaparAttr(d.secao)+'</td><td>'+escaparAttr(d.desc_ant||d.desc)+'</td><td>'+fmtQtd(d.qtd_ant||0)+'</td><td>—</td></tr>';
+    var arrow = (d.qtd_nov||0)>(d.qtd_ant||0)?'▲':'▼';
+    return '<tr style="color:#7a5a00"><td>'+arrow+' Alterado</td><td>'+escaparAttr(d.secao)+'</td>'
+      +'<td><del>'+escaparAttr(d.desc_ant||'')+'</del><br>'+escaparAttr(d.desc_nov||'')+'</td>'
+      +'<td>'+fmtQtd(d.qtd_ant||0)+'</td><td>'+fmtQtd(d.qtd_nov||0)+'</td></tr>';
+  }).join('');
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Revisão Interna</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px}h2{color:#1A2DB8}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border:1px solid #ddd;text-align:left}th{background:#1A2DB8;color:#fff}</style></head>'
+    +'<body><h2>Revisão Interna — '+escaparAttr(proj)+'</h2><p>Revisão: '+revisao+' · Gerado em: '+dataGeracao+'</p>'
+    +'<table><thead><tr><th>Tipo</th><th>Seção</th><th>Item</th><th>Qtd Ant.</th><th>Qtd Nov.</th></tr></thead><tbody>'+linhas+'</tbody></table>'
+    +'<p style="margin-top:20px;font-size:10px;color:#999">Stand1 Produções · Documento interno · Não enviar ao cliente</p></body></html>';
+}
+
+// ── KVA ──────────────────────────────────────────────────────────────────────
+
+var _dadosKVA    = null;
+var _tabelaKVA   = {};
+
+function receberResultadoKVA(res){
+  _dadosKVA = res;
+  var btn = document.getElementById('btnKVA');
+  if(!btn) return;
+  if(!res || res.sem_tabela || res.total === 0){ btn.style.display='none'; return; }
+  btn.style.display='';
+  btn.textContent = '⚡ ' + res.total.toFixed(2) + ' KVA';
+}
+
+function abrirPainelKVA(){
+  document.getElementById('painelKVA').style.display='flex';
+  renderizarKVA();
+}
+
+function fecharPainelKVA(){
+  document.getElementById('painelKVA').style.display='none';
+}
+
+function renderizarKVA(){
+  var corpo = document.getElementById('corpoKVA');
+  if(!corpo) return;
+  if(!_dadosKVA || !_dadosKVA.secoes || !_dadosKVA.secoes.length){
+    corpo.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum item de KVA calculado.<br>Carregue o memorial primeiro.</div>';
+    return;
+  }
+  var html = '';
+  _dadosKVA.secoes.forEach(function(sec){
+    html += '<div class="kva-sec"><div class="kva-sec-titulo">'+escaparAttr(sec.secao)+'</div>';
+    sec.itens.forEach(function(it){
+      if(it.sem_cadastro){
+        html += '<div class="kva-item sem-cad"><span>'+escaparAttr(it.desc)+'</span><span>sem KVA cadastrado</span></div>';
+      } else {
+        var label = it.por==='metro' ? '×'+it.qtd+'m' : '×'+fmtQtd(it.qtd);
+        html += '<div class="kva-item"><span>'+escaparAttr(it.desc)+'</span><span style="opacity:.65">'+label+' × '+it.kva_unit+' kva</span><span>'+it.kva_total.toFixed(3)+'</span></div>';
+      }
+    });
+    html += '<div class="kva-subtotal">subtotal: '+sec.subtotal.toFixed(3)+' kva</div></div>';
+  });
+  html += '<div class="kva-total">TOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA</div>';
+  corpo.innerHTML = html;
+}
+
+function exportarRelatorioKVA(){
+  if(!_dadosKVA||!_dadosKVA.secoes){ mostrarToast('Nenhum dado KVA disponível.'); return; }
+  var html = buildHTMLRelatorioKVA();
+  var nome = 'RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.pdf';
+  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva) sketchup.exportar_relatorio_kva(html, nome);
+  else { var o=document.title; document.title=nome.replace('.pdf',''); window.print(); document.title=o; }
+}
+
+function exportarRelatorioKVATXT(){
+  if(!_dadosKVA||!_dadosKVA.secoes){ mostrarToast('Nenhum dado KVA disponível.'); return; }
+  var txt = buildTXTRelatorioKVA();
+  var nome = 'RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.txt';
+  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva_txt) sketchup.exportar_relatorio_kva_txt(txt, nome);
+  else navigator.clipboard.writeText(txt).then(function(){mostrarToast('Copiado!');});
+}
+
+function buildHTMLRelatorioKVA(){
+  var proj = nomeProjeto||nomeArquivo;
+  var linhas = '';
+  _dadosKVA.secoes.forEach(function(sec){
+    linhas += '<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(sec.secao)+'</td></tr>';
+    sec.itens.forEach(function(it){
+      if(it.sem_cadastro){
+        linhas += '<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>';
+      } else {
+        var qtd = it.por==='metro' ? it.qtd+'m' : fmtQtd(it.qtd)+' un';
+        linhas += '<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>';
+      }
+    });
+    linhas += '<tr style="font-weight:bold;background:#f5f5f5"><td colspan="2">Subtotal</td><td>'+sec.subtotal.toFixed(3)+' kva</td></tr>';
+  });
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório KVA</title>'
+    +'<style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px}h2{color:#1A2DB8}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border:1px solid #ddd}th{background:#1A2DB8;color:#fff}.total{font-size:15px;font-weight:bold;text-align:center;margin-top:16px;color:#1A2DB8}</style></head>'
+    +'<body><h2>Relatório de Carga Elétrica</h2><p>Projeto: <strong>'+escaparAttr(proj)+'</strong> · Revisão: '+revisao+' · '+dataGeracao+'</p>'
+    +'<table><thead><tr><th>Item</th><th>Quantidade</th><th>KVA</th></tr></thead><tbody>'+linhas+'</tbody></table>'
+    +'<div class="total">TOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA</div>'
+    +'<p style="margin-top:20px;font-size:10px;color:#999">Stand1 Produções · Relatório interno</p></body></html>';
+}
+
+function buildTXTRelatorioKVA(){
+  var proj = nomeProjeto||nomeArquivo;
+  var t = 'RELATÓRIO DE CARGA ELÉTRICA\nProjeto: '+proj+'\nRevisão: '+revisao+'\n'+dataGeracao+'\n';
+  t += '============================================================\n\n';
+  _dadosKVA.secoes.forEach(function(sec){
+    t += sec.secao+'\n';
+    sec.itens.forEach(function(it){
+      if(it.sem_cadastro) t += '  '+it.desc+' - sem KVA cadastrado\n';
+      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; t += '  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
+    });
+    t += '  Subtotal: '+sec.subtotal.toFixed(3)+' kva\n\n';
+  });
+  t += '============================================================\nTOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA\n';
+  return t;
+}
+
+// ── EDITOR TABELA KVA ────────────────────────────────────────────────────────
+
+function abrirEditorKVA(){
+  fecharPainelKVA();
+  document.getElementById('modalEditorKVA').style.display='flex';
+  if(typeof sketchup!=='undefined'&&sketchup.carregar_kva_table_local) sketchup.carregar_kva_table_local();
+}
+
+function fecharEditorKVA(){
+  document.getElementById('modalEditorKVA').style.display='none';
+}
+
+function receberTabelaKVA(tabela, token){
+  _tabelaKVA = tabela || {};
+  var linhas = [];
+  Object.keys(_tabelaKVA).forEach(function(cat){
+    (_tabelaKVA[cat]||[]).forEach(function(e){ linhas.push(e.nome+' | '+e.kva+' | '+e.por); });
+  });
+  var txt = document.getElementById('textoEditorKVA');
+  if(txt) txt.value = linhas.join('\n');
+  if(token){ var inp=document.getElementById('inputGithubToken'); if(inp) inp.value=token; }
+}
+
+function salvarTokenGitHub(){
+  var token = (document.getElementById('inputGithubToken')||{}).value || '';
+  if(typeof sketchup!=='undefined'&&sketchup.salvar_token_github) sketchup.salvar_token_github(token);
+  mostrarToast('Token salvo!');
+}
+
+function parsearEditorKVA(){
+  var txt = (document.getElementById('textoEditorKVA')||{}).value || '';
+  var resultado = { personalizado: [] };
+  txt.split('\n').forEach(function(linha){
+    linha = linha.trim(); if(!linha||linha.startsWith('#')) return;
+    var partes = linha.split('|');
+    if(partes.length < 2) return;
+    var nome = partes[0].trim(), kva = parseFloat(partes[1].trim()), por = (partes[2]||'').trim().toLowerCase();
+    if(!nome || isNaN(kva)) return;
+    if(por!=='metro') por='unidade';
+    resultado.personalizado.push({ nome: nome, kva: kva, por: por });
+  });
+  return resultado;
+}
+
+function salvarKVALocal(){
+  var tabela = parsearEditorKVA();
+  var msg = document.getElementById('msgEditorKVA');
+  if(msg) msg.textContent = 'Salvando localmente...';
+  // publicar_kva_github no Ruby salva local antes de publicar — sem token só salva local
+  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github){
+    sketchup.publicar_kva_github(JSON.stringify(tabela));
+  }
+  if(msg) msg.textContent = 'Salvo localmente.';
+  fecharEditorKVA();
+}
+
+function publicarKVAGitHub(){
+  var tabela = parsearEditorKVA();
+  var msg = document.getElementById('msgEditorKVA');
+  if(msg) msg.textContent = 'Publicando no GitHub...';
+  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github){
+    sketchup.publicar_kva_github(JSON.stringify(tabela));
+  }
+}
+
+function buscarKVAGitHub(){
+  var msg = document.getElementById('msgEditorKVA');
+  if(msg) msg.textContent='Buscando no GitHub...';
+  if(typeof sketchup!=='undefined'&&sketchup.buscar_kva_github) sketchup.buscar_kva_github();
+}
+
+function sucessoKVAGitHub(){
+  mostrarToast('✅ Tabela publicada no GitHub!');
+  var msg=document.getElementById('msgEditorKVA'); if(msg) msg.textContent='Publicado com sucesso!';
+  fecharEditorKVA();
+}
+
+function erroKVAGitHub(msg){
+  mostrarToast('⚠ KVA: '+msg);
+  var el=document.getElementById('msgEditorKVA'); if(el) el.textContent='Erro: '+msg;
+}
+
+// ── INICIALIZAÇÃO ─────────────────────────────────────────────────────────────
+
+window.addEventListener('load', function(){
+  if(typeof sketchup!=='undefined'&&sketchup.carregar_kva_table_local) sketchup.carregar_kva_table_local();
+});
 </script>
 </body>
 </html>
