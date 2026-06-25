@@ -332,7 +332,7 @@
     <button class="hbtn hbtn-p" onclick="exportarPDFDireto()">⬇ PDF</button>
     <div class="h-sep-v"></div>
     <button id="btnMultiEspaco" class="hbtn hbtn-s hbtn-toggle" onclick="toggleMultiEspaco()" title="Alternar modo Multi-Espaço">⊞ Padrão</button>
-    <button id="btnKVA" class="hbtn hbtn-s hbtn-kva" onclick="abrirPainelKVA()" title="Carga elétrica calculada (clique para detalhes)" style="display:none">⚡ — KVA</button>
+    <button id="btnKVA" class="hbtn hbtn-s hbtn-kva" onclick="abrirPainelKVA()" title="Carga elétrica — clique para detalhes e configurações">⚡ KVA</button>
     <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="exportarPDFDireto()" title="Há alterações em relação à leitura anterior" style="display:none">🔄 —</button>
   </div>
 </header>
@@ -1731,8 +1731,7 @@ function receberResultadoKVA(res){
   _dadosKVA = res;
   var btn = document.getElementById('btnKVA');
   if(!btn) return;
-  if(!res || res.sem_tabela || res.total === 0){ btn.style.display='none'; return; }
-  btn.style.display='';
+  if(!res || res.sem_tabela || !res.total){ btn.textContent='⚡ KVA'; return; }
   btn.textContent = '⚡ ' + res.total.toFixed(2) + ' KVA';
 }
 
