@@ -1,6 +1,6 @@
-# =============================================================================
-# Stand1 Memorial Descritivo — core.rb v7.0.0
-# Novidades: Multi-Espaço · Diff de Revisão · Cálculo de KVA
+﻿# =============================================================================
+# Stand1 Memorial Descritivo â€” core.rb v7.0.0
+# Novidades: Multi-EspaÃ§o Â· Diff de RevisÃ£o Â· CÃ¡lculo de KVA
 # =============================================================================
 
 require 'sketchup.rb'
@@ -15,14 +15,14 @@ module STAND1_Memorial
   POLEGADA_PARA_METRO = 0.0254
   POL2_PARA_M2        = 0.0254 * 0.0254
 
-  # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.1"
+  # â”€â”€ VERSÃƒO + AUTO-UPDATE (via GitHub pÃºblico) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  VERSAO        = "7.0.2"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
-  # ── KVA ─────────────────────────────────────────────────────────────────────
+  # â”€â”€ KVA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   URL_KVA_RAW = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/kva_table.json"
   URL_KVA_API = "https://api.github.com/repos/tatazera/vibe-coding/contents/STAND1_Memorial_Plugin/kva_table.json"
-  KVA_SECOES  = ["EQUIPAMENTOS", "ELÉTRICA"].freeze
+  KVA_SECOES  = ["EQUIPAMENTOS", "ELÃ‰TRICA"].freeze
 
   # Compara "a.b.c" numericamente: remota > local?
   def self.versao_maior?(remota, local)
@@ -34,15 +34,15 @@ module STAND1_Memorial
     (r <=> l) > 0
   end
 
-  # GET assíncrono. Prioriza Sketchup::Http (pilha de rede nativa do Windows —
+  # GET assÃ­ncrono. Prioriza Sketchup::Http (pilha de rede nativa do Windows â€”
   # respeita proxy/TLS do sistema, sem depender do OpenSSL do SketchUp, que falha
   # o handshake com o GitHub em muitas builds). Faz fallback para Net::HTTP.
   # Chama on_body.call(corpo_string_ou_nil, ok_booleano).
   def self.http_async(url, &on_body)
     if defined?(Sketchup::Http) && defined?(Sketchup::Http::Request)
       req = Sketchup::Http::Request.new(url, Sketchup::Http::GET)
-      # Retém a requisição: sem isso o GC a coleta antes do callback assíncrono
-      # disparar e a chamada morre em silêncio (bug clássico do Sketchup::Http).
+      # RetÃ©m a requisiÃ§Ã£o: sem isso o GC a coleta antes do callback assÃ­ncrono
+      # disparar e a chamada morre em silÃªncio (bug clÃ¡ssico do Sketchup::Http).
       (@http_reqs ||= []) << req
       req.start do |request, response|
         (@http_reqs ||= []).delete(request) rescue nil
@@ -62,7 +62,7 @@ module STAND1_Memorial
     on_body.call(nil, false)
   end
 
-  # Fallback síncrono (SketchUp sem Sketchup::Http): Net::HTTP com cert tolerante.
+  # Fallback sÃ­ncrono (SketchUp sem Sketchup::Http): Net::HTTP com cert tolerante.
   def self.http_get_net(url, limite = 4)
     require 'net/http'
     require 'openssl'
@@ -81,15 +81,15 @@ module STAND1_Memorial
     end
   end
 
-  # Verifica versão e sinaliza o diálogo. manual=true mostra também "sem update".
+  # Verifica versÃ£o e sinaliza o diÃ¡logo. manual=true mostra tambÃ©m "sem update".
   def self.verificar_atualizacao(manual = false)
     return unless @dialog
     http_async(URL_MANIFESTO) do |body, ok|
       next (@dialog.execute_script("avisoUpdateErro()") rescue nil) if (!ok || body.nil?) && manual
       next unless ok && body
       begin
-        # Remove BOM (UTF-8) eventual no inicio — senao o JSON.parse falha.
-        limpo = body.to_s.dup.force_encoding("UTF-8").sub(/\A\xEF\xBB\xBF/n, "").sub(/\A﻿/, "")
+        # Remove BOM (UTF-8) eventual no inicio â€” senao o JSON.parse falha.
+        limpo = body.to_s.dup.force_encoding("UTF-8").sub(/\A\xEF\xBB\xBF/n, "").sub(/\Aï»¿/, "")
         info = JSON.parse(limpo)
         nova = info["versao"].to_s
         if versao_maior?(nova, VERSAO)
@@ -108,7 +108,7 @@ module STAND1_Memorial
   def self.baixar_e_instalar_update(url)
     http_async(url) do |body, ok|
       if !ok || body.nil?
-        UI.messagebox("Não foi possível baixar a atualização.\nAbrindo o download no navegador.")
+        UI.messagebox("NÃ£o foi possÃ­vel baixar a atualizaÃ§Ã£o.\nAbrindo o download no navegador.")
         UI.openURL(url) rescue nil
         next
       end
@@ -117,36 +117,36 @@ module STAND1_Memorial
         File.open(destino, "wb") { |f| f.write(body) }
         if Sketchup.respond_to?(:install_from_archive)
           Sketchup.install_from_archive(destino)
-          UI.messagebox("✅ Atualização instalada!\n\nReinicie o SketchUp para concluir.")
+          UI.messagebox("âœ… AtualizaÃ§Ã£o instalada!\n\nReinicie o SketchUp para concluir.")
         else
           UI.openURL(url)
         end
       rescue => e
-        UI.messagebox("Falha ao instalar a atualização:\n#{e.message}\n\nAbrindo o download no navegador.")
+        UI.messagebox("Falha ao instalar a atualizaÃ§Ã£o:\n#{e.message}\n\nAbrindo o download no navegador.")
         UI.openURL(url) rescue nil
       end
     end
   end
 
-  # Apenas estas 6 tags são exportadas — na ordem correta
+  # Apenas estas 6 tags sÃ£o exportadas â€” na ordem correta
   SECOES_PERMITIDAS = [
     "ESTRUTURAS",
     "REVESTIMENTOS",
-    "COMUNICAÇÃO VISUAL",
-    "MOBILIÁRIO",
+    "COMUNICAÃ‡ÃƒO VISUAL",
+    "MOBILIÃRIO",
     "EQUIPAMENTOS",
-    "ELÉTRICA"
+    "ELÃ‰TRICA"
   ]
 
-  # Padrão de fábrica para Mobiliário — editável dentro do plugin
+  # PadrÃ£o de fÃ¡brica para MobiliÃ¡rio â€” editÃ¡vel dentro do plugin
   PALAVRAS_MOBILIARIO_DEFAULT = [
-    "mdf", "compensado", "alumínio", "aluminio", "metalon"
+    "mdf", "compensado", "alumÃ­nio", "aluminio", "metalon"
   ]
 
-  # Persistência robusta de listas de palavras-chave em Sketchup defaults.
+  # PersistÃªncia robusta de listas de palavras-chave em Sketchup defaults.
   # Armazena uma palavra por linha (sem aspas/colchetes): o registro do SketchUp
   # aplica escaping em strings JSON, fazendo a releitura falhar e resetar para o
-  # padrão (bug do reset ao "Adicionar Tudo"). Lê o formato legado JSON também.
+  # padrÃ£o (bug do reset ao "Adicionar Tudo"). LÃª o formato legado JSON tambÃ©m.
   def self.ler_lista(chave, padrao)
     raw = Sketchup.read_default("STAND1_Memorial", chave, nil)
     return padrao.dup if raw.nil?
@@ -157,7 +157,7 @@ module STAND1_Memorial
         return v if v.is_a?(Array)
       rescue
       end
-      return padrao.dup # JSON legado corrompido pelo registro → padrão
+      return padrao.dup # JSON legado corrompido pelo registro â†’ padrÃ£o
     end
     s.split("\n").map { |x| x.strip }.reject(&:empty?)
   rescue
@@ -177,11 +177,11 @@ module STAND1_Memorial
     salvar_lista("palavras_mobiliario", lista)
   end
 
-  # Palavras-chave para identificar fitas LED na seção Elétrica
+  # Palavras-chave para identificar fitas LED na seÃ§Ã£o ElÃ©trica
   PALAVRAS_FITA_LED = ["fita led", "fita_led", "led cob", "led fita"]
 
-  # Largura da fita LED (m) — usada para converter área da textura em metro linear.
-  # metro linear = área da textura (um lado) ÷ largura. Editável no mini-painel.
+  # Largura da fita LED (m) â€” usada para converter Ã¡rea da textura em metro linear.
+  # metro linear = Ã¡rea da textura (um lado) Ã· largura. EditÃ¡vel no mini-painel.
   LARGURA_FITA_LED_DEFAULT = 0.02
   def self.largura_fita_led
     v = Sketchup.read_default("STAND1_Memorial", "largura_fita_led", nil)
@@ -197,23 +197,23 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "largura_fita_led", larg)
   end
 
-  # ── REGRAS DE MEDIÇÃO (ESTRUTURAS) ──────────────────────────────────────────
-  # Editor único: cada regra mapeia uma palavra-chave → fórmula de medição.
-  # A 1ª regra (de cima p/ baixo) cujo nome do item contenha a palavra vence;
-  # itens sem regra usam o fallback "face" (largura × altura).
-  # Fórmulas (= dropdown na interface):
-  #   horizontal       L×P                  m²   piso/forro/teto
-  #   face             largura×altura       m²   painel/backdrop/parede (fallback)
-  #   recinto          2×(L+P)×altura       m²   sala/cabine (fechado)*
-  #   faixa            (L+P)×altura         m²   testeira/fachada*
-  #   comprimento      maior dimensão       m    coluna/viga/pilar
-  #   perimetro        2×(2 maiores)        m    moldura/sanca
+  # â”€â”€ REGRAS DE MEDIÃ‡ÃƒO (ESTRUTURAS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Editor Ãºnico: cada regra mapeia uma palavra-chave â†’ fÃ³rmula de mediÃ§Ã£o.
+  # A 1Âª regra (de cima p/ baixo) cujo nome do item contenha a palavra vence;
+  # itens sem regra usam o fallback "face" (largura Ã— altura).
+  # FÃ³rmulas (= dropdown na interface):
+  #   horizontal       LÃ—P                  mÂ²   piso/forro/teto
+  #   face             larguraÃ—altura       mÂ²   painel/backdrop/parede (fallback)
+  #   recinto          2Ã—(L+P)Ã—altura       mÂ²   sala/cabine (fechado)*
+  #   faixa            (L+P)Ã—altura         mÂ²   testeira/fachada*
+  #   comprimento      maior dimensÃ£o       m    coluna/viga/pilar
+  #   perimetro        2Ã—(2 maiores)        m    moldura/sanca
   #   desenvolvimento  L+P                  m    trilho/barra aberta
-  #   volume           L×P×altura           m³   blocos/bases
-  #   unidade          —                    und. item avulso
-  # * recinto/faixa só aplicam a fórmula de perímetro se a menor dimensão
-  #   horizontal ≥ GUARDA_FOOTPRINT_M (footprint real); abaixo disso caem em
-  #   "face" — protege painel/parede fino de dobrar a área indevidamente.
+  #   volume           LÃ—PÃ—altura           mÂ³   blocos/bases
+  #   unidade          â€”                    und. item avulso
+  # * recinto/faixa sÃ³ aplicam a fÃ³rmula de perÃ­metro se a menor dimensÃ£o
+  #   horizontal â‰¥ GUARDA_FOOTPRINT_M (footprint real); abaixo disso caem em
+  #   "face" â€” protege painel/parede fino de dobrar a Ã¡rea indevidamente.
   GUARDA_FOOTPRINT_M = 0.30
 
   FORMULAS_VALIDAS = %w[
@@ -227,16 +227,16 @@ module STAND1_Memorial
     ["coluna", "comprimento"], ["viga", "comprimento"], ["pilar", "comprimento"],
     ["brise", "comprimento"], ["ripa", "comprimento"], ["pergola", "comprimento"],
     ["barrote", "comprimento"], ["montante", "comprimento"], ["travessa", "comprimento"],
-    ["moldura", "perimetro"], ["sanca", "perimetro"], ["rodapé", "perimetro"],
+    ["moldura", "perimetro"], ["sanca", "perimetro"], ["rodapÃ©", "perimetro"],
     ["friso", "perimetro"], ["arremate", "perimetro"],
-    ["sala", "recinto"], ["cabine", "recinto"], ["depósito", "recinto"], ["copa", "recinto"],
+    ["sala", "recinto"], ["cabine", "recinto"], ["depÃ³sito", "recinto"], ["copa", "recinto"],
     ["testeira", "faixa"], ["fachada", "faixa"],
     ["painel", "face"], ["backdrop", "face"], ["parede", "face"], ["placa", "face"],
-    ["fechamento", "face"], ["caixaria", "face"], ["divisória", "face"], ["totem", "face"]
+    ["fechamento", "face"], ["caixaria", "face"], ["divisÃ³ria", "face"], ["totem", "face"]
   ].freeze
 
-  # Regras lidas do registro como "palavra=formula" por linha (formato à prova do
-  # escaping que corrompe JSON no registro do SketchUp — ver ler_lista).
+  # Regras lidas do registro como "palavra=formula" por linha (formato Ã  prova do
+  # escaping que corrompe JSON no registro do SketchUp â€” ver ler_lista).
   def self.regras_medicao
     raw = Sketchup.read_default("STAND1_Memorial", "regras_medicao", nil)
     return REGRAS_MEDICAO_DEFAULT.map(&:dup) if raw.nil?
@@ -258,28 +258,28 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "regras_medicao", linhas.join("\n"))
   end
 
-  # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
+  # â”€â”€ TAGS PADRÃƒO STAND1 (integrado do plugin STAND1_Tags) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   NOME_GRUPO_TAGS = "0. Descritivo"
   TAGS_PADRAO = [
     { nome: "ESTRUTURAS",         cor: [43, 109, 184] },
     { nome: "REVESTIMENTOS",      cor: [52, 168, 83]  },
-    { nome: "COMUNICAÇÃO VISUAL", cor: [234, 67, 53]  },
-    { nome: "MOBILIÁRIO",         cor: [251, 188, 5]  },
+    { nome: "COMUNICAÃ‡ÃƒO VISUAL", cor: [234, 67, 53]  },
+    { nome: "MOBILIÃRIO",         cor: [251, 188, 5]  },
     { nome: "EQUIPAMENTOS",       cor: [102, 60, 163] },
-    { nome: "ELÉTRICA",           cor: [255, 109, 0]  },
-    { nome: "LOCAÇÃO",            cor: [0, 188, 212]  },
-    { nome: "REFERÊNCIA",         cor: [158, 158, 158] }
+    { nome: "ELÃ‰TRICA",           cor: [255, 109, 0]  },
+    { nome: "LOCAÃ‡ÃƒO",            cor: [0, 188, 212]  },
+    { nome: "REFERÃŠNCIA",         cor: [158, 158, 158] }
   ]
 
-  # Cria as Tags padrão Stand1 no modelo ativo, agrupadas na pasta "0. Descritivo".
-  # Tags existentes não são removidas (só têm a cor atualizada).
+  # Cria as Tags padrÃ£o Stand1 no modelo ativo, agrupadas na pasta "0. Descritivo".
+  # Tags existentes nÃ£o sÃ£o removidas (sÃ³ tÃªm a cor atualizada).
   def self.criar_tags_padrao
     model = Sketchup.active_model
     return UI.messagebox("Nenhum modelo aberto.") unless model
 
     suporta_folders = model.layers.respond_to?(:add_folder)
     criadas = []; existentes = []
-    model.start_operation("Stand1 — Criar Tags", true)
+    model.start_operation("Stand1 â€” Criar Tags", true)
     begin
       pasta = nil
       if suporta_folders
@@ -302,7 +302,7 @@ module STAND1_Memorial
           begin
             pasta.add_layer(layer) if layer.folder != pasta
           rescue
-            # algumas versões usam API diferente para mover tag — ignora
+            # algumas versÃµes usam API diferente para mover tag â€” ignora
           end
         end
       end
@@ -313,18 +313,18 @@ module STAND1_Memorial
       return UI.messagebox("Erro ao criar tags:\n#{e.message}")
     end
 
-    # Pós-operação (não afeta o commit): abre painel de Tags e informa o resultado.
+    # PÃ³s-operaÃ§Ã£o (nÃ£o afeta o commit): abre painel de Tags e informa o resultado.
     Sketchup.send_action("showLayerManager:") rescue nil
-    msg = "✅ Tags Stand1 prontas!\n\n"
+    msg = "âœ… Tags Stand1 prontas!\n\n"
     msg += "Criadas (#{criadas.length}): #{criadas.join(', ')}\n\n" unless criadas.empty?
-    msg += "Já existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
+    msg += "JÃ¡ existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
     msg += "Sem suporte a pastas de Tags (SketchUp < 2021): tags criadas soltas.\n" unless suporta_folders
     UI.messagebox(msg)
   end
 
-  # Padrão de fábrica para Revestimentos automáticos — editável dentro do plugin.
-  # Materiais do modelo cujo nome contém estas palavras entram automaticamente
-  # na seção REVESTIMENTOS ao usar "Adicionar Tudo".
+  # PadrÃ£o de fÃ¡brica para Revestimentos automÃ¡ticos â€” editÃ¡vel dentro do plugin.
+  # Materiais do modelo cujo nome contÃ©m estas palavras entram automaticamente
+  # na seÃ§Ã£o REVESTIMENTOS ao usar "Adicionar Tudo".
   PALAVRAS_REVESTIMENTO_DEFAULT = [
     "lona impressa", "napa", "pintura", "ripado"
   ]
@@ -337,7 +337,7 @@ module STAND1_Memorial
     salvar_lista("palavras_revestimento", lista)
   end
 
-  # ── PERSISTÊNCIA DE ESTADO (arquivo por projeto) ────────────────────────────
+  # â”€â”€ PERSISTÃŠNCIA DE ESTADO (arquivo por projeto) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @ultimo_estado_json = nil
   @cache = {}
@@ -353,37 +353,37 @@ module STAND1_Memorial
      (m[8]**2+m[9]**2+m[10]**2).round(4)]
   end
 
-  # Regras de medição lidas do registro são cacheadas durante o scan.
+  # Regras de mediÃ§Ã£o lidas do registro sÃ£o cacheadas durante o scan.
   def self.regras_medicao_cached
     @cache[:regras] ||= regras_medicao
   end
 
-  # Fórmula da 1ª regra cujo nome contenha a palavra (ou "face" como fallback).
+  # FÃ³rmula da 1Âª regra cujo nome contenha a palavra (ou "face" como fallback).
   def self.formula_do_item(nome_lower)
     regra = regras_medicao_cached.find { |pal, _f| nome_lower.include?(pal) }
     regra ? regra[1] : "face"
   end
 
-  # Monta a descrição de um item de ESTRUTURAS conforme a fórmula da regra.
+  # Monta a descriÃ§Ã£o de um item de ESTRUTURAS conforme a fÃ³rmula da regra.
   # l = largura (maior horizontal), p = profundidade (menor horizontal),
-  # a = altura (eixo vertical Z do modelo — lógica construtiva, não a menor dim).
+  # a = altura (eixo vertical Z do modelo â€” lÃ³gica construtiva, nÃ£o a menor dim).
   def self.descricao_estrutura(nome, l, p, a)
     formula = formula_do_item(nome.downcase)
-    d       = [l, p, a].sort.reverse        # 3 dimensões, maior → menor
+    d       = [l, p, a].sort.reverse        # 3 dimensÃµes, maior â†’ menor
     dim3    = "(#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)"
 
-    # Recinto/Faixa exigem footprint real; senão viram face (não dobram peça fina).
+    # Recinto/Faixa exigem footprint real; senÃ£o viram face (nÃ£o dobram peÃ§a fina).
     if (formula == "recinto" || formula == "faixa") && [l, p].min < GUARDA_FOOTPRINT_M
       formula = "face"
     end
 
     case formula
     when "horizontal"
-      "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt((l * p).round(2))}m²"
+      "#{nome} (#{fmt(l)}m x #{fmt(p)}m) - #{fmt((l * p).round(2))}mÂ²"
     when "recinto"
-      "#{nome} #{dim3} - #{fmt((2 * (l + p) * a).round(2))}m²"
+      "#{nome} #{dim3} - #{fmt((2 * (l + p) * a).round(2))}mÂ²"
     when "faixa"
-      "#{nome} #{dim3} - #{fmt(((l + p) * a).round(2))}m²"
+      "#{nome} #{dim3} - #{fmt(((l + p) * a).round(2))}mÂ²"
     when "comprimento"
       "#{nome} #{dim3} - #{fmt(d[0])}m"
     when "perimetro"
@@ -391,11 +391,11 @@ module STAND1_Memorial
     when "desenvolvimento"
       "#{nome} #{dim3} - #{fmt((l + p).round(2))}m"
     when "volume"
-      "#{nome} #{dim3} - #{fmt((l * p * a).round(2))}m³"
+      "#{nome} #{dim3} - #{fmt((l * p * a).round(2))}mÂ³"
     when "unidade"
       nome
-    else # face: largura × altura
-      "#{nome} #{dim3} - #{fmt((l * a).round(2))}m²"
+    else # face: largura Ã— altura
+      "#{nome} #{dim3} - #{fmt((l * a).round(2))}mÂ²"
     end
   end
 
@@ -420,15 +420,15 @@ module STAND1_Memorial
     path = arquivo_estado(model)
     rotacionar_backup(path)
     File.open(path, "w:UTF-8") { |f| f.write(json) }
-    # também salva nos atributos do modelo (backup para modelos salvos)
+    # tambÃ©m salva nos atributos do modelo (backup para modelos salvos)
     model.set_attribute("STAND1_Memorial", "estado_memorial", json) if model
   rescue => e
     # silently ignore file errors; try model attribute only
     model.set_attribute("STAND1_Memorial", "estado_memorial", json) rescue nil
   end
 
-  # Mantém até 5 backups (.bak1 mais recente … .bak5 mais antigo).
-  # Rotaciona no máximo a cada 10 min para não encher de cópias quase idênticas.
+  # MantÃ©m atÃ© 5 backups (.bak1 mais recente â€¦ .bak5 mais antigo).
+  # Rotaciona no mÃ¡ximo a cada 10 min para nÃ£o encher de cÃ³pias quase idÃªnticas.
   def self.rotacionar_backup(path)
     return unless File.exist?(path)
     bak1 = "#{path}.bak1"
@@ -439,11 +439,11 @@ module STAND1_Memorial
     end
     FileUtils.cp(path, bak1)
   rescue
-    # backup é melhor-esforço; nunca impede o salvamento principal
+    # backup Ã© melhor-esforÃ§o; nunca impede o salvamento principal
   end
 
   def self.carregar_estado_arquivo(model)
-    # tenta arquivo primeiro (não depende de o SKP estar salvo)
+    # tenta arquivo primeiro (nÃ£o depende de o SKP estar salvo)
     path = arquivo_estado(model)
     if File.exist?(path)
       conteudo = File.read(path, encoding: 'utf-8')
@@ -455,7 +455,7 @@ module STAND1_Memorial
     model ? model.get_attribute("STAND1_Memorial", "estado_memorial", nil) : nil
   end
 
-  # ── DIALOG ──────────────────────────────────────────────────────────────────
+  # â”€â”€ DIALOG â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @dialog = nil
 
@@ -473,7 +473,7 @@ module STAND1_Memorial
 
     html_path = File.join(__dir__, 'dialog.html')
     unless File.exist?(html_path)
-      UI.messagebox("Arquivo dialog.html não encontrado em:\n#{__dir__}")
+      UI.messagebox("Arquivo dialog.html nÃ£o encontrado em:\n#{__dir__}")
       return
     end
 
@@ -489,7 +489,7 @@ module STAND1_Memorial
 
     @dialog.set_file(html_path)
 
-    # Interface abre VAZIA — o usuário escolhe como carregar
+    # Interface abre VAZIA â€” o usuÃ¡rio escolhe como carregar
     @dialog.add_action_callback("dialog_pronto") do |_ctx|
       nome_arquivo = nome_do_arquivo(model)
       @dialog.execute_script("definirNomeArquivo('#{nome_arquivo.gsub("'","\\\\'")}')") rescue nil
@@ -508,20 +508,20 @@ module STAND1_Memorial
           parsed = JSON.parse(estado_json)
           @dialog.execute_script("restaurarEstado(#{parsed.to_json})")
         rescue => e
-          # JSON inválido — ignora e abre em branco
+          # JSON invÃ¡lido â€” ignora e abre em branco
         end
       end
       # Envia tabela KVA local e token para a interface
       tabela = kva_table_local
       token  = token_github
       @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token.to_json})") rescue nil
-      # Modo multi-espaço
+      # Modo multi-espaÃ§o
       multi = modo_multi_espaco?
       if multi
         grupos = listar_grupos_raiz(model)
         @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},true)") rescue nil
       end
-      # Checagem de atualização adiada (não bloqueia a abertura do diálogo).
+      # Checagem de atualizaÃ§Ã£o adiada (nÃ£o bloqueia a abertura do diÃ¡logo).
       UI.start_timer(1.5, false) { verificar_atualizacao(false) } rescue nil
       # Busca tabela KVA do GitHub em background (atualiza sem bloquear)
       UI.start_timer(3.0, false) { buscar_kva_github } rescue nil
@@ -533,7 +533,7 @@ module STAND1_Memorial
     end
 
     @dialog.set_on_closed do
-      # garante persistência mesmo se o diálogo for fechado de forma inesperada
+      # garante persistÃªncia mesmo se o diÃ¡logo for fechado de forma inesperada
       if @ultimo_estado_json
         salvar_estado_arquivo(@ultimo_estado_json, Sketchup.active_model)
       end
@@ -572,7 +572,7 @@ module STAND1_Memorial
       salvar_largura_fita_led(valor)
     end
 
-    # Carregar TUDO automaticamente (lê todas as tags)
+    # Carregar TUDO automaticamente (lÃª todas as tags)
     @dialog.add_action_callback("carregar_tudo") do |_ctx|
       model_atual = Sketchup.active_model
       if model_atual
@@ -588,7 +588,7 @@ module STAND1_Memorial
       end
     end
 
-    # Carregar somente a SELEÇÃO atual do modelo (ACUMULA com dados existentes)
+    # Carregar somente a SELEÃ‡ÃƒO atual do modelo (ACUMULA com dados existentes)
     @dialog.add_action_callback("carregar_selecao") do |_ctx|
       model_atual = Sketchup.active_model
       if model_atual
@@ -605,7 +605,7 @@ module STAND1_Memorial
       end
     end
 
-    # Atualizar manualmente (re-lê usando o último modo)
+    # Atualizar manualmente (re-lÃª usando o Ãºltimo modo)
     @dialog.add_action_callback("atualizar") do |_ctx|
       enviar_atualizacao
     end
@@ -620,7 +620,7 @@ module STAND1_Memorial
       exportar_arquivo_txt(texto_memorial, nome_sug)
     end
 
-    # Listar materiais para seleção pelo usuário
+    # Listar materiais para seleÃ§Ã£o pelo usuÃ¡rio
     @dialog.add_action_callback("listar_revestimentos") do |_ctx|
       model = Sketchup.active_model
       if model
@@ -646,7 +646,7 @@ module STAND1_Memorial
       @dialog.close
     end
 
-    # ── MULTI-ESPAÇO ──────────────────────────────────────────────────────────
+    # â”€â”€ MULTI-ESPAÃ‡O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @dialog.add_action_callback("toggle_multi_espaco") do |_ctx, ativo|
       salvar_modo_multi_espaco(ativo.to_s == "true")
@@ -687,13 +687,13 @@ module STAND1_Memorial
       @dialog.execute_script("receberDiffRevisao(#{diff.to_json})")
     end
 
-    # ── DIFF DE REVISÃO ──────────────────────────────────────────────────────
+    # â”€â”€ DIFF DE REVISÃƒO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @dialog.add_action_callback("exportar_pdf_revisao") do |_ctx, html_conteudo, nome_sug|
       exportar_pdf_headless(html_conteudo, nome_sug || "Revisao_Interna.pdf")
     end
 
-    # ── KVA ──────────────────────────────────────────────────────────────────
+    # â”€â”€ KVA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @dialog.add_action_callback("salvar_token_github") do |_ctx, token|
       salvar_token_github(token)
@@ -742,7 +742,7 @@ module STAND1_Memorial
     @dialog.show
   end
 
-  # ── ATUALIZAÇÃO MANUAL ──────────────────────────────────────────────────────
+  # â”€â”€ ATUALIZAÃ‡ÃƒO MANUAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @ultimo_modo = :tudo  # :tudo ou :selecao
 
@@ -767,7 +767,7 @@ module STAND1_Memorial
     @dialog.execute_script("receberResultadoKVA(#{resultado_kva.to_json})")
   end
 
-  # Reenvia as listas de palavras-chave salvas para a interface após cada scan,
+  # Reenvia as listas de palavras-chave salvas para a interface apÃ³s cada scan,
   # garantindo que elas nunca "sumam" ao rodar Adicionar Tudo/Atualizar.
   def self.reenviar_listas
     return unless @dialog
@@ -777,7 +777,7 @@ module STAND1_Memorial
     @dialog.execute_script("definirLarguraFita(#{largura_fita_led})") rescue nil
   end
 
-  # ── EXPORTAR PDF HEADLESS ────────────────────────────────────────────────────
+  # â”€â”€ EXPORTAR PDF HEADLESS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   BROWSER_PATHS = [
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
@@ -804,20 +804,20 @@ module STAND1_Memorial
 
     browser = BROWSER_PATHS.find { |p| File.exist?(p) }
     unless browser
-      UI.messagebox("Edge ou Chrome não encontrado.\nInstale o Microsoft Edge para exportar PDF diretamente.")
+      UI.messagebox("Edge ou Chrome nÃ£o encontrado.\nInstale o Microsoft Edge para exportar PDF diretamente.")
       return
     end
 
     tmp_html_uri = "file:///#{tmp_html.gsub('\\', '/')}"
-    # --headless=new: novo headless do Edge/Chrome, que NÃO imprime cabeçalho/rodapé
-    # (URL + nº da página) — o flag --print-to-pdf-no-header é ignorado no headless antigo.
+    # --headless=new: novo headless do Edge/Chrome, que NÃƒO imprime cabeÃ§alho/rodapÃ©
+    # (URL + nÂº da pÃ¡gina) â€” o flag --print-to-pdf-no-header Ã© ignorado no headless antigo.
     cmd = "\"#{browser}\" --headless=new --disable-gpu --no-sandbox" \
           " --print-to-pdf=\"#{destino}\"" \
           " --print-to-pdf-no-header --no-pdf-header-footer \"#{tmp_html_uri}\""
 
     result = system(cmd)
 
-    # Fallback: se o novo headless falhar (Edge muito antigo), tenta o headless clássico.
+    # Fallback: se o novo headless falhar (Edge muito antigo), tenta o headless clÃ¡ssico.
     unless result && File.exist?(destino)
       cmd_old = "\"#{browser}\" --headless --disable-gpu --no-sandbox" \
                 " --print-to-pdf=\"#{destino}\"" \
@@ -830,11 +830,11 @@ module STAND1_Memorial
     if result && File.exist?(destino)
       UI.messagebox("PDF salvo em:\n#{destino}")
     else
-      UI.messagebox("Falha ao gerar o PDF.\nVerifique se o Edge está instalado e tente novamente.")
+      UI.messagebox("Falha ao gerar o PDF.\nVerifique se o Edge estÃ¡ instalado e tente novamente.")
     end
   end
 
-  # ── EXPORTAR TXT ─────────────────────────────────────────────────────────────
+  # â”€â”€ EXPORTAR TXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.exportar_arquivo_txt(texto, nome_sugerido = nil)
     unless nome_sugerido && !nome_sugerido.strip.empty?
@@ -858,8 +858,8 @@ module STAND1_Memorial
     end
   end
 
-  # ── COPIAR PARA A ÁREA DE TRANSFERÊNCIA ─────────────────────────────────────
-  # Escreve o texto no clipboard do Windows preservando acentos e ² (UTF-8 → Set-Clipboard).
+  # â”€â”€ COPIAR PARA A ÃREA DE TRANSFERÃŠNCIA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Escreve o texto no clipboard do Windows preservando acentos e Â² (UTF-8 â†’ Set-Clipboard).
   def self.copiar_para_clipboard(texto)
     tmp = File.join(ENV['TEMP'] || ENV['TMP'] || Dir.tmpdir, "stand1_memorial_clip.txt")
     File.write(tmp, texto.to_s, encoding: 'utf-8')
@@ -867,23 +867,23 @@ module STAND1_Memorial
     system("powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps)
     File.delete(tmp) rescue nil
   rescue => e
-    UI.messagebox("Não foi possível copiar:\n#{e.message}")
+    UI.messagebox("NÃ£o foi possÃ­vel copiar:\n#{e.message}")
   end
 
-  # ── SELEÇÃO DE COMPONENTE NO MODELO (LUPA) ──────────────────────────────────
+  # â”€â”€ SELEÃ‡ÃƒO DE COMPONENTE NO MODELO (LUPA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.selecionar_componente_no_modelo(chave_item)
     model = Sketchup.active_model
     return unless model
 
-    # Itens agrupados por nome (MOBILIÁRIO/ELÉTRICA): chave "grp__nome" → seleciona
-    # todas as instâncias com aquele nome (qualquer tamanho).
+    # Itens agrupados por nome (MOBILIÃRIO/ELÃ‰TRICA): chave "grp__nome" â†’ seleciona
+    # todas as instÃ¢ncias com aquele nome (qualquer tamanho).
     if chave_item.to_s.start_with?("grp__")
       nome_alvo = chave_item.to_s.sub("grp__", "")
       encontrados = []
       procurar_por_nome(model.entities, nome_alvo, encontrados)
       if encontrados.empty?
-        UI.messagebox("Componente não encontrado no modelo:\n\n#{nome_alvo}")
+        UI.messagebox("Componente nÃ£o encontrado no modelo:\n\n#{nome_alvo}")
         return
       end
       model.selection.clear
@@ -909,7 +909,7 @@ module STAND1_Memorial
                         encontrados)
 
     if encontrados.empty?
-      UI.messagebox("Componente não encontrado no modelo:\n\n#{nome_alvo}")
+      UI.messagebox("Componente nÃ£o encontrado no modelo:\n\n#{nome_alvo}")
       return
     end
 
@@ -928,7 +928,7 @@ module STAND1_Memorial
     entities.each do |ent|
       if ent.is_a?(Sketchup::ComponentInstance)
         nome = ent.definition.name
-        # mesma fonte de dimensões do memorial — as chaves batem
+        # mesma fonte de dimensÃµes do memorial â€” as chaves batem
         dims = dimensoes_reais(ent, tr_pai)
         _ck = [dims[:largura], dims[:profund], dims[:altura]].sort.reverse
         l   = _ck[0]
@@ -953,7 +953,7 @@ module STAND1_Memorial
     end
   end
 
-  # Busca instâncias por nome (qualquer dimensão) — para itens agrupados por nome.
+  # Busca instÃ¢ncias por nome (qualquer dimensÃ£o) â€” para itens agrupados por nome.
   def self.procurar_por_nome(entities, nome_alvo, resultado)
     nome_lc = nome_alvo.to_s.downcase
     entities.each do |ent|
@@ -969,14 +969,14 @@ module STAND1_Memorial
     end
   end
 
-  # ── NOME DO ARQUIVO .SKP ─────────────────────────────────────────────────────
+  # â”€â”€ NOME DO ARQUIVO .SKP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.nome_do_arquivo(model)
     path = model.path
     (path && !path.empty?) ? File.basename(path, ".skp") : "Novo Modelo"
   end
 
-  # ── COLETA DE DADOS (TUDO) ─────────────────────────────────────────────────
+  # â”€â”€ COLETA DE DADOS (TUDO) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.coletar_dados(model)
     @ultimo_modo = :tudo
@@ -988,7 +988,7 @@ module STAND1_Memorial
       processar_entidade(ent, secoes_raw)
     end
 
-    # listar_materiais_revestimentos é chamado uma única vez e reaproveitado
+    # listar_materiais_revestimentos Ã© chamado uma Ãºnica vez e reaproveitado
     materiais = listar_materiais_revestimentos(model)
     adicionar_revestimentos_auto(secoes_raw, materiais)
     adicionar_fita_led_auto(secoes_raw, materiais)
@@ -1033,9 +1033,9 @@ module STAND1_Memorial
 
     metros = (area_total / larg).round(2)
     chave  = "fita_led_auto"
-    return if secoes_raw["ELÉTRICA"][chave]
+    return if secoes_raw["ELÃ‰TRICA"][chave]
 
-    secoes_raw["ELÉTRICA"][chave] = {
+    secoes_raw["ELÃ‰TRICA"][chave] = {
       nome:               "Fita LED",
       largura:            0.0,
       profund:            0.0,
@@ -1049,7 +1049,7 @@ module STAND1_Memorial
     }
   end
 
-  # ── COLETA DE DADOS (SELEÇÃO) ──────────────────────────────────────────────
+  # â”€â”€ COLETA DE DADOS (SELEÃ‡ÃƒO) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.coletar_dados_selecao(model, selection)
     @ultimo_modo = :selecao
@@ -1084,10 +1084,10 @@ module STAND1_Memorial
     resultado
   end
 
-  # ── PROCESSAMENTO DE ENTIDADES ─────────────────────────────────────────────
+  # â”€â”€ PROCESSAMENTO DE ENTIDADES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.processar_entidade(entidade, secoes_raw, tag_herdada = nil, tr_pai = nil)
-    # Layer própria tem prioridade; Untagged/Layer0 herda do pai
+    # Layer prÃ³pria tem prioridade; Untagged/Layer0 herda do pai
     tag_propria = entidade.layer&.name || ""
     tag_nome    = (tag_propria != "" && tag_propria != "Untagged" && tag_propria != "Layer0") \
                   ? tag_propria : (tag_herdada || "")
@@ -1099,7 +1099,7 @@ module STAND1_Memorial
       if secao_match
         adicionar_componente(entidade, secao_match, secoes_raw, tr_pai)
       else
-        # acumula a transformação do pai (decisão 4: escala de pais aninhados)
+        # acumula a transformaÃ§Ã£o do pai (decisÃ£o 4: escala de pais aninhados)
         tr = tr_pai ? tr_pai * entidade.transformation : entidade.transformation
         entidade.definition.entities.each do |sub|
           processar_entidade(sub, secoes_raw, tag_nome, tr)
@@ -1114,9 +1114,9 @@ module STAND1_Memorial
     end
   end
 
-  # Ponte SketchUp → módulo puro de dimensões.
-  # Usa definition.bounds (dims reais da peça) + transformação composta,
-  # nunca inst.bounds (caixa do mundo, que infla peças rotacionadas).
+  # Ponte SketchUp â†’ mÃ³dulo puro de dimensÃµes.
+  # Usa definition.bounds (dims reais da peÃ§a) + transformaÃ§Ã£o composta,
+  # nunca inst.bounds (caixa do mundo, que infla peÃ§as rotacionadas).
   # API SketchUp: BoundingBox#width = X, #height = Y, #depth = Z.
   def self.dimensoes_reais(inst, tr_pai = nil)
     tr = tr_pai ? tr_pai * inst.transformation : inst.transformation
@@ -1145,24 +1145,24 @@ module STAND1_Memorial
     dims    = dimensoes_reais(inst, tr_pai)
     largura = dims[:largura]   # maior horizontal
     profund = dims[:profund]   # menor horizontal
-    altura  = dims[:altura]    # eixo mais vertical (Z) — sempre por último
+    altura  = dims[:altura]    # eixo mais vertical (Z) â€” sempre por Ãºltimo
 
-    # Chave: dims ordenadas — agrupa a mesma peça em qualquer orientação/espelho
+    # Chave: dims ordenadas â€” agrupa a mesma peÃ§a em qualquer orientaÃ§Ã£o/espelho
     chave_dims = Dimensoes.chave_dims(largura, profund, altura)
     _ck = [largura, profund, altura].sort.reverse
-    comprimento_linear = _ck[0]  # maior dimensão (fallback de m linear p/ fita LED)
+    comprimento_linear = _ck[0]  # maior dimensÃ£o (fallback de m linear p/ fita LED)
 
-    # area_face_frontal: usado só por COMUNICAÇÃO VISUAL ("2 maiores dimensões":
-    # lonas/logos, espessura é a menor dim). ESTRUTURAS calcula a medida na
-    # formatação, via regras de medição (descricao_estrutura).
-    area_face_frontal = secao == "COMUNICAÇÃO VISUAL" ? (_ck[0] * _ck[1]).round(2) : 0.0
+    # area_face_frontal: usado sÃ³ por COMUNICAÃ‡ÃƒO VISUAL ("2 maiores dimensÃµes":
+    # lonas/logos, espessura Ã© a menor dim). ESTRUTURAS calcula a medida na
+    # formataÃ§Ã£o, via regras de mediÃ§Ã£o (descricao_estrutura).
+    area_face_frontal = secao == "COMUNICAÃ‡ÃƒO VISUAL" ? (_ck[0] * _ck[1]).round(2) : 0.0
 
-    # ── REVESTIMENTOS: agrupa por ID do MATERIAL (não por componente) ──
+    # â”€â”€ REVESTIMENTOS: agrupa por ID do MATERIAL (nÃ£o por componente) â”€â”€
     if secao == "REVESTIMENTOS"
       area_por_mat = calcular_area_por_material(inst)
 
       if area_por_mat.empty?
-        # Nenhum material encontrado → usa o nome do componente como fallback
+        # Nenhum material encontrado â†’ usa o nome do componente como fallback
         chave = "rev_#{nome}__sem_material"
         area_fb = (largura * profund).round(2)
         if secoes_raw[secao][chave]
@@ -1198,18 +1198,18 @@ module STAND1_Memorial
       return
     end
 
-    # ── FITA LED (ELÉTRICA): metro linear = área da textura (um lado) ÷ largura ──
-    eh_fita = secao == "ELÉTRICA" && PALAVRAS_FITA_LED.any? { |kw| nome.downcase.include?(kw) }
+    # â”€â”€ FITA LED (ELÃ‰TRICA): metro linear = Ã¡rea da textura (um lado) Ã· largura â”€â”€
+    eh_fita = secao == "ELÃ‰TRICA" && PALAVRAS_FITA_LED.any? { |kw| nome.downcase.include?(kw) }
     metros_fita = 0.0
     if eh_fita
       area_tex = area_faces_material_m2(inst, tr_pai)  # qualquer face com textura
       metros_fita = (area_tex / largura_fita_led).round(2) if area_tex > 0
     end
 
-    # ── AGRUPAMENTO ──
-    # MOBILIÁRIO e ELÉTRICA agrupam só pelo NOME (medida = 1ª peça com aquele nome).
-    # Demais seções agrupam por nome + dimensões (tamanhos diferentes = linhas distintas).
-    chave = if ["MOBILIÁRIO", "ELÉTRICA"].include?(secao)
+    # â”€â”€ AGRUPAMENTO â”€â”€
+    # MOBILIÃRIO e ELÃ‰TRICA agrupam sÃ³ pelo NOME (medida = 1Âª peÃ§a com aquele nome).
+    # Demais seÃ§Ãµes agrupam por nome + dimensÃµes (tamanhos diferentes = linhas distintas).
+    chave = if ["MOBILIÃRIO", "ELÃ‰TRICA"].include?(secao)
       "grp__#{nome.downcase}"
     else
       "#{nome}__#{chave_dims}"
@@ -1217,7 +1217,7 @@ module STAND1_Memorial
 
     if secoes_raw[secao][chave]
       secoes_raw[secao][chave][:quantidade] += 1
-      # Fita LED: soma o comprimento real de cada instância
+      # Fita LED: soma o comprimento real de cada instÃ¢ncia
       secoes_raw[secao][chave][:metros_fita] += metros_fita if eh_fita
     else
       secoes_raw[secao][chave] = {
@@ -1226,7 +1226,7 @@ module STAND1_Memorial
         profund:            profund,
         altura:             altura,
         area_face_frontal:  area_face_frontal,
-        area_material:      0.0,  # não usado nesta seção; mantido por compatibilidade do estado
+        area_material:      0.0,  # nÃ£o usado nesta seÃ§Ã£o; mantido por compatibilidade do estado
         comprimento_linear: comprimento_linear,
         metros_fita:        metros_fita,
         quantidade:         1,
@@ -1235,11 +1235,11 @@ module STAND1_Memorial
     end
   end
 
-  # ── CÁLCULO DE ÁREA (m²) A PARTIR DAS TEXTURAS/MATERIAIS ──────────────────
+  # â”€â”€ CÃLCULO DE ÃREA (mÂ²) A PARTIR DAS TEXTURAS/MATERIAIS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   # Retorna hash { "nome_material" => area_m2 } agrupado por material
   # Leva em conta:
-  #   1) Material da instância do componente (aplicado no exterior)
+  #   1) Material da instÃ¢ncia do componente (aplicado no exterior)
   #   2) Material aplicado diretamente nas faces internas
   #   3) Materiais em grupos/componentes aninhados
   def self.calcular_area_por_material(inst)
@@ -1248,7 +1248,7 @@ module STAND1_Memorial
 
     coletar_materiais_recursivo(inst.definition.entities, mat_instancia, materiais_pol2)
 
-    # Converte polegadas² → m² e arredonda
+    # Converte polegadasÂ² â†’ mÂ² e arredonda
     resultado = {}
     materiais_pol2.each do |nome, area_pol2|
       resultado[nome] = (area_pol2 * POL2_PARA_M2).round(2)
@@ -1260,7 +1260,7 @@ module STAND1_Memorial
     entities.each do |ent|
       if ent.is_a?(Sketchup::Face)
         # Conta todas as faces pintadas: material da face (front), ou verso, ou
-        # herdado da instância/grupo pai.
+        # herdado da instÃ¢ncia/grupo pai.
         mat = ent.material || ent.back_material || mat_herdado
         if mat
           nome = mat.respond_to?(:display_name) ? mat.display_name : mat.name
@@ -1276,7 +1276,7 @@ module STAND1_Memorial
     end
   end
 
-  # ── FORMATAÇÃO POR SEÇÃO ─────────────────────────────────────────────────────
+  # â”€â”€ FORMATAÃ‡ÃƒO POR SEÃ‡ÃƒO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   # Toda medida exibida com 2 casas decimais: 5.00, 50.00, 500.00
   def self.fmt(v)
@@ -1295,30 +1295,30 @@ module STAND1_Memorial
 
     case secao
 
-    # ESTRUTURAS: medida definida pelas Regras de Medição (palavra-chave → fórmula).
+    # ESTRUTURAS: medida definida pelas Regras de MediÃ§Ã£o (palavra-chave â†’ fÃ³rmula).
     when "ESTRUTURAS"
       build_item(descricao_estrutura(nome, l, p, a), qtd, "und.")
 
-    # REVESTIMENTOS: Nome do Material (ID da textura) + m² + und.
+    # REVESTIMENTOS: Nome do Material (ID da textura) + mÂ² + und.
     when "REVESTIMENTOS"
       mat_id = item[:material_id] || ""
       area   = (item[:area_material] || 0.0).round(2)
       if !mat_id.empty? && mat_id != "Sem material"
-        desc = "#{mat_id} - #{fmt(area)}m²"
+        desc = "#{mat_id} - #{fmt(area)}mÂ²"
       else
-        desc = "#{nome} - #{fmt(area)}m²"
+        desc = "#{nome} - #{fmt(area)}mÂ²"
       end
       build_item(desc, qtd, "und.")
 
-    # COMUNICAÇÃO VISUAL: L x A (bounding box) + área real da maior face
-    when "COMUNICAÇÃO VISUAL"
+    # COMUNICAÃ‡ÃƒO VISUAL: L x A (bounding box) + Ã¡rea real da maior face
+    when "COMUNICAÃ‡ÃƒO VISUAL"
       d1, d2, _esp = [l, p, a].sort.reverse
-      desc = "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m) - #{fmt(af)}m²"
+      desc = "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m) - #{fmt(af)}mÂ²"
       build_item(desc, qtd, "und.")
 
-    # MOBILIÁRIO: mostra dimensões apenas para itens com palavras-chave configuradas.
+    # MOBILIÃRIO: mostra dimensÃµes apenas para itens com palavras-chave configuradas.
     # Carrega nome_base + dims crus p/ a interface reformatar sem reler o modelo.
-    when "MOBILIÁRIO"
+    when "MOBILIÃRIO"
       tem = palavras_mobiliario.any? { |kw| nome_lower.include?(kw) }
       desc = tem ? "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)" : nome
       it = build_item(desc, qtd, "und.")
@@ -1330,8 +1330,8 @@ module STAND1_Memorial
     when "EQUIPAMENTOS"
       build_item(nome, qtd, "und.")
 
-    # ELÉTRICA: fitas LED em metro linear (área da textura ÷ largura), demais em und.
-    when "ELÉTRICA"
+    # ELÃ‰TRICA: fitas LED em metro linear (Ã¡rea da textura Ã· largura), demais em und.
+    when "ELÃ‰TRICA"
       eh_fita = PALAVRAS_FITA_LED.any? { |kw| nome_lower.include?(kw) }
       if eh_fita
         total_m = (item[:metros_fita] || 0.0).round(2)
@@ -1355,10 +1355,10 @@ module STAND1_Memorial
     }
   end
 
-  # ── LISTAR MATERIAIS DE REVESTIMENTOS (para painel de seleção) ───────────────
+  # â”€â”€ LISTAR MATERIAIS DE REVESTIMENTOS (para painel de seleÃ§Ã£o) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.listar_materiais_revestimentos(model)
-    # Chaveado pelo objeto Material — nome idêntico ao painel de Materiais do SketchUp
+    # Chaveado pelo objeto Material â€” nome idÃªntico ao painel de Materiais do SketchUp
     materiais_pol2 = Hash.new(0.0)
     model.entities.each { |ent| varrer_para_revestimentos(ent, materiais_pol2) }
     materiais_pol2
@@ -1392,14 +1392,14 @@ module STAND1_Memorial
     end
   end
 
-  # ── ÁREA REAL DAS FACES REVESTIDAS (paredes/sancas/testeiras em L) ───────────
-  # Soma a área real das faces que têm material aplicado (a "pintura"/lona),
+  # â”€â”€ ÃREA REAL DAS FACES REVESTIDAS (paredes/sancas/testeiras em L) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Soma a Ã¡rea real das faces que tÃªm material aplicado (a "pintura"/lona),
   # uma face por plano (remove faces coplanares duplicadas), com a escala da
-  # instância/pais aplicada. Lida com paredes em L, com retorno e várias paredes,
-  # pois mede a geometria real — não a caixa delimitadora.
-  # Área (m²) das faces com material, uma por plano, escala aplicada.
-  # kws = nil  → qualquer face com material (ex.: textura da fita LED).
-  # kws = [..] → só faces cujo material casa com as palavras (ex.: revestimentos).
+  # instÃ¢ncia/pais aplicada. Lida com paredes em L, com retorno e vÃ¡rias paredes,
+  # pois mede a geometria real â€” nÃ£o a caixa delimitadora.
+  # Ãrea (mÂ²) das faces com material, uma por plano, escala aplicada.
+  # kws = nil  â†’ qualquer face com material (ex.: textura da fita LED).
+  # kws = [..] â†’ sÃ³ faces cujo material casa com as palavras (ex.: revestimentos).
   def self.area_faces_material_m2(inst, tr_pai = nil, kws = nil)
     tr = tr_pai ? tr_pai * inst.transformation : inst.transformation
     k = [:afm, inst.definition.object_id, scale_sig(tr), kws ? kws.sort : nil]
@@ -1429,7 +1429,7 @@ module STAND1_Memorial
         area = area_poligono_3d(pts)
         next if area <= 1e-9
         chave = assinatura_plano(pts)
-        # uma face por plano: mantém a maior área no mesmo plano (descarta duplicadas)
+        # uma face por plano: mantÃ©m a maior Ã¡rea no mesmo plano (descarta duplicadas)
         planos[chave] = area if area > (planos[chave] || 0.0)
       elsif ent.is_a?(Sketchup::Group)
         acumular_faces_material(ent.entities, tr * ent.transformation, planos, kws)
@@ -1439,7 +1439,7 @@ module STAND1_Memorial
     end
   end
 
-  # Área de polígono 3D (fórmula de Newell) — pontos já transformados (com escala).
+  # Ãrea de polÃ­gono 3D (fÃ³rmula de Newell) â€” pontos jÃ¡ transformados (com escala).
   def self.area_poligono_3d(pts)
     n = pts.length
     return 0.0 if n < 3
@@ -1454,7 +1454,7 @@ module STAND1_Memorial
   end
 
   # Assinatura do plano (normal normalizada + deslocamento), arredondada.
-  # Mantém o sinal da normal: frente e verso ficam em planos diferentes (a face do
+  # MantÃ©m o sinal da normal: frente e verso ficam em planos diferentes (a face do
   # verso, sem material, nem entra na conta).
   def self.assinatura_plano(pts)
     a, b, c = pts[0], pts[1], pts[2]
@@ -1470,10 +1470,10 @@ module STAND1_Memorial
     [nx.round(3), ny.round(3), nz.round(3), d.round(2)]
   end
 
-  # ── DIAGNÓSTICO DE REVESTIMENTOS ────────────────────────────────────────────
-  # Mostra, por material, quantas faces entram na conta e de onde vem a área
-  # (front da face, verso/back, ou herdado da instância/grupo). Ajuda a achar a
-  # origem de m² excedente (verso + bordas de sólidos, ou tinta na instância).
+  # â”€â”€ DIAGNÃ“STICO DE REVESTIMENTOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # Mostra, por material, quantas faces entram na conta e de onde vem a Ã¡rea
+  # (front da face, verso/back, ou herdado da instÃ¢ncia/grupo). Ajuda a achar a
+  # origem de mÂ² excedente (verso + bordas de sÃ³lidos, ou tinta na instÃ¢ncia).
   def self.nome_material(m)
     m.respond_to?(:display_name) ? m.display_name : m.name
   end
@@ -1505,8 +1505,8 @@ module STAND1_Memorial
   def self.diagnostico_revestimentos(model = Sketchup.active_model)
     dados = {}
     model.entities.each { |e| diag_varrer(e, nil, dados) }
-    puts "── Diagnóstico de Revestimentos — #{model.title} ──"
-    puts format("%-30s %5s %11s %11s   %s", "MATERIAL", "faces", "total m²", "maior m²", "[front/back/herdado]")
+    puts "â”€â”€ DiagnÃ³stico de Revestimentos â€” #{model.title} â”€â”€"
+    puts format("%-30s %5s %11s %11s   %s", "MATERIAL", "faces", "total mÂ²", "maior mÂ²", "[front/back/herdado]")
     dados.sort_by { |n, _| n.to_s.downcase }.each do |nome, d|
       puts format("%-30s %5d %11.2f %11.2f   [%d/%d/%d]",
                   nome[0, 30], d[:faces],
@@ -1514,13 +1514,13 @@ module STAND1_Memorial
                   d[:maior] * POL2_PARA_M2,
                   d[:front], d[:back], d[:herdado])
     end
-    puts "─────────────────────────────────────────────────────────────"
-    puts "Dica: se 'total' >> 'maior' e há faces em back/herdado, o excedente"
-    puts "vem do verso/bordas do sólido ou da tinta aplicada na instância."
+    puts "â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€"
+    puts "Dica: se 'total' >> 'maior' e hÃ¡ faces em back/herdado, o excedente"
+    puts "vem do verso/bordas do sÃ³lido ou da tinta aplicada na instÃ¢ncia."
     dados.size
   end
 
-  # ── MULTI-ESPAÇO ────────────────────────────────────────────────────────────
+  # â”€â”€ MULTI-ESPAÃ‡O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.modo_multi_espaco?
     Sketchup.read_default("STAND1_Memorial", "modo_multi_espaco", "0") == "1"
@@ -1530,7 +1530,7 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "modo_multi_espaco", ativo ? "1" : "0")
   end
 
-  # Retorna todos os grupos de primeiro nível do modelo com nome e status de marcação.
+  # Retorna todos os grupos de primeiro nÃ­vel do modelo com nome e status de marcaÃ§Ã£o.
   def self.listar_grupos_raiz(model)
     grupos = []
     model.entities.each do |ent|
@@ -1543,9 +1543,9 @@ module STAND1_Memorial
     grupos
   end
 
-  # Marca ou desmarca um grupo como espaço via persistent_id.
+  # Marca ou desmarca um grupo como espaÃ§o via persistent_id.
   def self.marcar_grupo_espaco(pid, ativo, model)
-    model.start_operation("STAND1 — Marcar Espaço", true)
+    model.start_operation("STAND1 â€” Marcar EspaÃ§o", true)
     model.entities.each do |ent|
       next unless ent.is_a?(Sketchup::Group)
       if ent.persistent_id.to_s == pid.to_s
@@ -1558,7 +1558,7 @@ module STAND1_Memorial
     false
   end
 
-  # Coleta dados separados por espaço (grupos marcados com atributo "espaco").
+  # Coleta dados separados por espaÃ§o (grupos marcados com atributo "espaco").
   # Retorna array de { "espaco" => nome, "secoes" => [...] }.
   def self.coletar_dados_multi_espaco(model)
     @ultimo_modo = :tudo
@@ -1570,11 +1570,11 @@ module STAND1_Memorial
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       next unless marcado == true || marcado == "true"
       nome = ent.name.to_s.strip
-      nome = "Espaço #{grupos.size + 1}" if nome.empty?
+      nome = "EspaÃ§o #{grupos.size + 1}" if nome.empty?
       grupos << { grupo: ent, nome: nome }
     end
 
-    return nil if grupos.empty?  # fallback para modo padrão
+    return nil if grupos.empty?  # fallback para modo padrÃ£o
 
     resultado = []
     grupos.each do |gs|
@@ -1590,7 +1590,7 @@ module STAND1_Memorial
     resultado
   end
 
-  # Versão de listar_materiais_revestimentos restrita a um grupo específico.
+  # VersÃ£o de listar_materiais_revestimentos restrita a um grupo especÃ­fico.
   def self.listar_materiais_revestimentos_grupo(grupo)
     materiais_pol2 = Hash.new(0.0)
     grupo.entities.each { |ent| varrer_para_revestimentos(ent, materiais_pol2) }
@@ -1601,7 +1601,7 @@ module STAND1_Memorial
     end.sort_by { |m| m["nome"] }
   end
 
-  # ── DIFF DE REVISÃO ──────────────────────────────────────────────────────────
+  # â”€â”€ DIFF DE REVISÃƒO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   @snapshot_anterior = nil
 
@@ -1616,8 +1616,8 @@ module STAND1_Memorial
     @snapshot_anterior = nil
   end
 
-  # Compara dois resultados de memorial e retorna lista de alterações.
-  # Cada alteração: { tipo: "novo"|"removido"|"alterado", secao:, ... }
+  # Compara dois resultados de memorial e retorna lista de alteraÃ§Ãµes.
+  # Cada alteraÃ§Ã£o: { tipo: "novo"|"removido"|"alterado", secao:, ... }
   def self.comparar_memoriais(anterior, novo)
     return [] if anterior.nil? || novo.nil?
 
@@ -1655,7 +1655,7 @@ module STAND1_Memorial
     alteracoes
   end
 
-  # Compara dois resultados multi-espaço e retorna diff por espaço.
+  # Compara dois resultados multi-espaÃ§o e retorna diff por espaÃ§o.
   def self.comparar_memoriais_multi(anterior, novo)
     return [] if anterior.nil? || novo.nil?
     ant_map = {}; anterior.each { |e| ant_map[e["espaco"]] = e["secoes"] }
@@ -1667,7 +1667,7 @@ module STAND1_Memorial
     end
   end
 
-  # ── KVA ──────────────────────────────────────────────────────────────────────
+  # â”€â”€ KVA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   def self.token_github
     Sketchup.read_default("STAND1_Memorial", "github_token", "").to_s.strip
@@ -1689,24 +1689,32 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "kva_table", tabela.to_json)
   end
 
-  # Busca tabela KVA do GitHub e atualiza local (assíncrono).
+  # Busca tabela KVA do GitHub e atualiza local (assÃ­ncrono).
   def self.buscar_kva_github
     http_async(URL_KVA_RAW) do |body, ok|
       next unless ok && body
       begin
         tabela = JSON.parse(body)
         salvar_kva_table_local(tabela)
-        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json})") rescue nil
+        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token_github.to_json})") rescue nil
+        # Recalcula KVA com os dados jÃ¡ carregados (se houver)
+        secoes = if modo_multi_espaco? && @ultimo_resultado_multi
+          @ultimo_resultado_multi.flat_map { |e| e["secoes"] }
+        else
+          @ultimo_resultado || []
+        end
+        resultado_kva = calcular_kva(secoes)
+        @dialog.execute_script("receberResultadoKVA(#{resultado_kva.to_json})") rescue nil
       rescue
       end
     end
   end
 
-  # Publica tabela KVA no GitHub via API (síncrono, roda em thread separada).
+  # Publica tabela KVA no GitHub via API (sÃ­ncrono, roda em thread separada).
   def self.publicar_kva_github(tabela_json)
     token = token_github
     if token.empty?
-      @dialog.execute_script("erroKVAGitHub('Token não configurado. Configure em KVA > GitHub.')") rescue nil
+      @dialog.execute_script("erroKVAGitHub('Token nÃ£o configurado. Configure em KVA > GitHub.')") rescue nil
       return
     end
     Thread.new do
@@ -1749,13 +1757,13 @@ module STAND1_Memorial
     end
   end
 
-  # Calcula KVA de Equipamentos e Elétrica usando a tabela local.
+  # Calcula KVA de Equipamentos e ElÃ©trica usando a tabela local.
   # Retorna { total:, secoes: [ { secao:, itens: [...], subtotal: } ] }
   def self.calcular_kva(secoes_resultado)
     tabela = kva_table_local
     return { "total" => 0, "secoes" => [], "sem_tabela" => true } if tabela.empty?
 
-    # Achata todas as entradas e ordena do mais específico (nome mais longo) para o genérico.
+    # Achata todas as entradas e ordena do mais especÃ­fico (nome mais longo) para o genÃ©rico.
     entradas = []
     tabela.each do |_cat, lista|
       Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] }
@@ -1800,7 +1808,7 @@ module STAND1_Memorial
     { "total" => total_geral.round(3), "secoes" => secoes_kva }
   end
 
-  # ── MENU E BARRA DE FERRAMENTAS ─────────────────────────────────────────────
+  # â”€â”€ MENU E BARRA DE FERRAMENTAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   unless file_loaded?(__FILE__)
     cmd = UI::Command.new("STAND1_Memorial") { STAND1_Memorial.abrir_dialog }
@@ -1814,9 +1822,9 @@ module STAND1_Memorial
 
     menu = UI.menu("Plugins")
     menu.add_item(cmd)
-    menu.add_item("STAND1_Memorial — Diagnóstico de Revestimentos") do
+    menu.add_item("STAND1_Memorial â€” DiagnÃ³stico de Revestimentos") do
       STAND1_Memorial.diagnostico_revestimentos
-      UI.messagebox("Diagnóstico impresso na Janela > Ruby Console.\nCopie e me envie as linhas dos revestimentos que estão excedendo.")
+      UI.messagebox("DiagnÃ³stico impresso na Janela > Ruby Console.\nCopie e me envie as linhas dos revestimentos que estÃ£o excedendo.")
     end
 
     toolbar = UI::Toolbar.new("STAND1_Memorial")
@@ -1824,7 +1832,8 @@ module STAND1_Memorial
     toolbar.restore
 
     file_loaded(__FILE__)
-    puts "✅ STAND1_Memorial v#{VERSAO} carregado"
+    puts "âœ… STAND1_Memorial v#{VERSAO} carregado"
   end
 
 end
+
