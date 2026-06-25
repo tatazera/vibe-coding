@@ -1,5 +1,5 @@
 {
-    "versao":  "7.0.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.1.rbz",
+    "versao":  "7.0.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.2.rbz",
     "notas":  "v7.0.0: Multi-Espaco (ambientes separados), Diff de Revisao (PDF interno com alteracoes) e Calculo de KVA eletrico com tabela colaborativa via GitHub."
 }
