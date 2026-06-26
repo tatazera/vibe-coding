@@ -1,5 +1,5 @@
 {
-    "versao":  "7.1.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.0.rbz",
-    "notas":  "v7.1.0: PDF Padrao e PDF Alt agora sao independentes (PDF Padrao sem alteracoes). Nova regra de medicao Area Real para paredes em L/U (geometria verdadeira). Correcao da memoria Multi ao apagar grupos."
+    "versao":  "7.1.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.1.rbz",
+    "notas":  "v7.1.1: Corrige o painel de Regras de Medicao (campos de palavra-chave que ficaram espremidos na v7.1.0)."
 }
