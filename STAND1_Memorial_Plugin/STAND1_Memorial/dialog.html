@@ -75,6 +75,10 @@
   .secao { margin-bottom: 18px; }
   .secao:last-child { margin-bottom: 0; }
   .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); }
+  /* Multi-Espaço: título do espaço + divisória minimalista entre espaços */
+  .espaco-titulo { font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); }
+  .espaco-divisor { height: 1px; background: linear-gradient(90deg, transparent, rgba(200,79,191,.45), transparent); margin: 26px 0 22px; }
+  body.dark .espaco-titulo { color: #e08fd8; }
   ul.itens { list-style: none; display: flex; flex-direction: column; gap: 4px; }
   ul.itens li { font-size: 12px; color: var(--texto); line-height: 1.5; padding-left: 15px; position: relative; display: flex; align-items: flex-start; gap: 5px; }
   ul.itens li::before { content: '▪'; position: absolute; left: 0; top: 2px; font-size: 9px; color: var(--azul); }
@@ -533,9 +537,12 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalMultiEspaco()">✕</button>
       </div>
     </div>
-    <div class="linear-desc" style="margin-bottom:10px">Marque os grupos que representam ambientes independentes:</div>
-    <div id="listaGruposEspaco" style="max-height:300px;overflow-y:auto;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
+    <div style="padding:14px 18px 0">
+      <div class="linear-desc" style="margin-bottom:10px">Marque os grupos que representam ambientes independentes:</div>
+      <input type="text" id="buscaGrupoEspaco" placeholder="🔍 Buscar grupo..." oninput="filtrarGruposEspaco()" style="width:100%;box-sizing:border-box;font-size:12px;padding:8px 11px;margin-bottom:10px;background:rgba(128,128,128,.08);border:1.5px solid rgba(128,128,128,.25);border-radius:7px;color:inherit;outline:none">
+      <div id="listaGruposEspaco" style="max-height:46vh;overflow-y:auto"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid rgba(128,128,128,.15);margin-top:12px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalMultiEspaco()">Fechar</button>
       <button class="mrev-btn mrev-btn-primary" onclick="carregarMultiEspaco()">📋 Carregar Espaços</button>
     </div>
@@ -663,7 +670,14 @@ function atualizarMemorial(){ if(_bloqueioImpedeReleitura()) return; var b=docum
 var ORDEM_SECOES=["ESTRUTURAS","REVESTIMENTOS","COMUNICAÇÃO VISUAL","MOBILIÁRIO","EQUIPAMENTOS","ELÉTRICA"];
 
 function ordenarSecoes(){
+  // Mantém os espaços agrupados na ordem de leitura (multi); dentro de cada
+  // espaço, ordena as seções pela ordem padrão. No modo padrão (_espaco vazio),
+  // comporta-se exatamente como antes.
+  var ordemEspaco={}, n=0;
+  dadosMemorial.forEach(function(s){ var e=s._espaco||''; if(!(e in ordemEspaco)) ordemEspaco[e]=n++; });
   dadosMemorial.sort(function(a,b){
+    var ea=ordemEspaco[a._espaco||''], eb=ordemEspaco[b._espaco||''];
+    if(ea!==eb) return ea-eb;
     var ai=ORDEM_SECOES.indexOf(a.secao); var bi=ORDEM_SECOES.indexOf(b.secao);
     return (ai<0?999:ai)-(bi<0?999:bi);
   });
@@ -786,7 +800,16 @@ function atualizarDados(p){
   if(f){f.classList.add('atualizando');setTimeout(function(){f.classList.remove('atualizando');},400);}
 }
 
-function excluirItem(sn,ch){ for(var i=0;i<dadosMemorial.length;i++){if(dadosMemorial[i].secao===sn){dadosMemorial[i].itens=dadosMemorial[i].itens.filter(function(it){return it.chave!==ch;}); if(!dadosMemorial[i].itens.length) dadosMemorial.splice(i,1); break;}} atualizarStatus(); renderizar(); persistirEstado(); }
+// Localiza a seção por nome + espaço (multi). No modo padrão, esp é '' e casa normal.
+function _acharSecaoIdx(sn, esp){
+  esp = esp||'';
+  for(var i=0;i<dadosMemorial.length;i++){
+    if(dadosMemorial[i].secao===sn && (dadosMemorial[i]._espaco||'')===esp) return i;
+  }
+  return -1;
+}
+
+function excluirItem(sn,ch,esp){ var i=_acharSecaoIdx(sn,esp); if(i>=0){dadosMemorial[i].itens=dadosMemorial[i].itens.filter(function(it){return it.chave!==ch;}); if(!dadosMemorial[i].itens.length) dadosMemorial.splice(i,1);} atualizarStatus(); renderizar(); persistirEstado(); }
 
 function atualizarStatus(){ var t=dadosMemorial.reduce(function(s,sc){return s+sc.itens.length;},0); document.getElementById('statusTag').textContent=dadosMemorial.length+' seção(ões) · '+t+' item(ns)'; }
 function atualizarProjeto(v){ nomeProjeto=v; document.querySelectorAll('.fpn').forEach(function(e){e.textContent=v||nomeArquivo;}); document.querySelectorAll('.meta-proj').forEach(function(e){e.textContent=v?'Projeto: '+v:'';}); persistirEstado(); }
@@ -1065,31 +1088,30 @@ function salvarKeywordsRevAuto(){
 // ── DRAG & DROP (reordenar dentro da seção e mover entre seções) ──
 function dragItem(ev,li){
   if(bloqueado){ev.preventDefault();return;}
-  ev.dataTransfer.setData('text/plain', li.dataset.sn+'||'+li.dataset.idx);
+  ev.dataTransfer.setData('text/plain', li.dataset.sn+'||'+li.dataset.idx+'||'+(li.dataset.esp||''));
   ev.dataTransfer.effectAllowed='move';
 }
 function dropItem(ev,li){
   ev.preventDefault(); ev.stopPropagation();
   var d=ev.dataTransfer.getData('text/plain').split('||');
   if(d.length<2) return;
-  moverItem(d[0], parseInt(d[1],10), li.dataset.sn, parseInt(li.dataset.idx,10));
+  moverItem(d[0], parseInt(d[1],10), li.dataset.sn, parseInt(li.dataset.idx,10), d[2]||'', li.dataset.esp||'');
 }
 function dropSecao(ev,div){
   ev.preventDefault();
   var d=ev.dataTransfer.getData('text/plain').split('||');
   if(d.length<2) return;
-  moverItem(d[0], parseInt(d[1],10), div.dataset.sn, -1); // -1 = fim da seção
+  moverItem(d[0], parseInt(d[1],10), div.dataset.sn, -1, d[2]||'', div.dataset.esp||''); // -1 = fim da seção
 }
-function moverItem(snFrom, from, snTo, to){
+function moverItem(snFrom, from, snTo, to, espFrom, espTo){
+  espFrom=espFrom||''; espTo=espTo||'';
   if(isNaN(from)||!snFrom||!snTo) return;
-  if(snFrom===snTo&&from===to) return;
-  var seF=null, seT=null;
-  for(var i=0;i<dadosMemorial.length;i++){
-    if(dadosMemorial[i].secao===snFrom) seF=dadosMemorial[i];
-    if(dadosMemorial[i].secao===snTo)   seT=dadosMemorial[i];
-  }
+  if(snFrom===snTo&&espFrom===espTo&&from===to) return;
+  var iF=_acharSecaoIdx(snFrom, espFrom), iT=_acharSecaoIdx(snTo, espTo);
+  var seF = iF>=0 ? dadosMemorial[iF] : null;
+  var seT = iT>=0 ? dadosMemorial[iT] : null;
   if(!seF) return;
-  if(!seT){ seT={secao:snTo,itens:[]}; dadosMemorial.push(seT); }
+  if(!seT){ seT={secao:snTo,itens:[]}; if(espTo) seT._espaco=espTo; dadosMemorial.push(seT); }
   var it=seF.itens.splice(from,1)[0];
   if(!it) return;
   if(to<0||isNaN(to)||to>seT.itens.length) seT.itens.push(it);
@@ -1213,9 +1235,9 @@ function toggleObs(id){
 }
 
 function salvarObs(inp){
-  var sn=inp.dataset.sn, ch=inp.dataset.ch, val=inp.value;
-  for(var i=0;i<dadosMemorial.length;i++){
-    if(dadosMemorial[i].secao===sn){
+  var sn=inp.dataset.sn, ch=inp.dataset.ch, esp=inp.dataset.esp, val=inp.value;
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  {
       for(var j=0;j<dadosMemorial[i].itens.length;j++){
         if(dadosMemorial[i].itens[j].chave===ch){
           dadosMemorial[i].itens[j].obs=val;
@@ -1230,42 +1252,35 @@ function salvarObs(inp){
         }
       }
     }
-  }
 }
 
 function salvarQuantidade(el){
   if(bloqueado) return;
-  var sn=el.dataset.sn, ch=el.dataset.ch;
+  var sn=el.dataset.sn, ch=el.dataset.ch, esp=el.dataset.esp;
   var val=parseInt(el.textContent.trim(), 10);
   if(isNaN(val)||val<1){ val=1; }
   el.textContent=fmtQtd(val);
-  for(var i=0;i<dadosMemorial.length;i++){
-    if(dadosMemorial[i].secao===sn){
-      for(var j=0;j<dadosMemorial[i].itens.length;j++){
-        if(dadosMemorial[i].itens[j].chave===ch){
-          dadosMemorial[i].itens[j].quantidade=val;
-          dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
-          persistirEstado(); renderizar(); return;
-        }
-      }
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  for(var j=0;j<dadosMemorial[i].itens.length;j++){
+    if(dadosMemorial[i].itens[j].chave===ch){
+      dadosMemorial[i].itens[j].quantidade=val;
+      dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
+      persistirEstado(); renderizar(); return;
     }
   }
 }
 
 function salvarDescricao(el){
   if(bloqueado) return;
-  var sn=el.dataset.sn, ch=el.dataset.ch;
+  var sn=el.dataset.sn, ch=el.dataset.ch, esp=el.dataset.esp;
   var val=el.textContent.trim();
   if(!val) return;
-  for(var i=0;i<dadosMemorial.length;i++){
-    if(dadosMemorial[i].secao===sn){
-      for(var j=0;j<dadosMemorial[i].itens.length;j++){
-        if(dadosMemorial[i].itens[j].chave===ch){
-          dadosMemorial[i].itens[j].descricao=val;
-          dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
-          persistirEstado(); renderizar(); return;
-        }
-      }
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  for(var j=0;j<dadosMemorial[i].itens.length;j++){
+    if(dadosMemorial[i].itens[j].chave===ch){
+      dadosMemorial[i].itens[j].descricao=val;
+      dadosMemorial[i].itens[j].editado=true; // controle: preservar no Atualizar
+      persistirEstado(); renderizar(); return;
     }
   }
 }
@@ -1388,26 +1403,34 @@ function renderizar(){
   var logo=(typeof LOGO_B64!=='undefined')?LOGO_B64:'';
   var proj=nomeProjeto||nomeArquivo;
 
+  var _lastEsp=null;
   var secoesHtml=dadosMemorial.map(function(sec){
+    var cab='';
+    if(sec._espaco && sec._espaco!==_lastEsp){
+      if(_lastEsp!==null) cab+='<div class="espaco-divisor"></div>';
+      cab+='<div class="espaco-titulo">'+escaparAttr(sec._espaco)+'</div>';
+      _lastEsp=sec._espaco;
+    }
     var sn=sec.secao;
+    var esp=sec._espaco||'';
     var ih=sec.itens.map(function(item,idx){
       var lupa=item.chave?'<button class="btn-lupa" title="Selecionar" onclick="selecionarNoModelo(\''+escaparChave(item.chave)+'\')"><svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>':'';
-      var exc=item.chave?'<button class="btn-excluir" title="Remover" onclick="excluirItem(\''+escaparChave(sn)+'\',\''+escaparChave(item.chave)+'\')">✕</button>':'';
+      var exc=item.chave?'<button class="btn-excluir" title="Remover" onclick="excluirItem(\''+escaparChave(sn)+'\',\''+escaparChave(item.chave)+'\',\''+escaparChave(esp)+'\')">✕</button>':'';
       var hasObs=!!(item.obs&&item.obs.trim());
       var obsId='obsw_'+String(item.chave||'').replace(/[^a-zA-Z0-9]/g,'_').substring(0,48);
       var btnObs=item.chave?'<button class="btn-obs'+(hasObs?' tem-obs':'')+'" title="Observação" onclick="toggleObs(\''+obsId+'\')">✎</button>':'';
       var obsWrap='<div class="item-obs-wrap'+(hasObs?' aberto':'')+'" id="'+obsId+'">'+
         '<input class="item-obs-input" placeholder="Adicionar observação..." value="'+escaparAttr(item.obs||'')+'" '+
-        'data-sn="'+escaparAttr(sn)+'" data-ch="'+escaparAttr(item.chave||'')+'" oninput="salvarObs(this)">'+
+        'data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-ch="'+escaparAttr(item.chave||'')+'" oninput="salvarObs(this)">'+
         '</div>';
       var obsPrint=hasObs?'<div class="item-obs-print">'+item.obs+'</div>':'';
-      var qtdHtml='<span class="item-qtd-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarQuantidade(this)" title="Clique para editar a quantidade">'+fmtQtd(item.quantidade)+'</span>';
-      var descHtml='<span class="item-desc-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarDescricao(this)" title="Clique para editar a descrição">'+escaparAttr(fmtMedidas(item.descricao))+'</span>';
+      var qtdHtml='<span class="item-qtd-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarQuantidade(this)" title="Clique para editar a quantidade">'+fmtQtd(item.quantidade)+'</span>';
+      var descHtml='<span class="item-desc-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarDescricao(this)" title="Clique para editar a descrição">'+escaparAttr(fmtMedidas(item.descricao))+'</span>';
       var handle='<span class="drag-handle" draggable="true" ondragstart="dragItem(event,this.parentNode)" title="Arrastar para reordenar">⋮</span>';
       var badge=(item.origem==='manual'||item.editado)?'<span class="badge-manual" title="Item manual ou editado — preservado no Atualizar">✎</span>':'';
-      return '<li data-sn="'+escaparAttr(sn)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+lupa+btnObs+exc+obsWrap+obsPrint+'</li>';
+      return '<li data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+lupa+btnObs+exc+obsWrap+obsPrint+'</li>';
     }).join('');
-    return '<div class="secao" data-sn="'+escaparAttr(sn)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+sn+'</div><ul class="itens">'+ih+'</ul></div>';
+    return cab+'<div class="secao" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+sn+'</div><ul class="itens">'+ih+'</ul></div>';
   }).join('');
 
   preview.innerHTML=
@@ -1446,13 +1469,20 @@ function buildHTMLStandalone(){
     if(m) fonteCss+=m.join('\n');
   });
 
+  var _lastEspP=null;
   var corpo=dadosMemorial.map(function(sec){
+    var cab='';
+    if(sec._espaco && sec._espaco!==_lastEspP){
+      if(_lastEspP!==null) cab+='<div class="pespaco-divisor"></div>';
+      cab+='<div class="pespaco-titulo">'+escaparHtml(sec._espaco)+'</div>';
+      _lastEspP=sec._espaco;
+    }
     var itens=sec.itens.map(function(it){
       var d=escaparHtml(fmtMedidas(it.descricao));
       var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
       return '<li>'+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+'</li>';
     }).join('');
-    return '<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+'</ul></div>';
+    return cab+'<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+'</ul></div>';
   }).join('');
 
   var css=''+
@@ -1481,7 +1511,9 @@ function buildHTMLStandalone(){
     '.psec ul{list-style:none}'+
     '.psec li{font-size:13px;color:#4d6585;line-height:1.55;margin-bottom:4px}'+
     '.psec li b{color:#4d6585;font-weight:700}'+
-    '.pi-obs{font-size:11px;color:#777;font-style:italic;padding-left:2px}';
+    '.pi-obs{font-size:11px;color:#777;font-style:italic;padding-left:2px}'+
+    '.pespaco-titulo{font-size:16px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#C84FBF;margin:6px 0 14px;padding-bottom:7px;border-bottom:2px solid rgba(200,79,191,.4)}'+
+    '.pespaco-divisor{height:1px;background:linear-gradient(90deg,transparent,rgba(200,79,191,.5),transparent);margin:30px 0 26px}';
 
   var body=
     '<div class="ph">'+
@@ -1570,7 +1602,13 @@ function buildTextoMemorial(ocultarMedidas, comDecoracao){
   if(nomeResponsavel) t+='Responsável: '+nomeResponsavel+'\n';
   t+='Revisão: '+revisao+'\nGerado em: '+dataGeracao+'\n';
   t+=comDecoracao ? '============================================================\n\n' : '\n';
+  var _lastEspT=null;
   dadosMemorial.forEach(function(sec){
+    if(sec._espaco && sec._espaco!==_lastEspT){
+      if(_lastEspT!==null) t+='\n────────────────────────────────────────\n\n';
+      t+='### '+sec._espaco.toUpperCase()+' ###\n\n';
+      _lastEspT=sec._espaco;
+    }
     t+=sec.secao+'\n';
     if(comDecoracao) t+='----------------------------------------\n';
     sec.itens.forEach(function(item){
@@ -1622,13 +1660,24 @@ var _gruposEspaco    = [];
 var _dadosMultiEspaco = null;
 
 function toggleMultiEspaco(){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para trocar de modo.'); return; }
   _modoMultiEspaco = !_modoMultiEspaco;
   var btn = document.getElementById('btnMultiEspaco');
   if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
   if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco){
     sketchup.toggle_multi_espaco(_modoMultiEspaco.toString());
   }
-  if(_modoMultiEspaco) abrirModalMultiEspaco();
+  // CRÍTICO: trocar de modo REINICIA o memorial. As estruturas são incompatíveis
+  // (seções "[Espaço] SEÇÃO" no multi vs seções simples no padrão). Sem zerar, o
+  // "Adicionar Tudo" do padrão mesclaria com os dados antigos do multi e corromperia a leitura.
+  dadosMemorial = [];
+  _dadosMultiEspaco = null;
+  _diffAtual = [];
+  var sDiff=document.getElementById('secaoDiffExport'); if(sDiff) sDiff.style.display='none';
+  var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
+  atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
+  if(_modoMultiEspaco){ abrirModalMultiEspaco(); }
+  else { mostrarToast('Modo Padrão ativado — clique em "Adicionar Tudo" para reler o modelo.'); }
 }
 
 function abrirModalMultiEspaco(){
@@ -1645,20 +1694,32 @@ function receberGruposEspaco(grupos, modoAtivo){
   _modoMultiEspaco = !!modoAtivo;
   var btn = document.getElementById('btnMultiEspaco');
   if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
+  renderListaGruposEspaco();
+}
+
+function renderListaGruposEspaco(){
   var lista = document.getElementById('listaGruposEspaco');
   if(!lista) return;
   if(!_gruposEspaco.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo encontrado no modelo.</div>'; return; }
-  lista.innerHTML = _gruposEspaco.map(function(g){
+  var filtro = ((document.getElementById('buscaGrupoEspaco')||{}).value||'').trim().toLowerCase();
+  var itens = _gruposEspaco.filter(function(g){ return !filtro || (g.nome||'').toLowerCase().indexOf(filtro)>=0; });
+  if(!itens.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo corresponde à busca.</div>'; return; }
+  lista.innerHTML = itens.map(function(g){
     return '<div class="grupo-espaco-item" onclick="toggleGrupoEspaco(\''+g.id+'\',this)">'
       +'<input type="checkbox" id="ge_'+g.id+'" '+(g.marcado?'checked':'')+'>'
       +'<label for="ge_'+g.id+'">'+escaparAttr(g.nome)+'</label></div>';
   }).join('');
 }
 
+function filtrarGruposEspaco(){ renderListaGruposEspaco(); }
+
 function toggleGrupoEspaco(pid, el){
   var chk = el.querySelector('input[type=checkbox]');
   if(!chk) return;
   var ativo = chk.checked;
+  // Mantém o estado em memória para sobreviver à filtragem (re-render da lista).
+  var g = _gruposEspaco.find(function(x){ return x.id===pid; });
+  if(g) g.marcado = ativo;
   if(typeof sketchup!=='undefined'&&sketchup.marcar_grupo_espaco) sketchup.marcar_grupo_espaco(pid, ativo.toString());
 }
 
@@ -1675,11 +1736,13 @@ function alertaSemGruposEspaco(){ alertaSemEspacosMarcados(); }
 
 function carregarDadosMultiEspaco(payload){
   _dadosMultiEspaco = payload.espacos || [];
-  // Flatten para uso do memorial: agrupa seções com prefixo de espaço
+  // Diagramação por espaço: seções mantêm o NOME LIMPO (ex.: "MOBILIÁRIO") e o
+  // espaço fica no campo _espaco. O render desenha um título por espaço + linha
+  // minimalista entre espaços. A ordem dos espaços é a ordem de leitura.
   dadosMemorial = [];
   _dadosMultiEspaco.forEach(function(esp){
     (esp.secoes||[]).forEach(function(sec){
-      dadosMemorial.push({ secao: '['+esp.espaco+'] '+sec.secao, itens: sec.itens, _espaco: esp.espaco });
+      dadosMemorial.push({ secao: sec.secao, itens: sec.itens, _espaco: esp.espaco });
     });
   });
   if(payload.nome_arquivo) nomeArquivo = payload.nome_arquivo;
@@ -1755,7 +1818,14 @@ function buildHTMLRevisaoCompleta(){
     }
   });
 
+  var _lastEspR=null;
   var corpo=dadosMemorial.map(function(sec){
+    var cab='';
+    if(sec._espaco && sec._espaco!==_lastEspR){
+      if(_lastEspR!==null) cab+='<div class="pespaco-divisor"></div>';
+      cab+='<div class="pespaco-titulo">'+escaparHtml(sec._espaco)+'</div>';
+      _lastEspR=sec._espaco;
+    }
     var ksec=(sec._espaco?sec._espaco+'::':'')+_secaoBase(sec.secao);
     var itens=sec.itens.map(function(it){
       var d=escaparHtml(fmtMedidas(it.descricao));
@@ -1771,7 +1841,7 @@ function buildHTMLRevisaoCompleta(){
     var rem=(removidosPorSecao[ksec]||[]).map(function(d){
       return '<li class="rev-li-rem"><span class="rev-mk rev-rem">✕ removido</span> <del>'+escaparHtml(d.desc_ant||d.desc||'')+' - '+fmtQtd(d.qtd_ant||0)+'</del></li>';
     }).join('');
-    return '<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+rem+'</ul></div>';
+    return cab+'<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+rem+'</ul></div>';
   }).join('');
 
   var css=''+
@@ -1808,7 +1878,9 @@ function buildHTMLRevisaoCompleta(){
     '.rev-li-rem{color:#aa0000}'+
     '.rev-legend{margin:0 34px 10px;font-size:11px;color:#777;display:flex;gap:14px;flex-wrap:wrap}'+
     '.rev-legend b{font-weight:700}'+
-    '.rev-interno{margin:6px 34px 0;font-size:10px;color:#aa0000;font-weight:700}';
+    '.rev-interno{margin:6px 34px 0;font-size:10px;color:#aa0000;font-weight:700}'+
+    '.pespaco-titulo{font-size:16px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#C84FBF;margin:6px 0 14px;padding-bottom:7px;border-bottom:2px solid rgba(200,79,191,.4)}'+
+    '.pespaco-divisor{height:1px;background:linear-gradient(90deg,transparent,rgba(200,79,191,.5),transparent);margin:30px 0 26px}';
 
   var body=
     '<div class="ph">'+
