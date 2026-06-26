@@ -1,5 +1,5 @@
 {
-    "versao":  "7.0.4",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.4.rbz",
-    "notas":  "v7.0.3: Correcao de encoding (sem BOM) e isolamento completo das features Multi-Espaco, Diff e KVA para nao interferir no fluxo principal do memorial."
+    "versao":  "7.0.5",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.5.rbz",
+    "notas":  "v7.0.5: Tabela KVA embutida no plugin (carrega na hora, sem depender de internet). GitHub passa a ser apenas sincronizacao opcional."
 }
