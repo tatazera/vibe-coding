@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.9"
+  VERSAO        = "7.1.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -217,7 +217,7 @@ module STAND1_Memorial
   GUARDA_FOOTPRINT_M = 0.30
 
   FORMULAS_VALIDAS = %w[
-    horizontal face recinto faixa comprimento perimetro desenvolvimento volume unidade
+    horizontal face recinto faixa comprimento perimetro desenvolvimento volume unidade area_real
   ].freeze
 
   REGRAS_MEDICAO_DEFAULT = [
@@ -367,7 +367,7 @@ module STAND1_Memorial
   # Monta a descrição de um item de ESTRUTURAS conforme a fórmula da regra.
   # l = largura (maior horizontal), p = profundidade (menor horizontal),
   # a = altura (eixo vertical Z do modelo — lógica construtiva, não a menor dim).
-  def self.descricao_estrutura(nome, l, p, a)
+  def self.descricao_estrutura(nome, l, p, a, area_real = 0.0)
     formula = formula_do_item(nome.downcase)
     d       = [l, p, a].sort.reverse        # 3 dimensões, maior → menor
     dim3    = "(#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)"
@@ -392,6 +392,10 @@ module STAND1_Memorial
       "#{nome} #{dim3} - #{fmt((l + p).round(2))}m"
     when "volume"
       "#{nome} #{dim3} - #{fmt((l * p * a).round(2))}m³"
+    when "area_real"
+      # área verdadeira das faces revestidas (geometria real), com fallback p/ face
+      area = area_real.to_f > 0 ? area_real.to_f : (l * a)
+      "#{nome} #{dim3} - #{fmt(area.round(2))}m²"
     when "unidade"
       nome
     else # face: largura × altura
@@ -1229,6 +1233,13 @@ module STAND1_Memorial
       "#{nome}__#{chave_dims}"
     end
 
+    # ESTRUTURAS com regra "área real": mede a geometria verdadeira das faces
+    # revestidas (paredes em L/U etc.), não a caixa delimitadora. Material-agnóstico.
+    area_real = 0.0
+    if secao == "ESTRUTURAS" && formula_do_item(nome.downcase) == "area_real"
+      area_real = area_faces_material_m2(inst, tr_pai).round(2) rescue 0.0
+    end
+
     if secoes_raw[secao][chave]
       secoes_raw[secao][chave][:quantidade] += 1
       # Fita LED: soma o comprimento real de cada instância
@@ -1241,6 +1252,7 @@ module STAND1_Memorial
         altura:             altura,
         area_face_frontal:  area_face_frontal,
         area_material:      0.0,  # não usado nesta seção; mantido por compatibilidade do estado
+        area_real:          area_real,
         comprimento_linear: comprimento_linear,
         metros_fita:        metros_fita,
         quantidade:         1,
@@ -1311,7 +1323,7 @@ module STAND1_Memorial
 
     # ESTRUTURAS: medida definida pelas Regras de Medição (palavra-chave → fórmula).
     when "ESTRUTURAS"
-      build_item(descricao_estrutura(nome, l, p, a), qtd, "und.")
+      build_item(descricao_estrutura(nome, l, p, a, item[:area_real] || 0.0), qtd, "und.")
 
     # REVESTIMENTOS: Nome do Material (ID da textura) + m² + und.
     when "REVESTIMENTOS"
