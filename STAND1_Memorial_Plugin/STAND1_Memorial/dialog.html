@@ -354,7 +354,7 @@
     <div class="h-sep-v"></div>
     <button id="btnMultiEspaco" class="hbtn hbtn-s hbtn-toggle" onclick="toggleMultiEspaco()" title="Alternar modo Multi-Espaço">⊞ Padrão</button>
     <button id="btnKVA" class="hbtn hbtn-s hbtn-kva" onclick="abrirPainelKVA()" title="Carga elétrica — clique para detalhes e configurações">⚡ KVA</button>
-    <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="exportarPDFDireto()" title="Alterações em relação à leitura anterior">🔄 0 alt.</button>
+    <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="abrirPDFAlt()" title="PDF Alt — alterações em relação à leitura anterior">🔄 0 alt.</button>
   </div>
 </header>
 
@@ -500,10 +500,11 @@
   </div>
 </div>
 
+<!-- PDF PADRÃO (memorial limpo, para o cliente) — independente, sem alterações -->
 <div id="modalExportar" class="modal-overlay" style="display:none">
   <div class="modal-rev" style="max-width:380px">
     <div class="mrev-header">
-      <span class="mrev-title" id="modalExportarTitulo">⬇ Exportar PDF Alt</span>
+      <span class="mrev-title" id="modalExportarTitulo">⬇ Exportar PDF</span>
       <div class="mrev-actions">
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">✕</button>
       </div>
@@ -513,17 +514,28 @@
       <input type="checkbox" id="chkOcultarMedidas" style="width:16px;height:16px;cursor:pointer">
       <span style="font-size:13px">Ocultar medidas e m² <small style="opacity:.65">(somente descrição + quantidade)</small></span>
     </label>
-    <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">Cancelar</button>
-      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF Alt</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF</button>
     </div>
+  </div>
+</div>
 
-    <div id="secaoDiffExport" style="display:none;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;margin-top:4px">
-      <div style="font-size:12px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:10px">🔄 REVISÃO — <span id="diffContador">0</span> ALTERAÇÃO(ÕES)</div>
-      <div id="listaDiff" style="max-height:180px;overflow-y:auto;font-size:12px;margin-bottom:12px"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="mrev-btn mrev-btn-sec" onclick="exportarPDFRevisao()">📄 PDF com Alterações</button>
+<!-- PDF ALT (revisão interna com alterações destacadas) — independente do PDF Padrão -->
+<div id="modalPDFAlt" class="modal-overlay" style="display:none">
+  <div class="modal-rev" style="max-width:420px">
+    <div class="mrev-header">
+      <span class="mrev-title">🔄 Exportar PDF Alt</span>
+      <div class="mrev-actions">
+        <button class="mrev-btn mrev-btn-sec" onclick="fecharPDFAlt()">✕</button>
       </div>
+    </div>
+    <div class="linear-desc" style="margin-bottom:12px">Memorial completo com as <b>alterações</b> destacadas (★ novo · ▲▼ alterado · ✕ removido). Documento interno.</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:10px">🔄 REVISÃO — <span id="diffContador">0</span> ALTERAÇÃO(ÕES)</div>
+    <div id="listaDiff" style="max-height:200px;overflow-y:auto;font-size:12px;margin-bottom:14px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="mrev-btn mrev-btn-sec" onclick="fecharPDFAlt()">Cancelar</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="exportarPDFRevisao()">📄 PDF Alt</button>
     </div>
   </div>
 </div>
@@ -842,6 +854,7 @@ var FORMULAS_OPC = [
   ['perimetro',       'Perímetro — 2×(2 maiores) (m)'],
   ['desenvolvimento', 'Desenvolvimento — L+P (m)'],
   ['volume',          'Volume — L×P×alt (m³)'],
+  ['area_real',       'Área real — geometria verdadeira (m²) · paredes em L/U'],
   ['unidade',         'Unidade — só conta (und.)']
 ];
 
@@ -1576,10 +1589,11 @@ function buildHTMLStandalone(){
 // ── PRÉ-EXPORTAÇÃO ────────────────────────────────────────────────────────────
 var _exportarTipo = null; // 'pdf' ou 'txt'
 
+// PDF Padrão (memorial limpo, sem alterações) — independente do PDF Alt.
 function exportarPDFDireto(){
   if(!dadosMemorial||!dadosMemorial.length) return;
   _exportarTipo='pdf';
-  document.getElementById('modalExportarTitulo').textContent='⬇ Exportar PDF Alt';
+  document.getElementById('modalExportarTitulo').textContent='⬇ Exportar PDF';
   document.getElementById('modalExportar').style.display='flex';
 }
 
@@ -1587,6 +1601,13 @@ function fecharModalExportar(){
   document.getElementById('modalExportar').style.display='none';
   _exportarTipo=null;
 }
+
+// PDF Alt (revisão com alterações) — mini-menu próprio, independente do PDF Padrão.
+function abrirPDFAlt(){
+  if(!_diffAtual||!_diffAtual.length){ mostrarToast('Sem alterações registradas nesta leitura.'); return; }
+  document.getElementById('modalPDFAlt').style.display='flex';
+}
+function fecharPDFAlt(){ document.getElementById('modalPDFAlt').style.display='none'; }
 
 function limparDescricao(desc){
   // remove (Xm x Ym x Zm), (Xm x Ym) e " - X.XXm²"
@@ -1717,7 +1738,8 @@ function _ativarModo(multi){
   if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco) sketchup.toggle_multi_espaco(multi.toString());
   // o diff é por modo: zera o indicador ao trocar (recalcula na próxima leitura)
   _diffAtual=[];
-  var sDiff=document.getElementById('secaoDiffExport'); if(sDiff) sDiff.style.display='none';
+  var lDiff=document.getElementById('listaDiff'); if(lDiff) lDiff.innerHTML='';
+  var cDiff=document.getElementById('diffContador'); if(cDiff) cDiff.textContent='0';
   var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
   atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
 }
@@ -1780,7 +1802,13 @@ function carregarMultiEspaco(){
 }
 
 function alertaSemEspacosMarcados(){
-  mostrarToast('Nenhum grupo marcado como espaço. Abra o painel Multi-Espaço e marque os grupos.');
+  mostrarToast('Nenhum grupo marcado como espaço — memória do Multi-Espaço limpa.');
+  // Se estamos no Multi e a releitura não achou grupos (ex.: grupos apagados),
+  // limpa a memória do Multi em vez de manter o retrato antigo.
+  if(_modoMultiEspaco){
+    dadosMemorial=[]; _dadosMultiEspaco=null; _memMulti=[];
+    atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
+  }
 }
 function alertaSemGruposEspaco(){ alertaSemEspacosMarcados(); }
 
@@ -1809,14 +1837,12 @@ function receberDiffRevisao(diff){
   _diffAtual = diff || [];
   var btn = document.getElementById('btnDiff');
   if(!btn) return;
-  // Botão sempre visível, mesmo sem alterações.
-  if(!_diffAtual.length){ btn.textContent='🔄 0 alt.'; var s0=document.getElementById('secaoDiffExport'); if(s0) s0.style.display='none'; return; }
+  // Botão "🔄 N alt." sempre visível; abre o mini-menu PDF Alt (independente do PDF Padrão).
   btn.textContent = '🔄 ' + _diffAtual.length + ' alt.';
-  var secao = document.getElementById('secaoDiffExport');
-  if(secao){ secao.style.display=''; }
-  document.getElementById('diffContador').textContent = _diffAtual.length;
+  var cont=document.getElementById('diffContador'); if(cont) cont.textContent = _diffAtual.length;
   var lista = document.getElementById('listaDiff');
   if(!lista) return;
+  if(!_diffAtual.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhuma alteração desde a leitura anterior.</div>'; return; }
   lista.innerHTML = _diffAtual.map(function(d){
     if(d.tipo==='novo')
       return '<div class="diff-item diff-novo"><span>★</span><span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_nov||d.desc)+'</span><span style="white-space:nowrap">+'+fmtQtd(d.qtd_nov||0)+'</span></div>';
