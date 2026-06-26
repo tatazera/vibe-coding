@@ -1,5 +1,5 @@
 {
-    "versao":  "7.0.5",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.5.rbz",
-    "notas":  "v7.0.5: Tabela KVA embutida no plugin (carrega na hora, sem depender de internet). GitHub passa a ser apenas sincronizacao opcional."
+    "versao":  "7.0.6",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.6.rbz",
+    "notas":  "v7.0.6: Multi-Espaco aceita componentes, corrige revestimentos/dimensoes e KVA por espaco. Cadeado bloqueia releitura. PDF com Alteracoes mostra o memorial completo marcado. Fita LED usa o nome da textura."
 }
