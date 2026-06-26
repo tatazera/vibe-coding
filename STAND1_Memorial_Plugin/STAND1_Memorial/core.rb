@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.3"
+  VERSAO        = "7.0.4"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1658,14 +1658,30 @@ module STAND1_Memorial
 
   def self.kva_table_local
     raw = Sketchup.read_default("STAND1_Memorial", "kva_table", nil)
-    return {} if raw.nil? || raw.strip.empty?
-    JSON.parse(raw)
+    return [] if raw.nil? || raw.strip.empty?
+    parsed = JSON.parse(raw)
+    # Aceita flat [{nome,kva,por}] ou nested {cat:[...]}
+    if parsed.is_a?(Array)
+      parsed
+    else
+      entradas = []
+      parsed.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
+      entradas
+    end
   rescue
-    {}
+    []
   end
 
   def self.salvar_kva_table_local(tabela)
-    Sketchup.write_default("STAND1_Memorial", "kva_table", tabela.to_json)
+    # Normaliza para flat antes de salvar
+    flat = if tabela.is_a?(Array)
+      tabela
+    else
+      entradas = []
+      tabela.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
+      entradas
+    end
+    Sketchup.write_default("STAND1_Memorial", "kva_table", flat.to_json)
   end
 
   def self.buscar_kva_github
@@ -1674,8 +1690,9 @@ module STAND1_Memorial
       begin
         tabela = JSON.parse(body)
         salvar_kva_table_local(tabela)
-        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token_github.to_json})") rescue nil
-        # Recalcula KVA com dados já carregados, se houver
+        flat = kva_table_local
+        @dialog.execute_script("receberTabelaKVA(#{flat.to_json},#{token_github.to_json})") rescue nil
+        # Recalcula badge (JS agora faz o cálculo, mas mantemos callback para compatibilidade)
         secoes = if modo_multi_espaco? && @ultimo_resultado_multi
           @ultimo_resultado_multi.flat_map { |e| e["secoes"] }
         else
@@ -1689,9 +1706,14 @@ module STAND1_Memorial
   end
 
   def self.publicar_kva_github(tabela_json)
+    # Salva local imediatamente (JS enviou flat array)
+    begin
+      tabela_obj = JSON.parse(tabela_json)
+      salvar_kva_table_local(tabela_obj)
+    rescue; end
     token = token_github
     if token.empty?
-      @dialog.execute_script("erroKVAGitHub('Token não configurado.')") rescue nil
+      # Sem token: salva só local, não tenta GitHub
       return
     end
     Thread.new do
@@ -1724,10 +1746,9 @@ module STAND1_Memorial
   end
 
   def self.calcular_kva(secoes_resultado)
-    tabela = kva_table_local
+    tabela = kva_table_local  # já retorna flat [{nome,kva,por}]
     return { "total" => 0, "secoes" => [], "sem_tabela" => true } if tabela.empty?
-    entradas = []
-    tabela.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
+    entradas = tabela.select { |e| e["nome"] && e["kva"] }
     entradas.sort_by! { |e| -e["nome"].to_s.length }
     total_geral = 0.0
     secoes_kva  = []
