@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.5"
+  VERSAO        = "7.0.6"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -520,6 +520,11 @@ module STAND1_Memorial
           @dialog.execute_script("receberTabelaKVA(#{tabela_local.to_json},#{token_github.to_json})") rescue nil
         end
         UI.start_timer(3.0, false) { buscar_kva_github } rescue nil
+      rescue; end
+      # Restaurar estado do modo Multi-Espaço (botão + lista de grupos)
+      begin
+        grupos = listar_grupos_raiz(model)
+        @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{modo_multi_espaco?.to_json})") rescue nil
       rescue; end
     end
 
@@ -1031,29 +1036,31 @@ module STAND1_Memorial
     larg = largura_fita_led
     return if larg <= 0
 
-    area_total = 0.0
+    # Uma entrada por material de fita, usando o NOME REAL da textura
+    # (ex.: "Fita LED COB branco quente") em vez de um rótulo genérico.
     materiais.each do |m|
-      nome = m["nome"].to_s.downcase
-      area_total += m["area"].to_f if PALAVRAS_FITA_LED.any? { |kw| nome.include?(kw) }
+      nome_mat = m["nome"].to_s
+      next unless PALAVRAS_FITA_LED.any? { |kw| nome_mat.downcase.include?(kw) }
+      area = m["area"].to_f
+      next if area <= 0
+
+      metros = (area / larg).round(2)
+      chave  = "fita_led_auto__#{nome_mat.downcase}"
+      next if secoes_raw["ELÉTRICA"][chave]
+
+      secoes_raw["ELÉTRICA"][chave] = {
+        nome:               nome_mat,
+        largura:            0.0,
+        profund:            0.0,
+        altura:             0.0,
+        area_face_frontal:  0.0,
+        area_material:      area.round(2),
+        comprimento_linear: metros,
+        metros_fita:        metros,
+        quantidade:         1,
+        chave:              chave
+      }
     end
-    return if area_total <= 0
-
-    metros = (area_total / larg).round(2)
-    chave  = "fita_led_auto"
-    return if secoes_raw["ELÉTRICA"][chave]
-
-    secoes_raw["ELÉTRICA"][chave] = {
-      nome:               "Fita LED",
-      largura:            0.0,
-      profund:            0.0,
-      altura:             0.0,
-      area_face_frontal:  0.0,
-      area_material:      area_total.round(2),
-      comprimento_linear: metros,
-      metros_fita:        metros,
-      quantidade:         1,
-      chave:              chave
-    }
   end
 
   # ── COLETA DE DADOS (SELEÇÃO) ──────────────────────────────────────────────
@@ -1537,11 +1544,32 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "modo_multi_espaco", ativo ? "1" : "0")
   end
 
+  # Um "espaço" pode ser um Group OU um ComponentInstance de primeiro nível.
+  def self.container_espaco?(ent)
+    ent.is_a?(Sketchup::Group) || ent.is_a?(Sketchup::ComponentInstance)
+  end
+
+  # Conteúdo (entities) de um container, seja Group ou ComponentInstance.
+  def self.entities_do_container(ent)
+    ent.is_a?(Sketchup::ComponentInstance) ? ent.definition.entities : ent.entities
+  end
+
+  # Nome de exibição do espaço: nome da instância → nome da definição → vazio.
+  def self.nome_container_espaco(ent)
+    n = ent.name.to_s.strip
+    return n unless n.empty?
+    if ent.is_a?(Sketchup::ComponentInstance)
+      dn = ent.definition.name.to_s.strip
+      return dn unless dn.empty?
+    end
+    ""
+  end
+
   def self.listar_grupos_raiz(model)
     grupos = []
     model.entities.each do |ent|
-      next unless ent.is_a?(Sketchup::Group)
-      nome    = ent.name.to_s.strip
+      next unless container_espaco?(ent)
+      nome    = nome_container_espaco(ent)
       nome    = "(sem nome)" if nome.empty?
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       grupos << { "id" => ent.persistent_id.to_s, "nome" => nome, "marcado" => (marcado == true || marcado == "true") }
@@ -1552,7 +1580,7 @@ module STAND1_Memorial
   def self.marcar_grupo_espaco(pid, ativo, model)
     model.start_operation("STAND1 — Marcar Espaço", true)
     model.entities.each do |ent|
-      next unless ent.is_a?(Sketchup::Group)
+      next unless container_espaco?(ent)
       if ent.persistent_id.to_s == pid.to_s
         ent.set_attribute("STAND1_Memorial", "espaco", ativo)
         model.commit_operation
@@ -1563,14 +1591,25 @@ module STAND1_Memorial
     false
   end
 
+  # Processa o conteúdo de um espaço aplicando a transformação e a tag do próprio
+  # container — idêntico ao que o fluxo padrão faz ao encontrar o container no topo.
+  def self.processar_conteudo_espaco(container, secoes_raw)
+    tag = container.layer&.name.to_s
+    tag = "" if tag == "Untagged" || tag == "Layer0"
+    tr  = container.transformation
+    entities_do_container(container).each do |sub|
+      processar_entidade(sub, secoes_raw, tag, tr)
+    end
+  end
+
   def self.coletar_dados_multi_espaco(model)
     limpar_cache
     grupos = []
     model.entities.each do |ent|
-      next unless ent.is_a?(Sketchup::Group)
+      next unless container_espaco?(ent)
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       next unless marcado == true || marcado == "true"
-      nome = ent.name.to_s.strip
+      nome = nome_container_espaco(ent)
       nome = "Espaço #{grupos.size + 1}" if nome.empty?
       grupos << { grupo: ent, nome: nome }
     end
@@ -1579,7 +1618,7 @@ module STAND1_Memorial
     grupos.each do |gs|
       secoes_raw = {}
       SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
-      gs[:grupo].entities.each { |ent| processar_entidade(ent, secoes_raw) }
+      processar_conteudo_espaco(gs[:grupo], secoes_raw)
       materiais = listar_materiais_revestimentos_grupo(gs[:grupo])
       adicionar_revestimentos_auto(secoes_raw, materiais)
       adicionar_fita_led_auto(secoes_raw, materiais)
@@ -1589,9 +1628,12 @@ module STAND1_Memorial
     resultado
   end
 
-  def self.listar_materiais_revestimentos_grupo(grupo)
+  # Materiais de revestimento dentro de um espaço — varre as faces imediatas do
+  # container E recursivamente as aninhadas (igual ao que o fluxo global faz ao
+  # mergulhar no container), com o material herdado do próprio container.
+  def self.listar_materiais_revestimentos_grupo(container)
     materiais_pol2 = Hash.new(0.0)
-    grupo.entities.each { |ent| varrer_para_revestimentos(ent, materiais_pol2) }
+    varrer_faces_rev(entities_do_container(container), container.material, materiais_pol2)
     materiais_pol2.map do |mat, area|
       c = mat.color
       cor = '#%02x%02x%02x' % [c.red, c.green, c.blue]
