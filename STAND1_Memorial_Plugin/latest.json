@@ -1,5 +1,5 @@
 {
-    "versao":  "7.1.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.1.rbz",
-    "notas":  "v7.1.1: Corrige o painel de Regras de Medicao (campos de palavra-chave que ficaram espremidos na v7.1.0)."
+    "versao":  "7.1.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.2.rbz",
+    "notas":  "v7.1.2: Tags reformuladas. Removidas LOCACAO e REFERENCIA. Novas tags auxiliares (0.OCULTAR, 1.TEXTO, 2.VISTA, 3.ISO, 4.KV) na pasta 1.Auxiliares. As 6 secoes do memorial seguem na pasta 0.Descritivo."
 }
