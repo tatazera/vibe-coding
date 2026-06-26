@@ -1,5 +1,5 @@
 {
-    "versao":  "7.0.8",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.8.rbz",
-    "notas":  "v7.0.8: Multi-Espaco so reconhece grupos, ganhou barra de pesquisa e diagramacao por espaco (titulo + linha divisoria). Corrige o bug que misturava dados ao voltar para o modo Padrao."
+    "versao":  "7.0.9",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.9.rbz",
+    "notas":  "v7.0.9: Modos Padrao e Multi-Espaco agora sao memorias independentes (alternar preserva as duas leituras). KVA e PDF Alt coerentes por modo. Auto-cura de arquivos com dados misturados."
 }
