@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.7"
+  VERSAO        = "7.0.8"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1544,31 +1544,23 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "modo_multi_espaco", ativo ? "1" : "0")
   end
 
-  # Um "espaço" pode ser um Group OU um ComponentInstance de primeiro nível.
-  def self.container_espaco?(ent)
-    ent.is_a?(Sketchup::Group) || ent.is_a?(Sketchup::ComponentInstance)
-  end
+  # Multi-Espaço reconhece SOMENTE grupos de primeiro nível (decisão de uso:
+  # listar componentes deixava a lista grande demais). Cada espaço = 1 Group.
 
-  # Conteúdo (entities) de um container, seja Group ou ComponentInstance.
+  # Conteúdo (entities) do grupo-espaço.
   def self.entities_do_container(ent)
-    ent.is_a?(Sketchup::ComponentInstance) ? ent.definition.entities : ent.entities
+    ent.entities
   end
 
-  # Nome de exibição do espaço: nome da instância → nome da definição → vazio.
+  # Nome de exibição do espaço = nome da instância do grupo (Entity Info → Nome).
   def self.nome_container_espaco(ent)
-    n = ent.name.to_s.strip
-    return n unless n.empty?
-    if ent.is_a?(Sketchup::ComponentInstance)
-      dn = ent.definition.name.to_s.strip
-      return dn unless dn.empty?
-    end
-    ""
+    ent.name.to_s.strip
   end
 
   def self.listar_grupos_raiz(model)
     grupos = []
     model.entities.each do |ent|
-      next unless container_espaco?(ent)
+      next unless ent.is_a?(Sketchup::Group)
       nome    = nome_container_espaco(ent)
       nome    = "(sem nome)" if nome.empty?
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
@@ -1580,7 +1572,7 @@ module STAND1_Memorial
   def self.marcar_grupo_espaco(pid, ativo, model)
     model.start_operation("STAND1 — Marcar Espaço", true)
     model.entities.each do |ent|
-      next unless container_espaco?(ent)
+      next unless ent.is_a?(Sketchup::Group)
       if ent.persistent_id.to_s == pid.to_s
         ent.set_attribute("STAND1_Memorial", "espaco", ativo)
         model.commit_operation
@@ -1606,7 +1598,7 @@ module STAND1_Memorial
     limpar_cache
     grupos = []
     model.entities.each do |ent|
-      next unless container_espaco?(ent)
+      next unless ent.is_a?(Sketchup::Group)
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       next unless marcado == true || marcado == "true"
       nome = nome_container_espaco(ent)
