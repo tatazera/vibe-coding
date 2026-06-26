@@ -134,6 +134,15 @@
   .kw-chip-del { background: none; border: none; cursor: pointer; color: #aaa; font-size: 15px; line-height: 1; padding: 0 2px; font-family: var(--font); }
   .kw-chip-del:hover { color: #e74c3c; }
   .kw-vazio { font-size: 12px; color: #bbb; font-style: italic; padding: 6px 0; }
+  /* Editor KVA */
+  .kva-list { padding: 10px 16px; max-height: 300px; overflow-y: auto; }
+  .kva-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .kva-row input.kva-nome { flex: 2; min-width: 0; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 9px; font-size: 12px; font-family: var(--font); color: #222; outline: none; background: #fff; }
+  .kva-row input.kva-nome:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
+  .kva-row input.kva-val { width: 68px; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 7px; font-size: 12px; font-family: var(--font); color: #222; outline: none; background: #fff; }
+  .kva-row input.kva-val:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
+  .kva-row select.kva-por { width: 82px; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 6px; font-size: 11px; font-family: var(--font); color: #222; outline: none; background: #fff; cursor: pointer; }
+  body.dark .kva-row input.kva-nome, body.dark .kva-row input.kva-val, body.dark .kva-row select.kva-por { background: #15161c; border-color: #2e2f3a; color: #e4e4ea; }
   /* Editor de Regras de Medição */
   .regras-list { padding: 10px 16px; max-height: 300px; overflow-y: auto; }
   .regra-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
@@ -495,7 +504,6 @@
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">Cancelar</button>
       <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF Alt</button>
-      <button class="mrev-btn mrev-btn-sec" onclick="_doExportarTXT(document.getElementById('chkOcultarMedidas').checked);fecharModalExportar()">📋 TXT</button>
     </div>
 
     <div id="secaoDiffExport" style="display:none;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;margin-top:4px">
@@ -546,7 +554,7 @@
 
 <!-- ── EDITOR TABELA KVA ──────────────────────────────────────────────────── -->
 <div id="modalEditorKVA" class="modal-overlay" style="display:none">
-  <div class="modal-rev" style="max-width:560px">
+  <div class="modal-rev modal-linear" style="max-width:580px">
     <div class="mrev-header">
       <span class="mrev-title">⚡ Tabela KVA</span>
       <div class="mrev-actions">
@@ -554,19 +562,25 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharEditorKVA()">✕</button>
       </div>
     </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:11px;opacity:.6;margin-bottom:6px">Token GitHub (para salvar no repositório colaborativo):</div>
-      <div style="display:flex;gap:6px">
-        <input type="password" id="inputGithubToken" placeholder="ghp_xxxxxxxxxxxx" style="flex:1;font-size:12px;padding:5px 8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:inherit">
-        <button class="mrev-btn mrev-btn-sec" onclick="salvarTokenGitHub()">Salvar</button>
-      </div>
+    <div class="linear-desc">Cada item liga uma <b>palavra-chave</b> (contida na descrição do componente) a um valor em <b>KVA</b>. O item mais específico (nome mais longo) vence quando há mais de um candidato. Use <b>↻ GitHub</b> para sincronizar com a tabela colaborativa.</div>
+    <div style="display:flex;gap:6px;padding:0 16px 10px;align-items:center">
+      <input type="password" id="inputGithubToken" placeholder="Token GitHub (para publicar no repositório colaborativo)" style="flex:1;font-size:11px;padding:5px 8px;background:rgba(0,0,0,0.12);border:1px solid rgba(128,128,128,0.25);border-radius:6px;color:inherit">
+      <button class="mrev-btn mrev-btn-sec" style="font-size:11px;white-space:nowrap" onclick="salvarTokenGitHub()">Salvar token</button>
     </div>
-    <div style="font-size:11px;opacity:.6;margin-bottom:6px">Itens (um por linha: <code>Nome | KVA | unidade|metro</code>):</div>
-    <textarea id="textoEditorKVA" style="width:100%;height:300px;font-size:11px;font-family:monospace;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:inherit;padding:8px;resize:vertical" placeholder="Frigobar | 0.300 | unidade&#10;Fita LED | 0.012 | metro"></textarea>
-    <div id="msgEditorKVA" style="font-size:11px;margin-top:6px;min-height:16px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+    <div class="kva-list" id="listaKVA"></div>
+    <div class="linear-add">
+      <input type="text" id="inputKVANome" placeholder="Nome do equipamento..." style="flex:2" onkeydown="if(event.key==='Enter') adicionarItemKVA()">
+      <input type="number" id="inputKVAVal" placeholder="KVA" step="0.001" min="0" style="width:72px">
+      <select id="inputKVAPor" style="border:1.5px solid var(--borda);border-radius:6px;padding:6px 6px;font-size:11px;font-family:var(--font);color:#222;background:#fff;outline:none">
+        <option value="unidade">/ unidade</option>
+        <option value="metro">/ metro</option>
+      </select>
+      <button class="mrev-btn mrev-btn-primary" onclick="adicionarItemKVA()">+ Adicionar</button>
+    </div>
+    <div id="msgEditorKVA" style="font-size:11px;padding:2px 16px 4px;min-height:16px;opacity:.7"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:6px 16px 14px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharEditorKVA()">Cancelar</button>
-      <button class="mrev-btn mrev-btn-sec" onclick="salvarKVALocal()">💾 Salvar Local</button>
+      <button class="mrev-btn mrev-btn-sec" onclick="salvarKVALocal()">💾 Salvar</button>
       <button class="mrev-btn mrev-btn-primary" onclick="publicarKVAGitHub()">☁ Publicar no GitHub</button>
     </div>
   </div>
@@ -734,6 +748,7 @@ function carregarDados(p){
   // preserva itens manuais e movidos de seção.
   mesclarInteligente(p.secoes||[]);
   atualizarStatus(); renderizar(); persistirEstado();
+  atualizarBadgeKVA();
 }
 
 function adicionarDados(p){
@@ -750,6 +765,7 @@ function atualizarDados(p){
   dataGeracao=new Date().toLocaleDateString('pt-BR');
   mesclarInteligente(p.secoes||[]);
   atualizarStatus(); renderizar(); persistirEstado();
+  atualizarBadgeKVA();
   if(window._removidosUltima>0) mostrarToast(window._removidosUltima+' item(ns) removido(s) — não existem mais no modelo');
   var b=document.getElementById('btnAtualizar');
   if(b){ b.classList.remove('btn-atualizando'); b.classList.add('sucesso'); setTimeout(function(){b.classList.remove('sucesso');},1500); }
@@ -1725,106 +1741,156 @@ function buildHTMLRevisao(proj, diff){
 
 // ── KVA ──────────────────────────────────────────────────────────────────────
 
-var _dadosKVA    = null;
-var _tabelaKVA   = {};
+// ── KVA — tabela e cálculo independente ──────────────────────────────────────
+// _listaKVA: array flat [{nome, kva, por}] — fonte de verdade local
+var _listaKVA = [];
 
-function receberResultadoKVA(res){
-  _dadosKVA = res;
+// Recebe tabela do Ruby (formato nested {cat:[...]} do GitHub ou flat [...])
+function receberTabelaKVA(tabela, token){
+  if(Array.isArray(tabela)){
+    _listaKVA = tabela;
+  } else {
+    _listaKVA = [];
+    Object.keys(tabela||{}).forEach(function(cat){
+      (tabela[cat]||[]).forEach(function(e){
+        if(e.nome && e.kva) _listaKVA.push({nome:e.nome, kva:parseFloat(e.kva)||0, por:e.por||'unidade'});
+      });
+    });
+  }
+  renderizarListaKVA();
+  if(token){ var inp=document.getElementById('inputGithubToken'); if(inp) inp.value=token; }
+  atualizarBadgeKVA();
+}
+
+// Também chamado pelo Ruby após "Adicionar Tudo" — agora só atualiza badge
+function receberResultadoKVA(res){ atualizarBadgeKVA(); }
+
+// Cálculo feito inteiramente no JS — independente de "Adicionar Tudo"
+function calcularKVAJS(){
+  var SECOES_KVA = ["EQUIPAMENTOS", "ELÉTRICA"];
+  if(!_listaKVA.length) return { total:0, secoes:[], sem_tabela:true };
+  var entradas = _listaKVA.slice().sort(function(a,b){ return b.nome.length - a.nome.length; });
+  var total = 0, secoes = [];
+  SECOES_KVA.forEach(function(nomeSec){
+    var sec = dadosMemorial.find(function(s){ return s.secao===nomeSec; });
+    if(!sec) return;
+    var itens = [];
+    (sec.itens||[]).forEach(function(item){
+      var desc = (item.descricao||''), qtd = parseFloat(item.quantidade)||0;
+      var match = entradas.find(function(e){ return desc.toLowerCase().indexOf(e.nome.toLowerCase())>=0; });
+      if(match){
+        var kvaUnit = parseFloat(match.kva)||0, kvaTotal;
+        if(match.por==='metro'){
+          var m = desc.match(/\(([\d.,]+)\s*m\)/);
+          var metros = m ? parseFloat(m[1].replace(',','.'))||qtd : qtd;
+          kvaTotal = Math.round(kvaUnit*metros*1000)/1000;
+        } else {
+          kvaTotal = Math.round(kvaUnit*qtd*1000)/1000;
+        }
+        itens.push({desc:desc, qtd:qtd, kva_unit:kvaUnit, por:match.por, kva_total:kvaTotal, match:match.nome});
+        total += kvaTotal;
+      } else {
+        itens.push({desc:desc, qtd:qtd, kva_total:0, sem_cadastro:true});
+      }
+    });
+    var subtotal = Math.round(itens.reduce(function(s,i){ return s+(i.kva_total||0); },0)*1000)/1000;
+    if(itens.length) secoes.push({secao:nomeSec, itens:itens, subtotal:subtotal});
+  });
+  return {total:Math.round(total*1000)/1000, secoes:secoes};
+}
+
+function atualizarBadgeKVA(){
   var btn = document.getElementById('btnKVA');
   if(!btn) return;
-  if(!res || res.sem_tabela || !res.total){ btn.textContent='⚡ KVA'; return; }
-  btn.textContent = '⚡ ' + res.total.toFixed(2) + ' KVA';
+  if(!_listaKVA.length || !dadosMemorial.length){ btn.textContent='⚡ KVA'; return; }
+  var res = calcularKVAJS();
+  btn.textContent = res.total > 0 ? '⚡ '+res.total.toFixed(2)+' KVA' : '⚡ KVA';
 }
 
 function abrirPainelKVA(){
   document.getElementById('painelKVA').style.display='flex';
-  renderizarKVA();
-  // Se não há dados calculados ainda, pede ao Ruby para recalcular agora
-  if(!_dadosKVA || !_dadosKVA.secoes || !_dadosKVA.secoes.length){
-    if(typeof sketchup!=='undefined'&&sketchup.calcular_kva_atual) sketchup.calcular_kva_atual();
-  }
+  renderizarKVA(calcularKVAJS());
 }
 
 function fecharPainelKVA(){
   document.getElementById('painelKVA').style.display='none';
 }
 
-function renderizarKVA(){
+function renderizarKVA(res){
   var corpo = document.getElementById('corpoKVA');
   if(!corpo) return;
-  if(!_dadosKVA || !_dadosKVA.secoes || !_dadosKVA.secoes.length){
-    corpo.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum item de KVA calculado.<br>Carregue o memorial primeiro.</div>';
+  if(!_listaKVA.length){
+    corpo.innerHTML='<div style="opacity:.55;font-size:12px">Tabela KVA não carregada.<br>Clique em <b>✏️ Tabela</b> e depois <b>↻ GitHub</b> para sincronizar.</div>';
     return;
   }
-  var html = '';
-  _dadosKVA.secoes.forEach(function(sec){
-    html += '<div class="kva-sec"><div class="kva-sec-titulo">'+escaparAttr(sec.secao)+'</div>';
+  if(!res||!res.secoes||!res.secoes.length){
+    corpo.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum item de EQUIPAMENTOS ou ELÉTRICA no memorial atual.</div>';
+    return;
+  }
+  var html='';
+  res.secoes.forEach(function(sec){
+    html+='<div class="kva-sec"><div class="kva-sec-titulo">'+escaparAttr(sec.secao)+'</div>';
     sec.itens.forEach(function(it){
       if(it.sem_cadastro){
-        html += '<div class="kva-item sem-cad"><span>'+escaparAttr(it.desc)+'</span><span>sem KVA cadastrado</span></div>';
+        html+='<div class="kva-item sem-cad"><span>'+escaparAttr(it.desc)+'</span><span>sem KVA cadastrado</span></div>';
       } else {
-        var label = it.por==='metro' ? '×'+it.qtd+'m' : '×'+fmtQtd(it.qtd);
-        html += '<div class="kva-item"><span>'+escaparAttr(it.desc)+'</span><span style="opacity:.65">'+label+' × '+it.kva_unit+' kva</span><span>'+it.kva_total.toFixed(3)+'</span></div>';
+        var label=it.por==='metro'?'×'+it.qtd+'m':'×'+fmtQtd(it.qtd);
+        html+='<div class="kva-item"><span>'+escaparAttr(it.desc)+'</span><span style="opacity:.65">'+label+' × '+it.kva_unit+' kva</span><span>'+it.kva_total.toFixed(3)+'</span></div>';
       }
     });
-    html += '<div class="kva-subtotal">subtotal: '+sec.subtotal.toFixed(3)+' kva</div></div>';
+    html+='<div class="kva-subtotal">subtotal: '+sec.subtotal.toFixed(3)+' kva</div></div>';
   });
-  html += '<div class="kva-total">TOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA</div>';
-  corpo.innerHTML = html;
+  html+='<div class="kva-total">TOTAL GERAL: '+res.total.toFixed(3)+' KVA</div>';
+  corpo.innerHTML=html;
 }
 
 function exportarRelatorioKVA(){
-  if(!_dadosKVA||!_dadosKVA.secoes){ mostrarToast('Nenhum dado KVA disponível.'); return; }
-  var html = buildHTMLRelatorioKVA();
-  var nome = 'RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.pdf';
-  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva) sketchup.exportar_relatorio_kva(html, nome);
+  var res=calcularKVAJS();
+  if(!res.secoes||!res.secoes.length){ mostrarToast('Nenhum item de KVA para exportar.'); return; }
+  var nome='RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.pdf';
+  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva) sketchup.exportar_relatorio_kva(buildHTMLRelatorioKVA(res),nome);
   else { var o=document.title; document.title=nome.replace('.pdf',''); window.print(); document.title=o; }
 }
 
 function exportarRelatorioKVATXT(){
-  if(!_dadosKVA||!_dadosKVA.secoes){ mostrarToast('Nenhum dado KVA disponível.'); return; }
-  var txt = buildTXTRelatorioKVA();
-  var nome = 'RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.txt';
-  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva_txt) sketchup.exportar_relatorio_kva_txt(txt, nome);
-  else navigator.clipboard.writeText(txt).then(function(){mostrarToast('Copiado!');});
+  var res=calcularKVAJS();
+  if(!res.secoes||!res.secoes.length){ mostrarToast('Nenhum item de KVA para exportar.'); return; }
+  var nome='RelatorioKVA_'+((nomeProjeto||nomeArquivo||'Projeto').trim().replace(/\s+/g,'_'))+'.txt';
+  if(typeof sketchup!=='undefined'&&sketchup.exportar_relatorio_kva_txt) sketchup.exportar_relatorio_kva_txt(buildTXTRelatorioKVA(res),nome);
+  else navigator.clipboard.writeText(buildTXTRelatorioKVA(res)).then(function(){mostrarToast('Copiado!');});
 }
 
-function buildHTMLRelatorioKVA(){
-  var proj = nomeProjeto||nomeArquivo;
-  var linhas = '';
-  _dadosKVA.secoes.forEach(function(sec){
-    linhas += '<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(sec.secao)+'</td></tr>';
+function buildHTMLRelatorioKVA(res){
+  var proj=nomeProjeto||nomeArquivo, linhas='';
+  res.secoes.forEach(function(sec){
+    linhas+='<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(sec.secao)+'</td></tr>';
     sec.itens.forEach(function(it){
-      if(it.sem_cadastro){
-        linhas += '<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>';
-      } else {
-        var qtd = it.por==='metro' ? it.qtd+'m' : fmtQtd(it.qtd)+' un';
-        linhas += '<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>';
-      }
+      if(it.sem_cadastro){ linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>'; }
+      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>'; }
     });
-    linhas += '<tr style="font-weight:bold;background:#f5f5f5"><td colspan="2">Subtotal</td><td>'+sec.subtotal.toFixed(3)+' kva</td></tr>';
+    linhas+='<tr style="font-weight:bold;background:#f5f5f5"><td colspan="2">Subtotal</td><td>'+sec.subtotal.toFixed(3)+' kva</td></tr>';
   });
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório KVA</title>'
     +'<style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px}h2{color:#1A2DB8}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border:1px solid #ddd}th{background:#1A2DB8;color:#fff}.total{font-size:15px;font-weight:bold;text-align:center;margin-top:16px;color:#1A2DB8}</style></head>'
     +'<body><h2>Relatório de Carga Elétrica</h2><p>Projeto: <strong>'+escaparAttr(proj)+'</strong> · Revisão: '+revisao+' · '+dataGeracao+'</p>'
     +'<table><thead><tr><th>Item</th><th>Quantidade</th><th>KVA</th></tr></thead><tbody>'+linhas+'</tbody></table>'
-    +'<div class="total">TOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA</div>'
+    +'<div class="total">TOTAL GERAL: '+res.total.toFixed(3)+' KVA</div>'
     +'<p style="margin-top:20px;font-size:10px;color:#999">Stand1 Produções · Relatório interno</p></body></html>';
 }
 
-function buildTXTRelatorioKVA(){
-  var proj = nomeProjeto||nomeArquivo;
-  var t = 'RELATÓRIO DE CARGA ELÉTRICA\nProjeto: '+proj+'\nRevisão: '+revisao+'\n'+dataGeracao+'\n';
-  t += '============================================================\n\n';
-  _dadosKVA.secoes.forEach(function(sec){
-    t += sec.secao+'\n';
+function buildTXTRelatorioKVA(res){
+  var proj=nomeProjeto||nomeArquivo;
+  var t='RELATÓRIO DE CARGA ELÉTRICA\nProjeto: '+proj+'\nRevisão: '+revisao+'\n'+dataGeracao+'\n';
+  t+='============================================================\n\n';
+  res.secoes.forEach(function(sec){
+    t+=sec.secao+'\n';
     sec.itens.forEach(function(it){
-      if(it.sem_cadastro) t += '  '+it.desc+' - sem KVA cadastrado\n';
-      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; t += '  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
+      if(it.sem_cadastro) t+='  '+it.desc+' - sem KVA cadastrado\n';
+      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; t+='  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
     });
-    t += '  Subtotal: '+sec.subtotal.toFixed(3)+' kva\n\n';
+    t+='  Subtotal: '+sec.subtotal.toFixed(3)+' kva\n\n';
   });
-  t += '============================================================\nTOTAL GERAL: '+_dadosKVA.total.toFixed(3)+' KVA\n';
+  t+='============================================================\nTOTAL GERAL: '+res.total.toFixed(3)+' KVA\n';
   return t;
 }
 
@@ -1833,6 +1899,7 @@ function buildTXTRelatorioKVA(){
 function abrirEditorKVA(){
   fecharPainelKVA();
   document.getElementById('modalEditorKVA').style.display='flex';
+  renderizarListaKVA();
   if(typeof sketchup!=='undefined'&&sketchup.carregar_kva_table_local) sketchup.carregar_kva_table_local();
 }
 
@@ -1840,61 +1907,63 @@ function fecharEditorKVA(){
   document.getElementById('modalEditorKVA').style.display='none';
 }
 
-function receberTabelaKVA(tabela, token){
-  _tabelaKVA = tabela || {};
-  var linhas = [];
-  Object.keys(_tabelaKVA).forEach(function(cat){
-    (_tabelaKVA[cat]||[]).forEach(function(e){ linhas.push(e.nome+' | '+e.kva+' | '+e.por); });
-  });
-  var txt = document.getElementById('textoEditorKVA');
-  if(txt) txt.value = linhas.join('\n');
-  if(token){ var inp=document.getElementById('inputGithubToken'); if(inp) inp.value=token; }
+function renderizarListaKVA(){
+  var lista=document.getElementById('listaKVA');
+  if(!lista) return;
+  if(!_listaKVA.length){
+    lista.innerHTML='<div class="kw-vazio">Nenhum item cadastrado. Use ↻ GitHub para carregar ou adicione manualmente.</div>';
+    return;
+  }
+  lista.innerHTML=_listaKVA.map(function(e,i){
+    return '<div class="kva-row">'
+      +'<input class="kva-nome" type="text" value="'+escaparAttr(e.nome)+'" onchange="_listaKVA['+i+'].nome=this.value">'
+      +'<input class="kva-val" type="number" step="0.001" min="0" value="'+e.kva+'" onchange="_listaKVA['+i+'].kva=parseFloat(this.value)||0">'
+      +'<select class="kva-por" onchange="_listaKVA['+i+'].por=this.value">'
+        +'<option value="unidade"'+(e.por==='unidade'?' selected':'')+'>/ un</option>'
+        +'<option value="metro"'+(e.por==='metro'?' selected':'')+'>/ m</option>'
+      +'</select>'
+      +'<button class="regra-btn regra-del" onclick="_listaKVA.splice('+i+',1);renderizarListaKVA()" title="Remover">✕</button>'
+    +'</div>';
+  }).join('');
+}
+
+function adicionarItemKVA(){
+  var nome=((document.getElementById('inputKVANome')||{}).value||'').trim();
+  var kva=parseFloat((document.getElementById('inputKVAVal')||{}).value)||0;
+  var por=(document.getElementById('inputKVAPor')||{}).value||'unidade';
+  if(!nome||!kva){ mostrarToast('Preencha nome e valor KVA.'); return; }
+  _listaKVA.push({nome:nome, kva:kva, por:por});
+  renderizarListaKVA();
+  document.getElementById('inputKVANome').value='';
+  document.getElementById('inputKVAVal').value='';
 }
 
 function salvarTokenGitHub(){
-  var token = (document.getElementById('inputGithubToken')||{}).value || '';
+  var token=((document.getElementById('inputGithubToken')||{}).value||'').trim();
   if(typeof sketchup!=='undefined'&&sketchup.salvar_token_github) sketchup.salvar_token_github(token);
   mostrarToast('Token salvo!');
 }
 
-function parsearEditorKVA(){
-  var txt = (document.getElementById('textoEditorKVA')||{}).value || '';
-  var resultado = { personalizado: [] };
-  txt.split('\n').forEach(function(linha){
-    linha = linha.trim(); if(!linha||linha.startsWith('#')) return;
-    var partes = linha.split('|');
-    if(partes.length < 2) return;
-    var nome = partes[0].trim(), kva = parseFloat(partes[1].trim()), por = (partes[2]||'').trim().toLowerCase();
-    if(!nome || isNaN(kva)) return;
-    if(por!=='metro') por='unidade';
-    resultado.personalizado.push({ nome: nome, kva: kva, por: por });
-  });
-  return resultado;
-}
-
 function salvarKVALocal(){
-  var tabela = parsearEditorKVA();
-  var msg = document.getElementById('msgEditorKVA');
-  if(msg) msg.textContent = 'Salvando localmente...';
-  // publicar_kva_github no Ruby salva local antes de publicar — sem token só salva local
-  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github){
-    sketchup.publicar_kva_github(JSON.stringify(tabela));
-  }
-  if(msg) msg.textContent = 'Salvo localmente.';
+  var msg=document.getElementById('msgEditorKVA');
+  if(msg) msg.textContent='Salvando...';
+  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github)
+    sketchup.publicar_kva_github(JSON.stringify(_listaKVA));
+  atualizarBadgeKVA();
+  if(msg) msg.textContent='';
   fecharEditorKVA();
+  mostrarToast('Tabela KVA salva!');
 }
 
 function publicarKVAGitHub(){
-  var tabela = parsearEditorKVA();
-  var msg = document.getElementById('msgEditorKVA');
-  if(msg) msg.textContent = 'Publicando no GitHub...';
-  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github){
-    sketchup.publicar_kva_github(JSON.stringify(tabela));
-  }
+  var msg=document.getElementById('msgEditorKVA');
+  if(msg) msg.textContent='Publicando no GitHub...';
+  if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github)
+    sketchup.publicar_kva_github(JSON.stringify(_listaKVA));
 }
 
 function buscarKVAGitHub(){
-  var msg = document.getElementById('msgEditorKVA');
+  var msg=document.getElementById('msgEditorKVA');
   if(msg) msg.textContent='Buscando no GitHub...';
   if(typeof sketchup!=='undefined'&&sketchup.buscar_kva_github) sketchup.buscar_kva_github();
 }
