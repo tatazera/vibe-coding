@@ -158,7 +158,8 @@
   /* Editor de Regras de Medição */
   .regras-list { padding: 10px 16px; max-height: 300px; overflow-y: auto; }
   .regra-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .regra-row input.regra-pal { flex: 1; min-width: 0; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 9px; font-size: 12px; font-family: var(--font); color: #222; outline: none; background: #fff; }
+  .regra-row input.regra-pal { flex: 1; min-width: 90px; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 9px; font-size: 12px; font-family: var(--font); color: #222; outline: none; background: #fff; }
+  .regra-row select.regra-frm { max-width: 210px; }
   .regra-row input.regra-pal:focus { border-color: #C84FBF; box-shadow: 0 0 0 3px rgba(200,79,191,.1); }
   .regra-row select.regra-frm { flex: 1.2; border: 1.5px solid var(--borda); border-radius: 6px; padding: 6px 8px; font-size: 11.5px; font-family: var(--font); color: #222; outline: none; background: #fff; cursor: pointer; }
   .regra-ord { display: flex; flex-direction: column; gap: 1px; }
@@ -854,7 +855,7 @@ var FORMULAS_OPC = [
   ['perimetro',       'Perímetro — 2×(2 maiores) (m)'],
   ['desenvolvimento', 'Desenvolvimento — L+P (m)'],
   ['volume',          'Volume — L×P×alt (m³)'],
-  ['area_real',       'Área real — geometria verdadeira (m²) · paredes em L/U'],
+  ['area_real',       'Área real — geometria (m²)'],
   ['unidade',         'Unidade — só conta (und.)']
 ];
 
