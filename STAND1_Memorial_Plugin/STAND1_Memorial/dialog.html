@@ -89,12 +89,20 @@
   .hbtn-toggle.ativo { background: rgba(255,255,255,.40); font-weight: 700; }
   .hbtn-kva { font-size: 11px; padding: 3px 8px; background: rgba(255,220,50,.22); border-color: rgba(255,220,50,.5); }
   .hbtn-diff { font-size: 11px; padding: 3px 8px; background: rgba(255,120,50,.22); border-color: rgba(255,120,50,.5); }
-  .kva-sec { margin-bottom:12px; }
-  .kva-sec-titulo { font-size:11px; font-weight:700; letter-spacing:.06em; opacity:.65; margin-bottom:6px; }
-  .kva-item { display:flex; justify-content:space-between; font-size:12px; padding:3px 0; border-bottom:1px solid rgba(255,255,255,.06); gap:8px; }
-  .kva-item.sem-cad { opacity:.45; font-style:italic; }
-  .kva-subtotal { display:flex; justify-content:flex-end; font-size:12px; font-weight:700; margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,.18); }
-  .kva-total { font-size:14px; font-weight:700; text-align:center; margin:12px 0 4px; }
+  .kva-sec { margin-bottom:18px; }
+  .kva-sec-titulo { font-size:11px; font-weight:700; letter-spacing:.08em; opacity:.7; margin-bottom:8px; padding-bottom:5px; border-bottom:1.5px solid rgba(200,79,191,.35); }
+  .kva-item { display:grid; grid-template-columns:1fr auto 62px; align-items:center; gap:14px; font-size:12px; padding:6px 2px; border-bottom:1px solid rgba(255,255,255,.06); }
+  .kva-item .kva-desc { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .kva-item .kva-calc { opacity:.55; font-size:11px; text-align:right; white-space:nowrap; }
+  .kva-item .kva-val { text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+  .kva-item.sem-cad { opacity:.5; font-style:italic; }
+  .kva-item.sem-cad .kva-calc { grid-column:2 / 4; }
+  .kva-subtotal { display:flex; justify-content:flex-end; gap:8px; font-size:12px; font-weight:700; margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,.18); }
+  .kva-total { font-size:15px; font-weight:800; text-align:center; margin:18px 0 4px; padding:11px 8px; border-radius:9px; background:linear-gradient(90deg,rgba(255,77,141,.14),rgba(77,168,240,.14)); border:1px solid rgba(200,79,191,.3); }
+  .kva-espaco { margin-bottom:18px; padding:10px 12px; border:1px solid rgba(200,79,191,.25); border-radius:10px; background:rgba(200,79,191,.05); }
+  .kva-espaco-titulo { font-size:12.5px; font-weight:800; letter-spacing:.04em; color:#C84FBF; margin-bottom:10px; }
+  .kva-espaco .kva-sec:last-of-type { margin-bottom:8px; }
+  .kva-espaco-sub { display:flex; justify-content:space-between; gap:8px; font-size:12px; font-weight:800; padding-top:8px; border-top:1.5px solid rgba(200,79,191,.3); }
   .diff-item { display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; align-items:flex-start; }
   .diff-novo { color: #7FD97F; }
   .diff-removido { color: #FF8080; }
@@ -336,13 +344,13 @@
     <button class="hbtn hbtn-s" onclick="criarTags()" title="Criar as Tags padrão Stand1 (pasta '0. Descritivo') no modelo">🏷️ Tags</button>
     <button class="hbtn hbtn-s" onclick="verificarUpdate()" title="Verificar se há nova versão no GitHub">🔄 Atualização</button>
     <button class="hbtn hbtn-s hbtn-lock" id="btnTema" onclick="toggleTema()" title="Modo claro/escuro">🌙</button>
-    <button class="hbtn hbtn-s hbtn-lock" id="btnLock" onclick="toggleBloqueio()" title="Bloquear/desbloquear edição">🔓</button>
+    <button class="hbtn hbtn-s hbtn-lock" id="btnLock" onclick="toggleBloqueio()" title="Bloquear/desbloquear edição e releitura (Adicionar Tudo / Atualizar / Seleção)">🔓</button>
     <button class="hbtn hbtn-s" onclick="copiarMemorial()" title="Copiar memorial como texto (cola formatado no Bloco de Notas, Word, e-mail)">📋 Copiar</button>
     <button class="hbtn hbtn-p" onclick="exportarPDFDireto()">⬇ PDF</button>
     <div class="h-sep-v"></div>
     <button id="btnMultiEspaco" class="hbtn hbtn-s hbtn-toggle" onclick="toggleMultiEspaco()" title="Alternar modo Multi-Espaço">⊞ Padrão</button>
     <button id="btnKVA" class="hbtn hbtn-s hbtn-kva" onclick="abrirPainelKVA()" title="Carga elétrica — clique para detalhes e configurações">⚡ KVA</button>
-    <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="exportarPDFDireto()" title="Há alterações em relação à leitura anterior" style="display:none">🔄 —</button>
+    <button id="btnDiff" class="hbtn hbtn-s hbtn-diff" onclick="exportarPDFDireto()" title="Alterações em relação à leitura anterior">🔄 0 alt.</button>
   </div>
 </header>
 
@@ -503,14 +511,14 @@
     </label>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">Cancelar</button>
-      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF Alt</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF</button>
     </div>
 
     <div id="secaoDiffExport" style="display:none;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;margin-top:4px">
       <div style="font-size:12px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:10px">🔄 REVISÃO — <span id="diffContador">0</span> ALTERAÇÃO(ÕES)</div>
       <div id="listaDiff" style="max-height:180px;overflow-y:auto;font-size:12px;margin-bottom:12px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="mrev-btn mrev-btn-sec" onclick="exportarPDFRevisao()">📄 PDF revisão interna</button>
+        <button class="mrev-btn mrev-btn-sec" onclick="exportarPDFRevisao()">📄 PDF com Alterações</button>
       </div>
     </div>
   </div>
@@ -641,11 +649,16 @@ window.addEventListener('unload', function(){ persistirEstado(); });
 
 function definirNomeArquivo(n){ nomeArquivo=n||"Projeto Stand"; document.getElementById('nomeProjeto').value=nomeArquivo; nomeProjeto=nomeArquivo; }
 
-function carregarTudo(){ document.getElementById('modoTudo').classList.add('ativo'); document.getElementById('modoSelecao').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_tudo) sketchup.carregar_tudo(); }
-function carregarSelecao(){ document.getElementById('modoSelecao').classList.add('ativo'); document.getElementById('modoTudo').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_selecao) sketchup.carregar_selecao(); }
+// Cadeado: quando bloqueado, impede qualquer releitura do modelo (segurança do memorial curado).
+function _bloqueioImpedeReleitura(){
+  if(bloqueado){ mostrarToast('🔒 Memorial bloqueado — destrave o cadeado para reler o modelo.'); return true; }
+  return false;
+}
+function carregarTudo(){ if(_bloqueioImpedeReleitura()) return; document.getElementById('modoTudo').classList.add('ativo'); document.getElementById('modoSelecao').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_tudo) sketchup.carregar_tudo(); }
+function carregarSelecao(){ if(_bloqueioImpedeReleitura()) return; document.getElementById('modoSelecao').classList.add('ativo'); document.getElementById('modoTudo').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_selecao) sketchup.carregar_selecao(); }
 function alertaSemSelecao(){ document.getElementById('preview').innerHTML='<div class="vazio"><h3 style="color:#e74c3c">Nenhum componente selecionado</h3><p>Selecione componentes no SketchUp e tente novamente.</p></div>'; }
 
-function atualizarMemorial(){ var b=document.getElementById('btnAtualizar'); if(b) b.classList.add('btn-atualizando'); if(typeof sketchup!=='undefined'&&sketchup.atualizar) sketchup.atualizar(); else setTimeout(function(){atualizarDados({secoes:dadosMemorial,nome_arquivo:nomeArquivo});},400); }
+function atualizarMemorial(){ if(_bloqueioImpedeReleitura()) return; var b=document.getElementById('btnAtualizar'); if(b) b.classList.add('btn-atualizando'); if(typeof sketchup!=='undefined'&&sketchup.atualizar) sketchup.atualizar(); else setTimeout(function(){atualizarDados({secoes:dadosMemorial,nome_arquivo:nomeArquivo});},400); }
 
 var ORDEM_SECOES=["ESTRUTURAS","REVESTIMENTOS","COMUNICAÇÃO VISUAL","MOBILIÁRIO","EQUIPAMENTOS","ELÉTRICA"];
 
@@ -1657,6 +1670,7 @@ function toggleGrupoEspaco(pid, el){
 }
 
 function carregarMultiEspaco(){
+  if(_bloqueioImpedeReleitura()) return;
   fecharModalMultiEspaco();
   if(typeof sketchup!=='undefined'&&sketchup.carregar_multi_espaco) sketchup.carregar_multi_espaco();
 }
@@ -1689,8 +1703,8 @@ function receberDiffRevisao(diff){
   _diffAtual = diff || [];
   var btn = document.getElementById('btnDiff');
   if(!btn) return;
-  if(!_diffAtual.length){ btn.style.display='none'; document.getElementById('secaoDiffExport').style.display='none'; return; }
-  btn.style.display='';
+  // Botão sempre visível, mesmo sem alterações.
+  if(!_diffAtual.length){ btn.textContent='🔄 0 alt.'; var s0=document.getElementById('secaoDiffExport'); if(s0) s0.style.display='none'; return; }
   btn.textContent = '🔄 ' + _diffAtual.length + ' alt.';
   var secao = document.getElementById('secaoDiffExport');
   if(secao){ secao.style.display=''; }
@@ -1715,28 +1729,113 @@ function receberDiffRevisao(diff){
 function exportarPDFRevisao(){
   if(!_diffAtual.length){ mostrarToast('Sem alterações registradas.'); return; }
   var proj = nomeProjeto||nomeArquivo;
-  var html = buildHTMLRevisao(proj, _diffAtual);
+  var html = buildHTMLRevisaoCompleta();
+  if(!html){ mostrarToast('Nenhum memorial para exportar.'); return; }
   var nome = 'Revisao_'+((proj||'Projeto').trim().replace(/\s+/g,'_'))+'_Rev'+(revisao||'00')+'.pdf';
   if(typeof sketchup!=='undefined'&&sketchup.exportar_pdf_revisao) sketchup.exportar_pdf_revisao(html, nome);
   else { var o=document.title; document.title=nome.replace('.pdf',''); window.print(); document.title=o; }
 }
 
-function buildHTMLRevisao(proj, diff){
-  var linhas = diff.map(function(d){
-    if(d.tipo==='novo')
-      return '<tr style="color:#2a7a2a"><td>★ Novo</td><td>'+escaparAttr(d.secao)+'</td><td>'+escaparAttr(d.desc_nov||d.desc)+'</td><td>—</td><td>'+fmtQtd(d.qtd_nov||0)+'</td></tr>';
-    if(d.tipo==='removido')
-      return '<tr style="color:#aa0000"><td>✕ Removido</td><td>'+escaparAttr(d.secao)+'</td><td>'+escaparAttr(d.desc_ant||d.desc)+'</td><td>'+fmtQtd(d.qtd_ant||0)+'</td><td>—</td></tr>';
-    var arrow = (d.qtd_nov||0)>(d.qtd_ant||0)?'▲':'▼';
-    return '<tr style="color:#7a5a00"><td>'+arrow+' Alterado</td><td>'+escaparAttr(d.secao)+'</td>'
-      +'<td><del>'+escaparAttr(d.desc_ant||'')+'</del><br>'+escaparAttr(d.desc_nov||'')+'</td>'
-      +'<td>'+fmtQtd(d.qtd_ant||0)+'</td><td>'+fmtQtd(d.qtd_nov||0)+'</td></tr>';
+// PDF de Revisão = MEMORIAL COMPLETO atualizado, com cada item novo/alterado/removido
+// destacado inline. Mesmo layout do PDF limpo + marcações de revisão.
+function buildHTMLRevisaoCompleta(){
+  if(!dadosMemorial||!dadosMemorial.length) return '';
+  var logo=(typeof LOGO_B64!=='undefined')?LOGO_B64:'';
+  var proj=nomeProjeto||nomeArquivo||'';
+  var resp=nomeResponsavel||'';
+
+  var fonteCss='';
+  document.querySelectorAll('style').forEach(function(s){
+    var m=s.textContent.match(/@font-face[\s\S]*?\}/g);
+    if(m) fonteCss+=m.join('\n');
+  });
+
+  // Índices de alterações (casam por espaço::seção-base + descrição)
+  function chaveDiff(espaco, secao, desc){ return (espaco?espaco+'::':'')+_secaoBase(secao)+'||'+(desc||''); }
+  var alterados={}, removidosPorSecao={};
+  (_diffAtual||[]).forEach(function(d){
+    if(d.tipo==='removido'){
+      var ks=(d.espaco?d.espaco+'::':'')+_secaoBase(d.secao);
+      (removidosPorSecao[ks]=removidosPorSecao[ks]||[]).push(d);
+    } else {
+      alterados[chaveDiff(d.espaco,d.secao,d.desc_nov||d.desc)]={tipo:d.tipo,qa:d.qtd_ant,qn:d.qtd_nov};
+    }
+  });
+
+  var corpo=dadosMemorial.map(function(sec){
+    var ksec=(sec._espaco?sec._espaco+'::':'')+_secaoBase(sec.secao);
+    var itens=sec.itens.map(function(it){
+      var d=escaparHtml(fmtMedidas(it.descricao));
+      var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
+      var info=alterados[chaveDiff(sec._espaco,sec.secao,it.descricao)];
+      var marca='', cls='';
+      if(info){
+        if(info.tipo==='novo'){ marca='<span class="rev-mk rev-novo">★ novo</span> '; cls='rev-li-novo'; }
+        else { var ar=(info.qn||0)>(info.qa||0)?'▲':'▼'; marca='<span class="rev-mk rev-alt">'+ar+' '+fmtQtd(info.qa)+'→'+fmtQtd(info.qn)+'</span> '; cls='rev-li-alt'; }
+      }
+      return '<li class="'+cls+'">'+marca+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+'</li>';
+    }).join('');
+    var rem=(removidosPorSecao[ksec]||[]).map(function(d){
+      return '<li class="rev-li-rem"><span class="rev-mk rev-rem">✕ removido</span> <del>'+escaparHtml(d.desc_ant||d.desc||'')+' - '+fmtQtd(d.qtd_ant||0)+'</del></li>';
+    }).join('');
+    return '<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+rem+'</ul></div>';
   }).join('');
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Revisão Interna</title>'
-    +'<style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px}h2{color:#1A2DB8}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border:1px solid #ddd;text-align:left}th{background:#1A2DB8;color:#fff}</style></head>'
-    +'<body><h2>Revisão Interna — '+escaparAttr(proj)+'</h2><p>Revisão: '+revisao+' · Gerado em: '+dataGeracao+'</p>'
-    +'<table><thead><tr><th>Tipo</th><th>Seção</th><th>Item</th><th>Qtd Ant.</th><th>Qtd Nov.</th></tr></thead><tbody>'+linhas+'</tbody></table>'
-    +'<p style="margin-top:20px;font-size:10px;color:#999">Stand1 Produções · Documento interno · Não enviar ao cliente</p></body></html>';
+
+  var css=''+
+    '*{margin:0;padding:0;box-sizing:border-box}'+
+    '@page{size:A4;margin:0}'+
+    'body{font-family:\'Lato\',\'Segoe UI\',Arial,sans-serif;color:#444;padding:12mm 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    '.ph{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 34px 14px}'+
+    '.ph-logo{display:flex;align-items:center;gap:11px}'+
+    '.ph-logo img{width:50px;height:50px;object-fit:contain}'+
+    '.ph-logo span{font-size:30px;font-weight:800;color:#4a4a52;letter-spacing:1px}'+
+    '.ph-emp{text-align:right;font-size:12.5px;color:#5a5a62;line-height:1.55}'+
+    '.ph-emp b{color:#4a4a52;font-weight:700}'+
+    '.pband{background:#efeff1;padding:9px 34px;display:flex;justify-content:space-between;align-items:center}'+
+    '.pweb{font-size:11px;color:#7a7a82;font-weight:600}'+
+    '.ptab{position:relative;background:#e7e7ea;color:#6a6a72;font-size:22px;padding:7px 24px 7px 42px;border-radius:4px 0 0 4px}'+
+    '.ptab::before{content:\'\';position:absolute;left:0;top:0;bottom:0;width:28px;background:#e6398a;clip-path:polygon(0 0,100% 0,55% 100%,0 100%)}'+
+    '.pcli{padding:18px 34px 2px;font-size:13px;color:#4d6585}'+
+    '.pmeta{margin:14px 34px 10px;background:#fbe2ec;border-radius:10px;padding:14px 24px;display:flex;gap:30px;flex-wrap:wrap}'+
+    '.pmeta>div{display:flex;flex-direction:column;gap:3px}'+
+    '.pml{font-size:12px;font-weight:700;color:#d6357f}'+
+    '.pmv{font-size:12.5px;color:#5a5a62}'+
+    '.pcorpo{padding:14px 34px 28px}'+
+    '.pct{font-size:16px;font-weight:700;font-style:italic;color:#4a4a52;margin-bottom:14px}'+
+    '.psec{margin-bottom:18px;page-break-inside:avoid}'+
+    '.pst{font-size:14px;font-weight:700;color:#4a4a52;margin-bottom:6px}'+
+    '.psec ul{list-style:none}'+
+    '.psec li{font-size:13px;color:#4d6585;line-height:1.55;margin-bottom:4px}'+
+    '.psec li b{color:#4d6585;font-weight:700}'+
+    '.pi-obs{font-size:11px;color:#777;font-style:italic;padding-left:2px}'+
+    '.rev-mk{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;white-space:nowrap}'+
+    '.rev-novo{background:#e3f4e3;color:#2a7a2a}'+
+    '.rev-alt{background:#fbeecf;color:#7a5a00}'+
+    '.rev-rem{background:#fbe0e0;color:#aa0000}'+
+    '.rev-li-rem{color:#aa0000}'+
+    '.rev-legend{margin:0 34px 10px;font-size:11px;color:#777;display:flex;gap:14px;flex-wrap:wrap}'+
+    '.rev-legend b{font-weight:700}'+
+    '.rev-interno{margin:6px 34px 0;font-size:10px;color:#aa0000;font-weight:700}';
+
+  var body=
+    '<div class="ph">'+
+      '<div class="ph-logo"><img src="'+logo+'"><span>STAND1</span></div>'+
+      '<div class="ph-emp"><b>Lauro de Freitas</b><br>Bahia | Brasil<br>CPF/CNPJ: 44659980000104</div>'+
+    '</div>'+
+    '<div class="pband"><span class="pweb">www.stand1.com.br | @stand1oficial</span><span class="ptab">Memorial — Revisão</span></div>'+
+    (resp?'<div class="pcli">'+escaparHtml(resp)+'</div>':'')+
+    '<div class="pmeta">'+
+      '<div><span class="pml">Projeto</span><span class="pmv">'+escaparHtml(proj||'—')+'</span></div>'+
+      '<div><span class="pml">Responsável</span><span class="pmv">'+escaparHtml(resp||'—')+'</span></div>'+
+      '<div><span class="pml">Revisão</span><span class="pmv">'+escaparHtml(revisao)+'</span></div>'+
+      '<div><span class="pml">Data</span><span class="pmv">'+escaparHtml(dataGeracao)+'</span></div>'+
+    '</div>'+
+    '<div class="rev-legend"><span><b style="color:#2a7a2a">★ novo</b></span><span><b style="color:#7a5a00">▲▼ alterado</b></span><span><b style="color:#aa0000">✕ removido</b></span><span>itens sem marca = inalterados</span></div>'+
+    '<div class="rev-interno">Documento interno de revisão · Não enviar ao cliente</div>'+
+    '<div class="pcorpo"><div class="pct">Memorial Descritivo (Revisão):</div>'+corpo+'</div>';
+
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'+
+    '<style>'+fonteCss+css+'</style></head><body>'+body+'</body></html>';
 }
 
 // ── KVA ──────────────────────────────────────────────────────────────────────
@@ -1765,15 +1864,18 @@ function receberTabelaKVA(tabela, token){
 // Também chamado pelo Ruby após "Adicionar Tudo" — agora só atualiza badge
 function receberResultadoKVA(res){ atualizarBadgeKVA(); }
 
-// Cálculo feito inteiramente no JS — independente de "Adicionar Tudo"
+// Remove prefixo "[Espaço] " usado no modo Multi-Espaço para casar a seção base.
+function _secaoBase(nome){ return (nome||'').replace(/^\[[^\]]*\]\s*/,''); }
+
+// Cálculo feito inteiramente no JS — independente de "Adicionar Tudo".
+// Funciona no modo padrão e no Multi-Espaço (uma sub-seção por espaço, total somado).
 function calcularKVAJS(){
   var SECOES_KVA = ["EQUIPAMENTOS", "ELÉTRICA"];
   if(!_listaKVA.length) return { total:0, secoes:[], sem_tabela:true };
   var entradas = _listaKVA.slice().sort(function(a,b){ return b.nome.length - a.nome.length; });
   var total = 0, secoes = [];
-  SECOES_KVA.forEach(function(nomeSec){
-    var sec = dadosMemorial.find(function(s){ return s.secao===nomeSec; });
-    if(!sec) return;
+  dadosMemorial.forEach(function(sec){
+    if(SECOES_KVA.indexOf(_secaoBase(sec.secao)) < 0) return;
     var itens = [];
     (sec.itens||[]).forEach(function(item){
       var desc = (item.descricao||''), qtd = parseFloat(item.quantidade)||0;
@@ -1794,7 +1896,7 @@ function calcularKVAJS(){
       }
     });
     var subtotal = Math.round(itens.reduce(function(s,i){ return s+(i.kva_total||0); },0)*1000)/1000;
-    if(itens.length) secoes.push({secao:nomeSec, itens:itens, subtotal:subtotal});
+    if(itens.length) secoes.push({secao:_secaoBase(sec.secao), espaco:sec._espaco||null, itens:itens, subtotal:subtotal});
   });
   return {total:Math.round(total*1000)/1000, secoes:secoes};
 }
@@ -1827,21 +1929,41 @@ function renderizarKVA(res){
     corpo.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum item de EQUIPAMENTOS ou ELÉTRICA no memorial atual.</div>';
     return;
   }
+  var temEspaco = res.secoes.some(function(s){ return s.espaco; });
   var html='';
-  res.secoes.forEach(function(sec){
-    html+='<div class="kva-sec"><div class="kva-sec-titulo">'+escaparAttr(sec.secao)+'</div>';
-    sec.itens.forEach(function(it){
-      if(it.sem_cadastro){
-        html+='<div class="kva-item sem-cad"><span>'+escaparAttr(it.desc)+'</span><span>sem KVA cadastrado</span></div>';
-      } else {
-        var label=it.por==='metro'?'×'+it.qtd+'m':'×'+fmtQtd(it.qtd);
-        html+='<div class="kva-item"><span>'+escaparAttr(it.desc)+'</span><span style="opacity:.65">'+label+' × '+it.kva_unit+' kva</span><span>'+it.kva_total.toFixed(3)+'</span></div>';
-      }
+  if(temEspaco){
+    // Agrupa as seções por espaço, com cabeçalho e subtotal de cada espaço.
+    var ordem=[], grupos={};
+    res.secoes.forEach(function(sec){
+      var e=sec.espaco||'(sem espaço)';
+      if(!grupos[e]){ grupos[e]=[]; ordem.push(e); }
+      grupos[e].push(sec);
     });
-    html+='<div class="kva-subtotal">subtotal: '+sec.subtotal.toFixed(3)+' kva</div></div>';
-  });
+    ordem.forEach(function(e){
+      var inner='', subEsp=0;
+      grupos[e].forEach(function(sec){ inner+=_renderSecaoKVA(sec); subEsp+=sec.subtotal; });
+      html+='<div class="kva-espaco"><div class="kva-espaco-titulo">⊞ '+escaparAttr(e)+'</div>'+inner
+        +'<div class="kva-espaco-sub"><span>subtotal do espaço:</span><span>'+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva</span></div></div>';
+    });
+  } else {
+    res.secoes.forEach(function(sec){ html+=_renderSecaoKVA(sec); });
+  }
   html+='<div class="kva-total">TOTAL GERAL: '+res.total.toFixed(3)+' KVA</div>';
   corpo.innerHTML=html;
+}
+
+function _renderSecaoKVA(sec){
+  var html='<div class="kva-sec"><div class="kva-sec-titulo">'+escaparAttr(sec.secao)+'</div>';
+  sec.itens.forEach(function(it){
+    if(it.sem_cadastro){
+      html+='<div class="kva-item sem-cad"><span class="kva-desc" title="'+escaparAttr(it.desc)+'">'+escaparAttr(it.desc)+'</span><span class="kva-calc">sem KVA cadastrado</span></div>';
+    } else {
+      var label=it.por==='metro'?'×'+it.qtd+'m':'×'+fmtQtd(it.qtd);
+      html+='<div class="kva-item"><span class="kva-desc" title="'+escaparAttr(it.desc)+'">'+escaparAttr(it.desc)+'</span><span class="kva-calc">'+label+' × '+it.kva_unit+' kva</span><span class="kva-val">'+it.kva_total.toFixed(3)+'</span></div>';
+    }
+  });
+  html+='<div class="kva-subtotal"><span>subtotal:</span><span>'+sec.subtotal.toFixed(3)+' kva</span></div></div>';
+  return html;
 }
 
 function exportarRelatorioKVA(){
@@ -1863,7 +1985,8 @@ function exportarRelatorioKVATXT(){
 function buildHTMLRelatorioKVA(res){
   var proj=nomeProjeto||nomeArquivo, linhas='';
   res.secoes.forEach(function(sec){
-    linhas+='<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(sec.secao)+'</td></tr>';
+    var tituloSec=(sec.espaco?'['+sec.espaco+'] ':'')+sec.secao;
+    linhas+='<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(tituloSec)+'</td></tr>';
     sec.itens.forEach(function(it){
       if(it.sem_cadastro){ linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>'; }
       else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>'; }
@@ -1883,7 +2006,7 @@ function buildTXTRelatorioKVA(res){
   var t='RELATÓRIO DE CARGA ELÉTRICA\nProjeto: '+proj+'\nRevisão: '+revisao+'\n'+dataGeracao+'\n';
   t+='============================================================\n\n';
   res.secoes.forEach(function(sec){
-    t+=sec.secao+'\n';
+    t+=(sec.espaco?'['+sec.espaco+'] ':'')+sec.secao+'\n';
     sec.itens.forEach(function(it){
       if(it.sem_cadastro) t+='  '+it.desc+' - sem KVA cadastrado\n';
       else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; t+='  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
