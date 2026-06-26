@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.1.1"
+  VERSAO        = "7.1.2"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -259,53 +259,86 @@ module STAND1_Memorial
   end
 
   # ── TAGS PADRÃO STAND1 (integrado do plugin STAND1_Tags) ────────────────────
-  NOME_GRUPO_TAGS = "0. Descritivo"
+  NOME_PASTA_DESCRITIVO = "0. Descritivo"
+  NOME_PASTA_AUXILIARES = "1. Auxiliares"
+
+  # Tags do MEMORIAL (viram seções) — pasta "0. Descritivo".
   TAGS_PADRAO = [
     { nome: "ESTRUTURAS",         cor: [43, 109, 184] },
     { nome: "REVESTIMENTOS",      cor: [52, 168, 83]  },
     { nome: "COMUNICAÇÃO VISUAL", cor: [234, 67, 53]  },
     { nome: "MOBILIÁRIO",         cor: [251, 188, 5]  },
     { nome: "EQUIPAMENTOS",       cor: [102, 60, 163] },
-    { nome: "ELÉTRICA",           cor: [255, 109, 0]  },
-    { nome: "LOCAÇÃO",            cor: [0, 188, 212]  },
-    { nome: "REFERÊNCIA",         cor: [158, 158, 158] }
+    { nome: "ELÉTRICA",           cor: [255, 109, 0]  }
   ]
 
-  # Cria as Tags padrão Stand1 no modelo ativo, agrupadas na pasta "0. Descritivo".
-  # Tags existentes não são removidas (só têm a cor atualizada).
+  # Tags AUXILIARES (organização do modelo, NÃO entram no memorial) — pasta "1. Auxiliares".
+  TAGS_AUXILIARES = [
+    { nome: "0. OCULTAR", cor: [150, 150, 150] },
+    { nome: "1. TEXTO",   cor: [96, 96, 96]    },
+    { nome: "2. VISTA",   cor: [33, 150, 243]  },
+    { nome: "3. ISO",     cor: [0, 150, 136]   },
+    { nome: "4. KV",      cor: [255, 152, 0]   }
+  ]
+
+  # Tags antigas que deixaram de ser criadas — removidas se existirem (geometria
+  # é preservada: ao remover a tag, as entidades voltam para Untagged, nada é apagado).
+  TAGS_OBSOLETAS = ["LOCAÇÃO", "REFERÊNCIA"]
+
+  # Cria/garante uma pasta de tags e suas tags (cor atualizada se já existir).
+  def self.garantir_grupo_tags(model, nome_pasta, tags, suporta_folders, criadas, existentes)
+    pasta = nil
+    if suporta_folders
+      pasta = model.layers.folders.find { |f| f.name == nome_pasta }
+      pasta ||= model.layers.add_folder(nome_pasta)
+      pasta.visible = true if pasta.respond_to?(:visible=)
+    end
+    tags.each do |cfg|
+      layer = model.layers[cfg[:nome]]
+      if layer
+        existentes << cfg[:nome]
+      else
+        layer = model.layers.add(cfg[:nome])
+        criadas << cfg[:nome]
+      end
+      layer.color = Sketchup::Color.new(*cfg[:cor])
+      layer.visible = true
+      if suporta_folders && pasta
+        begin
+          pasta.add_layer(layer) if layer.folder != pasta
+        rescue
+          # algumas versões usam API diferente para mover tag — ignora
+        end
+      end
+    end
+  end
+
+  # Cria as Tags padrão Stand1 (Descritivo + Auxiliares) no modelo ativo.
+  # Tags existentes não são removidas (só têm a cor atualizada); as obsoletas
+  # (LOCAÇÃO/REFERÊNCIA) são removidas preservando a geometria.
   def self.criar_tags_padrao
     model = Sketchup.active_model
     return UI.messagebox("Nenhum modelo aberto.") unless model
 
     suporta_folders = model.layers.respond_to?(:add_folder)
-    criadas = []; existentes = []
+    criadas = []; existentes = []; removidas = []
     model.start_operation("Stand1 — Criar Tags", true)
     begin
-      pasta = nil
-      if suporta_folders
-        pasta = model.layers.folders.find { |f| f.name == NOME_GRUPO_TAGS }
-        pasta ||= model.layers.add_folder(NOME_GRUPO_TAGS)
-        pasta.visible = true if pasta.respond_to?(:visible=)
+      # Remove tags obsoletas (mantém a geometria — vai para Untagged).
+      TAGS_OBSOLETAS.each do |nome|
+        lay = model.layers[nome]
+        next unless lay
+        begin
+          model.active_layer = model.layers[0] if model.active_layer == lay
+          model.layers.remove(lay)
+          removidas << nome
+        rescue
+          # versão sem suporte a remoção segura — ignora
+        end
       end
 
-      TAGS_PADRAO.each do |cfg|
-        layer = model.layers[cfg[:nome]]
-        if layer
-          existentes << cfg[:nome]
-        else
-          layer = model.layers.add(cfg[:nome])
-          criadas << cfg[:nome]
-        end
-        layer.color = Sketchup::Color.new(*cfg[:cor])
-        layer.visible = true
-        if suporta_folders && pasta
-          begin
-            pasta.add_layer(layer) if layer.folder != pasta
-          rescue
-            # algumas versões usam API diferente para mover tag — ignora
-          end
-        end
-      end
+      garantir_grupo_tags(model, NOME_PASTA_DESCRITIVO, TAGS_PADRAO,     suporta_folders, criadas, existentes)
+      garantir_grupo_tags(model, NOME_PASTA_AUXILIARES, TAGS_AUXILIARES, suporta_folders, criadas, existentes)
 
       model.commit_operation
     rescue => e
@@ -318,6 +351,7 @@ module STAND1_Memorial
     msg = "✅ Tags Stand1 prontas!\n\n"
     msg += "Criadas (#{criadas.length}): #{criadas.join(', ')}\n\n" unless criadas.empty?
     msg += "Já existiam (#{existentes.length}): #{existentes.join(', ')}\n\n" unless existentes.empty?
+    msg += "Removidas (#{removidas.length}): #{removidas.join(', ')}\n\n" unless removidas.empty?
     msg += "Sem suporte a pastas de Tags (SketchUp < 2021): tags criadas soltas.\n" unless suporta_folders
     UI.messagebox(msg)
   end
