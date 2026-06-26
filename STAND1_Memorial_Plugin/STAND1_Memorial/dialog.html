@@ -503,7 +503,7 @@
 <div id="modalExportar" class="modal-overlay" style="display:none">
   <div class="modal-rev" style="max-width:380px">
     <div class="mrev-header">
-      <span class="mrev-title" id="modalExportarTitulo">⬇ Exportar Memorial</span>
+      <span class="mrev-title" id="modalExportarTitulo">⬇ Exportar PDF Alt</span>
       <div class="mrev-actions">
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">✕</button>
       </div>
@@ -515,7 +515,7 @@
     </label>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-bottom:18px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalExportar()">Cancelar</button>
-      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF</button>
+      <button class="mrev-btn mrev-btn-primary" onclick="confirmarExportar()">📄 PDF Alt</button>
     </div>
 
     <div id="secaoDiffExport" style="display:none;border-top:1px solid rgba(255,255,255,0.12);padding-top:14px;margin-top:4px">
@@ -661,11 +661,18 @@ function _bloqueioImpedeReleitura(){
   if(bloqueado){ mostrarToast('🔒 Memorial bloqueado — destrave o cadeado para reler o modelo.'); return true; }
   return false;
 }
-function carregarTudo(){ if(_bloqueioImpedeReleitura()) return; document.getElementById('modoTudo').classList.add('ativo'); document.getElementById('modoSelecao').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_tudo) sketchup.carregar_tudo(); }
-function carregarSelecao(){ if(_bloqueioImpedeReleitura()) return; document.getElementById('modoSelecao').classList.add('ativo'); document.getElementById('modoTudo').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_selecao) sketchup.carregar_selecao(); }
+function carregarTudo(){ if(_bloqueioImpedeReleitura()) return; _ativarModo(false); document.getElementById('modoTudo').classList.add('ativo'); document.getElementById('modoSelecao').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_tudo) sketchup.carregar_tudo(); }
+function carregarSelecao(){ if(_bloqueioImpedeReleitura()) return; _ativarModo(false); document.getElementById('modoSelecao').classList.add('ativo'); document.getElementById('modoTudo').classList.remove('ativo'); document.getElementById('preview').innerHTML='<div class="loading"><div class="spinner"></div></div>'; if(typeof sketchup!=='undefined'&&sketchup.carregar_selecao) sketchup.carregar_selecao(); }
 function alertaSemSelecao(){ document.getElementById('preview').innerHTML='<div class="vazio"><h3 style="color:#e74c3c">Nenhum componente selecionado</h3><p>Selecione componentes no SketchUp e tente novamente.</p></div>'; }
 
-function atualizarMemorial(){ if(_bloqueioImpedeReleitura()) return; var b=document.getElementById('btnAtualizar'); if(b) b.classList.add('btn-atualizando'); if(typeof sketchup!=='undefined'&&sketchup.atualizar) sketchup.atualizar(); else setTimeout(function(){atualizarDados({secoes:dadosMemorial,nome_arquivo:nomeArquivo});},400); }
+function atualizarMemorial(){
+  if(_bloqueioImpedeReleitura()) return;
+  // Em modo Multi, "Atualizar" relê os ESPAÇOS (não a leitura padrão), mantendo coerência.
+  if(_modoMultiEspaco){ if(typeof sketchup!=='undefined'&&sketchup.carregar_multi_espaco) sketchup.carregar_multi_espaco(); return; }
+  var b=document.getElementById('btnAtualizar'); if(b) b.classList.add('btn-atualizando');
+  if(typeof sketchup!=='undefined'&&sketchup.atualizar) sketchup.atualizar();
+  else setTimeout(function(){atualizarDados({secoes:dadosMemorial,nome_arquivo:nomeArquivo});},400);
+}
 
 var ORDEM_SECOES=["ESTRUTURAS","REVESTIMENTOS","COMUNICAÇÃO VISUAL","MOBILIÁRIO","EQUIPAMENTOS","ELÉTRICA"];
 
@@ -771,6 +778,11 @@ function mesclarInteligente(novos){
 function carregarDados(p){
   nomeArquivo=p.nome_arquivo||nomeArquivo;
   if(!nomeProjeto){nomeProjeto=nomeArquivo; document.getElementById('nomeProjeto').value=nomeProjeto;}
+  // "Adicionar Tudo" é SEMPRE modo Padrão (o multi usa carregarDadosMultiEspaco).
+  // Descarta qualquer resíduo de Multi-Espaço (seções com _espaco) que tenha ficado
+  // salvo no estado — senão o mesclarInteligente casaria por chave e o memorial
+  // ficaria misturado com as seções "[Espaço]" antigas.
+  dadosMemorial = dadosMemorial.filter(function(se){ return !se._espaco; });
   // Fusão inteligente: remove itens órfãos (ex.: chaves antigas), evita duplicar,
   // preserva itens manuais e movidos de seção.
   mesclarInteligente(p.secoes||[]);
@@ -790,6 +802,8 @@ function adicionarDados(p){
 function atualizarDados(p){
   nomeArquivo=p.nome_arquivo||nomeArquivo;
   dataGeracao=new Date().toLocaleDateString('pt-BR');
+  // No modo Padrão, "Atualizar" também descarta resíduo de Multi-Espaço.
+  if(!_modoMultiEspaco) dadosMemorial = dadosMemorial.filter(function(se){ return !se._espaco; });
   mesclarInteligente(p.secoes||[]);
   atualizarStatus(); renderizar(); persistirEstado();
   atualizarBadgeKVA();
@@ -1188,8 +1202,14 @@ function escaparAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&qu
 function fmtQtd(n){return n<10?'0'+n:''+n;}
 function persistirEstado(){
   if(typeof sketchup==='undefined'||!sketchup.salvar_estado) return;
+  // mantém o store do modo ativo sincronizado com dadosMemorial (que é reatribuído
+  // em várias operações), garantindo que as duas memórias fiquem corretas.
+  if(_modoMultiEspaco) _memMulti=dadosMemorial; else _memPadrao=dadosMemorial;
   var estado={
-    dados: dadosMemorial,
+    dadosPadrao: _memPadrao,
+    dadosMulti: _memMulti,
+    modoMulti: _modoMultiEspaco,
+    dados: dadosMemorial, // compatibilidade com leitura de estado antigo
     nomeProjeto: nomeProjeto,
     nomeResponsavel: nomeResponsavel,
     revisao: revisao,
@@ -1201,7 +1221,26 @@ function persistirEstado(){
 function restaurarEstado(estadoJson){
   try{
     var e=typeof estadoJson==='string' ? JSON.parse(estadoJson) : estadoJson;
-    if(e.dados&&e.dados.length){ dadosMemorial=e.dados; }
+    if(typeof e.dadosPadrao!=='undefined' || typeof e.dadosMulti!=='undefined'){
+      // estado novo: duas memórias independentes
+      _memPadrao = e.dadosPadrao||[];
+      _memMulti  = e.dadosMulti||[];
+      _modoMultiEspaco = !!e.modoMulti;
+    } else if(e.dados&&e.dados.length){
+      // MIGRAÇÃO do estado antigo (uma memória só): separa por _espaco.
+      // Auto-cura arquivos onde dados de multi e padrão tinham se misturado.
+      var temEsp=e.dados.some(function(s){ return s._espaco; });
+      if(temEsp){
+        _memMulti  = e.dados.filter(function(s){ return s._espaco; });
+        _memPadrao = e.dados.filter(function(s){ return !s._espaco; });
+      } else {
+        _memPadrao = e.dados; _memMulti = [];
+      }
+      _modoMultiEspaco = false; // começa no Padrão após migração
+    }
+    dadosMemorial = (_modoMultiEspaco ? _memMulti : _memPadrao) || [];
+    var btn=document.getElementById('btnMultiEspaco');
+    if(btn){ btn.textContent=_modoMultiEspaco?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',_modoMultiEspaco); }
     if(e.nomeProjeto){ nomeProjeto=e.nomeProjeto; document.getElementById('nomeProjeto').value=nomeProjeto; }
     if(e.nomeResponsavel){ nomeResponsavel=e.nomeResponsavel; document.getElementById('nomeResponsavel').value=nomeResponsavel; }
     if(e.revisao){ revisao=e.revisao; document.getElementById('revisao').value=revisao; }
@@ -1210,7 +1249,7 @@ function restaurarEstado(estadoJson){
       document.body.classList.add('bloqueado');
       document.getElementById('btnLock').textContent='🔒';
     }
-    if(dadosMemorial.length){ atualizarStatus(); renderizar(); }
+    atualizarStatus(); renderizar(); atualizarBadgeKVA();
   }catch(err){}
 }
 
@@ -1430,7 +1469,7 @@ function renderizar(){
       var badge=(item.origem==='manual'||item.editado)?'<span class="badge-manual" title="Item manual ou editado — preservado no Atualizar">✎</span>':'';
       return '<li data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+lupa+btnObs+exc+obsWrap+obsPrint+'</li>';
     }).join('');
-    return cab+'<div class="secao" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+sn+'</div><ul class="itens">'+ih+'</ul></div>';
+    return cab+'<div class="secao" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+escaparAttr(_secaoBase(sn))+'</div><ul class="itens">'+ih+'</ul></div>';
   }).join('');
 
   preview.innerHTML=
@@ -1482,7 +1521,7 @@ function buildHTMLStandalone(){
       var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
       return '<li>'+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+'</li>';
     }).join('');
-    return cab+'<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+'</ul></div>';
+    return cab+'<div class="psec"><div class="pst">'+escaparHtml(_secaoBase(sec.secao))+':</div><ul>'+itens+'</ul></div>';
   }).join('');
 
   var css=''+
@@ -1540,7 +1579,7 @@ var _exportarTipo = null; // 'pdf' ou 'txt'
 function exportarPDFDireto(){
   if(!dadosMemorial||!dadosMemorial.length) return;
   _exportarTipo='pdf';
-  document.getElementById('modalExportarTitulo').textContent='⬇ Exportar PDF';
+  document.getElementById('modalExportarTitulo').textContent='⬇ Exportar PDF Alt';
   document.getElementById('modalExportar').style.display='flex';
 }
 
@@ -1609,7 +1648,7 @@ function buildTextoMemorial(ocultarMedidas, comDecoracao){
       t+='### '+sec._espaco.toUpperCase()+' ###\n\n';
       _lastEspT=sec._espaco;
     }
-    t+=sec.secao+'\n';
+    t+=_secaoBase(sec.secao)+'\n';
     if(comDecoracao) t+='----------------------------------------\n';
     sec.itens.forEach(function(item){
       var desc=ocultarMedidas ? limparDescricao(item.descricao) : fmtMedidas(item.descricao);
@@ -1659,25 +1698,34 @@ var _modoMultiEspaco = false;
 var _gruposEspaco    = [];
 var _dadosMultiEspaco = null;
 
-function toggleMultiEspaco(){
-  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para trocar de modo.'); return; }
-  _modoMultiEspaco = !_modoMultiEspaco;
-  var btn = document.getElementById('btnMultiEspaco');
-  if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
-  if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco){
-    sketchup.toggle_multi_espaco(_modoMultiEspaco.toString());
-  }
-  // CRÍTICO: trocar de modo REINICIA o memorial. As estruturas são incompatíveis
-  // (seções "[Espaço] SEÇÃO" no multi vs seções simples no padrão). Sem zerar, o
-  // "Adicionar Tudo" do padrão mesclaria com os dados antigos do multi e corromperia a leitura.
-  dadosMemorial = [];
-  _dadosMultiEspaco = null;
-  _diffAtual = [];
+// Memórias INDEPENDENTES por modo: alternar só troca qual está ativa, nunca
+// destrói a outra. dadosMemorial sempre aponta para o store do modo ativo.
+var _memPadrao = [];
+var _memMulti  = [];
+
+// Ativa um modo trocando o store ativo. O store do modo atual é preservado.
+function _ativarModo(multi){
+  multi=!!multi;
+  if(multi===_modoMultiEspaco) return;
+  // guarda o memorial do modo atual no seu store
+  if(_modoMultiEspaco) _memMulti=dadosMemorial; else _memPadrao=dadosMemorial;
+  _modoMultiEspaco=multi;
+  // ativa o store do modo destino (mantém a leitura anterior daquele modo)
+  dadosMemorial = (multi ? _memMulti : _memPadrao) || [];
+  var btn=document.getElementById('btnMultiEspaco');
+  if(btn){ btn.textContent=multi?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',multi); }
+  if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco) sketchup.toggle_multi_espaco(multi.toString());
+  // o diff é por modo: zera o indicador ao trocar (recalcula na próxima leitura)
+  _diffAtual=[];
   var sDiff=document.getElementById('secaoDiffExport'); if(sDiff) sDiff.style.display='none';
   var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
   atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
-  if(_modoMultiEspaco){ abrirModalMultiEspaco(); }
-  else { mostrarToast('Modo Padrão ativado — clique em "Adicionar Tudo" para reler o modelo.'); }
+}
+
+function toggleMultiEspaco(){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para trocar de modo.'); return; }
+  _ativarModo(!_modoMultiEspaco);
+  if(_modoMultiEspaco) abrirModalMultiEspaco();
 }
 
 function abrirModalMultiEspaco(){
@@ -1691,7 +1739,8 @@ function fecharModalMultiEspaco(){
 
 function receberGruposEspaco(grupos, modoAtivo){
   _gruposEspaco = grupos || [];
-  _modoMultiEspaco = !!modoAtivo;
+  // NÃO sobrescreve o modo: a memória ativa (restaurada do estado por arquivo) é a
+  // fonte da verdade. Apenas reflete o botão e renderiza a lista de grupos.
   var btn = document.getElementById('btnMultiEspaco');
   if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
   renderListaGruposEspaco();
@@ -1725,6 +1774,7 @@ function toggleGrupoEspaco(pid, el){
 
 function carregarMultiEspaco(){
   if(_bloqueioImpedeReleitura()) return;
+  _ativarModo(true);
   fecharModalMultiEspaco();
   if(typeof sketchup!=='undefined'&&sketchup.carregar_multi_espaco) sketchup.carregar_multi_espaco();
 }
@@ -1841,7 +1891,7 @@ function buildHTMLRevisaoCompleta(){
     var rem=(removidosPorSecao[ksec]||[]).map(function(d){
       return '<li class="rev-li-rem"><span class="rev-mk rev-rem">✕ removido</span> <del>'+escaparHtml(d.desc_ant||d.desc||'')+' - '+fmtQtd(d.qtd_ant||0)+'</del></li>';
     }).join('');
-    return cab+'<div class="psec"><div class="pst">'+escaparHtml(sec.secao)+':</div><ul>'+itens+rem+'</ul></div>';
+    return cab+'<div class="psec"><div class="pst">'+escaparHtml(_secaoBase(sec.secao))+':</div><ul>'+itens+rem+'</ul></div>';
   }).join('');
 
   var css=''+
