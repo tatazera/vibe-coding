@@ -1,5 +1,5 @@
 {
-    "versao":  "7.0.7",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.7.rbz",
-    "notas":  "v7.0.7: Painel KVA com mais respiro (margens) e listagem por espaco. Ajustes finos de layout."
+    "versao":  "7.0.8",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.0.8.rbz",
+    "notas":  "v7.0.8: Multi-Espaco so reconhece grupos, ganhou barra de pesquisa e diagramacao por espaco (titulo + linha divisoria). Corrige o bug que misturava dados ao voltar para o modo Padrao."
 }
