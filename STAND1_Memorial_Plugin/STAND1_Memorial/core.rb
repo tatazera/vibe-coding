@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.0.4"
+  VERSAO        = "7.0.5"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1656,11 +1656,8 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "github_token", token.to_s.strip)
   end
 
-  def self.kva_table_local
-    raw = Sketchup.read_default("STAND1_Memorial", "kva_table", nil)
-    return [] if raw.nil? || raw.strip.empty?
-    parsed = JSON.parse(raw)
-    # Aceita flat [{nome,kva,por}] ou nested {cat:[...]}
+  # Normaliza qualquer formato (flat array ou nested por categoria) para flat.
+  def self.normalizar_kva(parsed)
     if parsed.is_a?(Array)
       parsed
     else
@@ -1668,20 +1665,28 @@ module STAND1_Memorial
       parsed.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
       entradas
     end
+  end
+
+  # Tabela embutida no plugin (ships no .rbz) — baseline sempre disponível, sem rede.
+  def self.kva_table_bundled
+    path = File.join(__dir__, 'kva_table.json')
+    return [] unless File.exist?(path)
+    normalizar_kva(JSON.parse(File.read(path)))
   rescue
     []
   end
 
+  def self.kva_table_local
+    raw = Sketchup.read_default("STAND1_Memorial", "kva_table", nil)
+    # Sem tabela salva pelo usuário → usa a embutida no plugin (do disco).
+    return kva_table_bundled if raw.nil? || raw.strip.empty?
+    normalizar_kva(JSON.parse(raw))
+  rescue
+    kva_table_bundled
+  end
+
   def self.salvar_kva_table_local(tabela)
-    # Normaliza para flat antes de salvar
-    flat = if tabela.is_a?(Array)
-      tabela
-    else
-      entradas = []
-      tabela.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
-      entradas
-    end
-    Sketchup.write_default("STAND1_Memorial", "kva_table", flat.to_json)
+    Sketchup.write_default("STAND1_Memorial", "kva_table", normalizar_kva(tabela).to_json)
   end
 
   def self.buscar_kva_github
