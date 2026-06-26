@@ -552,8 +552,8 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharPainelKVA()">✕</button>
       </div>
     </div>
-    <div id="corpoKVA" style="max-height:400px;overflow-y:auto;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
+    <div id="corpoKVA" style="max-height:56vh;overflow-y:auto;padding:18px 22px 6px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 22px 18px;border-top:1px solid rgba(128,128,128,.15)">
       <button class="mrev-btn mrev-btn-sec" onclick="exportarRelatorioKVATXT()">📋 TXT</button>
       <button class="mrev-btn mrev-btn-primary" onclick="exportarRelatorioKVA()">📄 PDF Relatório de Carga</button>
     </div>
@@ -1509,13 +1509,6 @@ function exportarPDFDireto(){
   if(!dadosMemorial||!dadosMemorial.length) return;
   _exportarTipo='pdf';
   document.getElementById('modalExportarTitulo').textContent='⬇ Exportar PDF';
-  document.getElementById('modalExportar').style.display='flex';
-}
-
-function exportarTXT(){
-  if(!dadosMemorial||!dadosMemorial.length) return;
-  _exportarTipo='txt';
-  document.getElementById('modalExportarTitulo').textContent='📄 Exportar TXT';
   document.getElementById('modalExportar').style.display='flex';
 }
 
