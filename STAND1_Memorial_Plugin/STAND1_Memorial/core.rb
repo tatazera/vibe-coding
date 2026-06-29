@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.1.2"
+  VERSAO        = "7.1.3"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -764,7 +764,8 @@ module STAND1_Memorial
     @dialog.add_action_callback("carregar_kva_table_local") do |_ctx|
       begin
         tabela = kva_table_local
-        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token_github.to_json})") unless tabela.empty?
+        sin    = kva_sinonimos_local
+        @dialog.execute_script("receberTabelaKVA(#{tabela.to_json},#{token_github.to_json},#{sin.to_json})") unless tabela.empty? && sin.empty?
       rescue; end
     end
 
@@ -1736,15 +1737,58 @@ module STAND1_Memorial
     Sketchup.write_default("STAND1_Memorial", "github_token", token.to_s.strip)
   end
 
-  # Normaliza qualquer formato (flat array ou nested por categoria) para flat.
+  # Normaliza qualquer formato (flat array | nested por categoria | wrapped {itens,_sinonimos})
+  # para um array flat de itens [{nome,kva,por}].
   def self.normalizar_kva(parsed)
-    if parsed.is_a?(Array)
-      parsed
-    else
-      entradas = []
-      parsed.each { |_cat, lista| Array(lista).each { |e| entradas << e if e["nome"] && e["kva"] } }
-      entradas
+    return parsed if parsed.is_a?(Array)
+    return [] unless parsed.is_a?(Hash)
+    return Array(parsed["itens"]) if parsed["itens"].is_a?(Array)
+    entradas = []
+    parsed.each do |cat, lista|
+      next if cat == "_sinonimos"
+      Array(lista).each { |e| entradas << e if e.is_a?(Hash) && e["nome"] && e["kva"] }
     end
+    entradas
+  end
+
+  # Extrai a lista de sinônimos [{apelidos:[...], oficial:"..."}] de um payload (se houver).
+  def self.extrair_sinonimos_kva(parsed)
+    return [] unless parsed.is_a?(Hash)
+    Array(parsed["_sinonimos"]).select { |s| s.is_a?(Hash) && s["oficial"] }
+  end
+
+  # Sinônimos embutidos no plugin (baseline do kva_table.json no .rbz).
+  def self.kva_sinonimos_bundled
+    path = File.join(__dir__, 'kva_table.json')
+    return [] unless File.exist?(path)
+    extrair_sinonimos_kva(JSON.parse(File.read(path)))
+  rescue
+    []
+  end
+
+  def self.kva_sinonimos_local
+    raw = Sketchup.read_default("STAND1_Memorial", "kva_sinonimos", nil)
+    return kva_sinonimos_bundled if raw.nil? || raw.strip.empty?
+    Array(JSON.parse(raw))
+  rescue
+    kva_sinonimos_bundled
+  end
+
+  def self.salvar_kva_sinonimos(sin)
+    Sketchup.write_default("STAND1_Memorial", "kva_sinonimos", Array(sin).to_json)
+  end
+
+  # Mescla itens: remoto é a base; mantém os itens só-locais (que não existem no remoto).
+  def self.mesclar_itens_kva(remoto, local)
+    nomes = Array(remoto).map { |e| e["nome"].to_s.downcase.strip }
+    extras = Array(local).reject { |e| nomes.include?(e["nome"].to_s.downcase.strip) }
+    Array(remoto) + extras
+  end
+
+  # Mescla sinônimos: remoto base + sinônimos só-locais (por nome oficial).
+  def self.mesclar_sinonimos_kva(remoto, local)
+    ofic = Array(remoto).map { |s| s["oficial"].to_s.downcase.strip }
+    Array(remoto) + Array(local).reject { |s| ofic.include?(s["oficial"].to_s.downcase.strip) }
   end
 
   # Tabela embutida no plugin (ships no .rbz) — baseline sempre disponível, sem rede.
@@ -1773,10 +1817,14 @@ module STAND1_Memorial
     http_async(URL_KVA_RAW) do |body, ok|
       next unless ok && body
       begin
-        tabela = JSON.parse(body)
-        salvar_kva_table_local(tabela)
+        parsed = JSON.parse(body)
+        # Mescla: preserva itens/sinônimos só-locais (não os apaga ao sincronizar).
+        merged = mesclar_itens_kva(normalizar_kva(parsed), kva_table_local)
+        salvar_kva_table_local(merged)
+        sin_merged = mesclar_sinonimos_kva(extrair_sinonimos_kva(parsed), kva_sinonimos_local)
+        salvar_kva_sinonimos(sin_merged)
         flat = kva_table_local
-        @dialog.execute_script("receberTabelaKVA(#{flat.to_json},#{token_github.to_json})") rescue nil
+        @dialog.execute_script("receberTabelaKVA(#{flat.to_json},#{token_github.to_json},#{sin_merged.to_json})") rescue nil
         # Recalcula badge (JS agora faz o cálculo, mas mantemos callback para compatibilidade)
         secoes = if modo_multi_espaco? && @ultimo_resultado_multi
           @ultimo_resultado_multi.flat_map { |e| e["secoes"] }
@@ -1791,10 +1839,11 @@ module STAND1_Memorial
   end
 
   def self.publicar_kva_github(tabela_json)
-    # Salva local imediatamente (JS enviou flat array)
+    # Salva local imediatamente. JS envia { itens:[...], _sinonimos:[...] } (ou flat array legado).
     begin
       tabela_obj = JSON.parse(tabela_json)
       salvar_kva_table_local(tabela_obj)
+      salvar_kva_sinonimos(extrair_sinonimos_kva(tabela_obj))
     rescue; end
     token = token_github
     if token.empty?
