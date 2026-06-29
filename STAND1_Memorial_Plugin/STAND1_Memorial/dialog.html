@@ -605,6 +605,13 @@
       </select>
       <button class="mrev-btn mrev-btn-primary" onclick="adicionarItemKVA()">+ Adicionar</button>
     </div>
+    <div class="linear-desc" style="margin-top:6px"><b>Sinônimos</b> ligam apelidos a um item da tabela (associação aproximada). Ex.: <i>smart tv, televisor</i> → <b>TV LED</b>. Quando há variantes numeradas (TV LED 40/50…), o plugin usa a polegada/valor mais próximo. Apelidos separados por vírgula.</div>
+    <div class="kva-list" id="listaSinonimosKVA" style="max-height:160px"></div>
+    <div class="linear-add">
+      <input type="text" id="inputSinApelidos" placeholder="apelidos (smart tv, televisor)" style="flex:2" onkeydown="if(event.key==='Enter') adicionarSinonimoKVA()">
+      <input type="text" id="inputSinOficial" placeholder="Nome oficial (TV LED)" style="flex:2" onkeydown="if(event.key==='Enter') adicionarSinonimoKVA()">
+      <button class="mrev-btn mrev-btn-primary" onclick="adicionarSinonimoKVA()">+ Sinônimo</button>
+    </div>
     <div id="msgEditorKVA" style="font-size:11px;padding:2px 16px 4px;min-height:16px;opacity:.7"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;padding:6px 16px 14px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharEditorKVA()">Cancelar</button>
@@ -1985,22 +1992,87 @@ function buildHTMLRevisaoCompleta(){
 // ── KVA — tabela e cálculo independente ──────────────────────────────────────
 // _listaKVA: array flat [{nome, kva, por}] — fonte de verdade local
 var _listaKVA = [];
+// _sinonimosKVA: [{apelidos:[...], oficial:"Nome Oficial"}] — associação aproximada
+var _sinonimosKVA = [];
+// Margem da proximidade numérica (tv 43 -> tv 40): casa se |Δ| <= ABS OU dentro de PCT relativo.
+var KVA_MARGEM_ABS = 15, KVA_MARGEM_PCT = 0.25;
 
-// Recebe tabela do Ruby (formato nested {cat:[...]} do GitHub ou flat [...])
-function receberTabelaKVA(tabela, token){
+// Recebe tabela do Ruby (nested {cat:[...]} | flat [...] | wrapped {itens,_sinonimos}) + sinônimos.
+function receberTabelaKVA(tabela, token, sinonimos){
   if(Array.isArray(tabela)){
     _listaKVA = tabela;
+  } else if(tabela && Array.isArray(tabela.itens)){
+    _listaKVA = tabela.itens;
   } else {
     _listaKVA = [];
     Object.keys(tabela||{}).forEach(function(cat){
+      if(cat==='_sinonimos') return;
       (tabela[cat]||[]).forEach(function(e){
         if(e.nome && e.kva) _listaKVA.push({nome:e.nome, kva:parseFloat(e.kva)||0, por:e.por||'unidade'});
       });
     });
   }
+  if(sinonimos!==undefined) _sinonimosKVA = Array.isArray(sinonimos) ? sinonimos : [];
+  else if(tabela && Array.isArray(tabela._sinonimos)) _sinonimosKVA = tabela._sinonimos;
   renderizarListaKVA();
+  renderizarListaSinonimosKVA();
   if(token){ var inp=document.getElementById('inputGithubToken'); if(inp) inp.value=token; }
   atualizarBadgeKVA();
+}
+
+// ── Matcher de KVA: 1) substring exato  2) sinônimo→núcleo  3) proximidade numérica ──
+function _normKVA(s){
+  return (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+function _stripNumKVA(s){
+  return _normKVA(s).replace(/\d+([.,]\d+)?\s*(w|kw|a|btu|l|k|pol|"|in)?\b/gi,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function _extrairNumKVA(s){
+  var m=(s||'').toString().replace(/\([^)]*\)/g,' ').match(/(\d+([.,]\d+)?)/);
+  return m ? parseFloat(m[1].replace(',','.')) : null;
+}
+function _matchKVA(desc, entradas){
+  var nd=_normKVA((desc||'').replace(/\([^)]*\)/g,' '));
+  // Camada 1 — substring exato (mais específico vence; entradas já ordenadas por tamanho).
+  var ex=entradas.find(function(e){ return nd.indexOf(_normKVA(e.nome))>=0; });
+  var descNum=_extrairNumKVA(desc);
+  var exNum=ex?_extrairNumKVA(ex.nome):null;
+
+  // Núcleo base: o match exato TEM prioridade; só usa sinônimo quando não há exato.
+  var baseCore=null;
+  if(ex){ baseCore=_stripNumKVA(ex.nome); }
+  else {
+    for(var i=0;i<_sinonimosKVA.length;i++){
+      var s=_sinonimosKVA[i], aps=s.apelidos||[], oficial=s.oficial||'';
+      if(oficial && aps.some(function(a){ a=(a||'').trim(); return a && nd.indexOf(_normKVA(a))>=0; })){
+        baseCore=_stripNumKVA(oficial); break;
+      }
+    }
+  }
+  if(!baseCore) return null;
+
+  var grupo=entradas.filter(function(e){ return _stripNumKVA(e.nome)===baseCore; });
+  if(!grupo.length && ex) grupo=[ex];
+  if(!grupo.length) return null;
+
+  var numeradas=grupo.map(function(e){ return {e:e,n:_extrairNumKVA(e.nome)}; }).filter(function(o){ return o.n!=null; });
+  var generico=grupo.find(function(e){ return _extrairNumKVA(e.nome)==null; });
+
+  // Camada 3 — proximidade numérica (tv 43 -> tv 40).
+  if(descNum!=null && numeradas.length){
+    var melhor=null,dist=null;
+    numeradas.forEach(function(o){ var d=Math.abs(o.n-descNum); if(dist===null||d<dist){ dist=d; melhor=o.e; } });
+    if(dist===0) return {entrada:melhor,aprox:false};
+    if(dist<=KVA_MARGEM_ABS || (descNum!==0 && dist/Math.abs(descNum)<=KVA_MARGEM_PCT)) return {entrada:melhor,aprox:true};
+    if(ex) return {entrada:ex,aprox:(exNum==null)};   // fora da margem: cai no exato (se havia)
+    if(generico) return {entrada:generico,aprox:true};
+    return null;
+  }
+  if(ex) return {entrada:ex,aprox:false};
+  if(generico) return {entrada:generico,aprox:true};
+  return {entrada:grupo.slice().sort(function(a,b){ return a.nome.length-b.nome.length; })[0],aprox:true};
 }
 
 // Também chamado pelo Ruby após "Adicionar Tudo" — agora só atualiza badge
@@ -2021,7 +2093,8 @@ function calcularKVAJS(){
     var itens = [];
     (sec.itens||[]).forEach(function(item){
       var desc = (item.descricao||''), qtd = parseFloat(item.quantidade)||0;
-      var match = entradas.find(function(e){ return desc.toLowerCase().indexOf(e.nome.toLowerCase())>=0; });
+      var achado = _matchKVA(desc, entradas);
+      var match = achado && achado.entrada;
       if(match){
         var kvaUnit = parseFloat(match.kva)||0, kvaTotal;
         if(match.por==='metro'){
@@ -2031,7 +2104,7 @@ function calcularKVAJS(){
         } else {
           kvaTotal = Math.round(kvaUnit*qtd*1000)/1000;
         }
-        itens.push({desc:desc, qtd:qtd, kva_unit:kvaUnit, por:match.por, kva_total:kvaTotal, match:match.nome});
+        itens.push({desc:desc, qtd:qtd, kva_unit:kvaUnit, por:match.por, kva_total:kvaTotal, match:match.nome, aprox:achado.aprox});
         total += kvaTotal;
       } else {
         itens.push({desc:desc, qtd:qtd, kva_total:0, sem_cadastro:true});
@@ -2101,7 +2174,8 @@ function _renderSecaoKVA(sec){
       html+='<div class="kva-item sem-cad"><span class="kva-desc" title="'+escaparAttr(it.desc)+'">'+escaparAttr(it.desc)+'</span><span class="kva-calc">sem KVA cadastrado</span></div>';
     } else {
       var label=it.por==='metro'?'×'+it.qtd+'m':'×'+fmtQtd(it.qtd);
-      html+='<div class="kva-item"><span class="kva-desc" title="'+escaparAttr(it.desc)+'">'+escaparAttr(it.desc)+'</span><span class="kva-calc">'+label+' × '+it.kva_unit+' kva</span><span class="kva-val">'+it.kva_total.toFixed(3)+'</span></div>';
+      var aprox=it.aprox?' <span style="opacity:.55;font-style:italic" title="associado por aproximação a '+escaparAttr(it.match||'')+'">≈ '+escaparAttr(it.match||'')+'</span>':'';
+      html+='<div class="kva-item"><span class="kva-desc" title="'+escaparAttr(it.desc)+(it.aprox?' ≈ '+escaparAttr(it.match||''):'')+'">'+escaparAttr(it.desc)+aprox+'</span><span class="kva-calc">'+label+' × '+it.kva_unit+' kva</span><span class="kva-val">'+it.kva_total.toFixed(3)+'</span></div>';
     }
   });
   html+='<div class="kva-subtotal"><span>subtotal:</span><span>'+sec.subtotal.toFixed(3)+' kva</span></div></div>';
@@ -2165,6 +2239,7 @@ function abrirEditorKVA(){
   fecharPainelKVA();
   document.getElementById('modalEditorKVA').style.display='flex';
   renderizarListaKVA();
+  renderizarListaSinonimosKVA();
   if(typeof sketchup!=='undefined'&&sketchup.carregar_kva_table_local) sketchup.carregar_kva_table_local();
 }
 
@@ -2203,6 +2278,38 @@ function adicionarItemKVA(){
   document.getElementById('inputKVAVal').value='';
 }
 
+function renderizarListaSinonimosKVA(){
+  var lista=document.getElementById('listaSinonimosKVA');
+  if(!lista) return;
+  if(!_sinonimosKVA.length){
+    lista.innerHTML='<div class="kw-vazio">Nenhum sinônimo. Ex.: smart tv, televisor → TV LED</div>';
+    return;
+  }
+  lista.innerHTML=_sinonimosKVA.map(function(s,i){
+    var aps=(s.apelidos||[]).join(', ');
+    return '<div class="kva-row">'
+      +'<input class="kva-nome" type="text" value="'+escaparAttr(aps)+'" title="apelidos (vírgula)" onchange="_sinonimosKVA['+i+'].apelidos=this.value.split(\',\').map(function(a){return a.trim();}).filter(function(a){return a;})">'
+      +'<span style="opacity:.5">→</span>'
+      +'<input class="kva-nome" type="text" value="'+escaparAttr(s.oficial||'')+'" title="nome oficial" onchange="_sinonimosKVA['+i+'].oficial=this.value.trim()">'
+      +'<button class="regra-btn regra-del" onclick="_sinonimosKVA.splice('+i+',1);renderizarListaSinonimosKVA()" title="Remover">✕</button>'
+    +'</div>';
+  }).join('');
+}
+
+function adicionarSinonimoKVA(){
+  var apsRaw=((document.getElementById('inputSinApelidos')||{}).value||'').trim();
+  var oficial=((document.getElementById('inputSinOficial')||{}).value||'').trim();
+  var apelidos=apsRaw.split(',').map(function(a){return a.trim();}).filter(function(a){return a;});
+  if(!apelidos.length||!oficial){ mostrarToast('Preencha apelidos e nome oficial.'); return; }
+  _sinonimosKVA.push({apelidos:apelidos, oficial:oficial});
+  renderizarListaSinonimosKVA();
+  document.getElementById('inputSinApelidos').value='';
+  document.getElementById('inputSinOficial').value='';
+}
+
+// Payload enviado ao Ruby: itens + sinônimos juntos (formato wrapped).
+function _payloadKVA(){ return JSON.stringify({ itens:_listaKVA, _sinonimos:_sinonimosKVA }); }
+
 function salvarTokenGitHub(){
   var token=((document.getElementById('inputGithubToken')||{}).value||'').trim();
   if(typeof sketchup!=='undefined'&&sketchup.salvar_token_github) sketchup.salvar_token_github(token);
@@ -2213,7 +2320,7 @@ function salvarKVALocal(){
   var msg=document.getElementById('msgEditorKVA');
   if(msg) msg.textContent='Salvando...';
   if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github)
-    sketchup.publicar_kva_github(JSON.stringify(_listaKVA));
+    sketchup.publicar_kva_github(_payloadKVA());
   atualizarBadgeKVA();
   if(msg) msg.textContent='';
   fecharEditorKVA();
@@ -2224,7 +2331,7 @@ function publicarKVAGitHub(){
   var msg=document.getElementById('msgEditorKVA');
   if(msg) msg.textContent='Publicando no GitHub...';
   if(typeof sketchup!=='undefined'&&sketchup.publicar_kva_github)
-    sketchup.publicar_kva_github(JSON.stringify(_listaKVA));
+    sketchup.publicar_kva_github(_payloadKVA());
 }
 
 function buscarKVAGitHub(){
