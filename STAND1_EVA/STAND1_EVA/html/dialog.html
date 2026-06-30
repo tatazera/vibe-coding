@@ -1,0 +1,1525 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EVA Stand1</title>
+  <style>
+    /* ════════════ IDENTIDADE VISUAL STAND1 ════════════ */
+    :root {
+      --g:      linear-gradient(135deg, #FF4D8D 0%, #C84FBF 50%, #4DA8F0 100%);
+      --azul:   #1A2DB8;
+      --rosa:   #d6357f;
+      --borda:  #e0e0e8;
+      --texto:  #444;
+      --font:   'Segoe UI', Arial, sans-serif;
+      --bg:     #f4f6f9;
+      --verde:  #27a567;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      font-size: 13px;
+      background: var(--bg);
+      color: #1a1a1a;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header com gradiente Stand1 ── */
+    header {
+      background: var(--g);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 14px rgba(200,79,191,.30);
+      flex-shrink: 0;
+    }
+
+    .h-logo {
+      width: 38px; height: 38px;
+      background: #fff;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    }
+    .h-logo img { width: 30px; height: 30px; object-fit: contain; }
+
+    header h1 {
+      font-size: 15px; font-weight: 800; color: #fff;
+      letter-spacing: .5px;
+    }
+
+    header .version { font-size: 11px; color: rgba(255,255,255,.7); margin-left: auto; }
+
+    .tabs { display: flex; gap: 4px; margin-left: 8px; }
+
+    .tab {
+      font-size: 12px; font-weight: 700;
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.28);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .tab:hover { background: rgba(255,255,255,.28); }
+    .tab.active { background: #fff; color: var(--azul); border-color: #fff; }
+
+    .tab-content { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+    .tab-content.active { display: flex; }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── Painel esquerdo ── */
+    .panel-scenes {
+      width: 260px; min-width: 200px;
+      border-right: 1px solid var(--borda);
+      background: #fff;
+      display: flex; flex-direction: column;
+    }
+
+    .panel-title {
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--azul);
+      padding: 13px 16px 9px;
+      border-bottom: 1px solid var(--borda);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .scenes-actions {
+      display: flex; gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--borda);
+    }
+
+    .btn-small {
+      font-size: 11px; font-weight: 600;
+      color: #666;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 5px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-small:hover { border-color: var(--rosa); color: var(--rosa); }
+
+    .scenes-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+
+    .scene-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 16px;
+      cursor: pointer; user-select: none;
+      transition: background .1s;
+    }
+
+    .scene-item:hover { background: #fafaff; }
+    .scene-item.checked { background: #fbe9f3; }
+
+    .scene-item input[type="checkbox"] {
+      accent-color: var(--rosa);
+      width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
+    }
+
+    .scene-item label {
+      cursor: pointer; flex: 1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: #333;
+    }
+
+    .empty-scenes {
+      padding: 22px 16px; color: #aaa; font-size: 12px; text-align: center;
+    }
+
+    /* ── Painel direito ── */
+    .panel-config { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg); }
+
+    .section { padding: 15px 18px; border-bottom: 1px solid var(--borda); }
+
+    .section-label {
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--azul);
+      margin-bottom: 11px;
+    }
+
+    /* Toggle group */
+    .toggle-group { display: flex; gap: 7px; }
+
+    .toggle-btn {
+      flex: 1; padding: 9px 0;
+      font-size: 12px; font-weight: 600;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 7px;
+      color: #666;
+      cursor: pointer; text-align: center;
+      transition: all .15s;
+    }
+
+    .toggle-btn:hover { border-color: var(--rosa); color: var(--rosa); }
+
+    .toggle-btn.active {
+      background: var(--azul);
+      border-color: var(--azul);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(26,45,184,.22);
+    }
+
+    .toggle-btn.active small { opacity: .8 !important; }
+
+    /* Resolução */
+    .res-row { display: flex; align-items: center; gap: 8px; }
+
+    .res-row input {
+      width: 78px;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 6px;
+      color: #222; font-size: 12px;
+      padding: 7px 8px; text-align: center;
+    }
+
+    .res-row input:focus { outline: none; border-color: var(--rosa); box-shadow: 0 0 0 3px rgba(214,53,127,.12); }
+    .res-row span { color: #999; font-size: 12px; }
+
+    .res-presets { display: flex; gap: 5px; margin-top: 9px; }
+
+    .res-preset {
+      font-size: 11px; font-weight: 600;
+      padding: 4px 11px;
+      border: 1.5px solid var(--borda);
+      border-radius: 20px;
+      background: #fff; color: #777;
+      cursor: pointer; transition: all .15s;
+    }
+
+    .res-preset:hover { border-color: var(--rosa); color: var(--rosa); }
+    .res-preset.active { background: var(--azul); border-color: var(--azul); color: #fff; }
+
+    /* Pasta */
+    .folder-row { display: flex; gap: 7px; align-items: center; }
+
+    .folder-path {
+      flex: 1;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 6px;
+      color: #999; font-size: 11px;
+      padding: 8px 10px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .folder-path.set { color: #333; }
+
+    .btn-folder {
+      padding: 8px 14px; font-size: 12px; font-weight: 600;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 6px; color: #555;
+      cursor: pointer; white-space: nowrap; transition: all .15s;
+    }
+
+    .btn-folder:hover { border-color: var(--rosa); color: var(--rosa); }
+
+    /* Footer */
+    footer {
+      padding: 13px 18px;
+      border-top: 1px solid var(--borda);
+      background: #fff;
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .status { flex: 1; font-size: 12px; color: #888; }
+    .status.ok    { color: var(--verde); font-weight: 600; }
+    .status.error { color: #e0436b; font-weight: 600; }
+    .status.info  { color: var(--azul); font-weight: 600; }
+
+    .btn-export {
+      padding: 10px 26px;
+      font-size: 13px; font-weight: 700;
+      background: var(--g);
+      border: none; border-radius: 7px;
+      color: #fff; cursor: pointer;
+      box-shadow: 0 2px 10px rgba(200,79,191,.30);
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn-export:hover:not(:disabled) { opacity: .92; }
+    .btn-export:active:not(:disabled) { transform: translateY(1px); }
+    .btn-export:disabled {
+      background: #e4e4ec; color: #aaa;
+      box-shadow: none; cursor: default;
+    }
+
+    /* Botão secundário (export prints) */
+    .btn-ghost {
+      padding: 10px 20px;
+      font-size: 13px; font-weight: 700;
+      background: #fff; color: var(--azul);
+      border: 1.5px solid var(--azul); border-radius: 7px;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-ghost:hover:not(:disabled) { background: #eef0ff; }
+    .btn-ghost:disabled { color: #bbb; border-color: var(--borda); cursor: default; }
+
+    /* Barra divisória de grupo (competência) */
+    .group-bar {
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 1.5px; color: #fff;
+      background: var(--g);
+      padding: 6px 18px;
+    }
+
+    /* Label com ação à direita */
+    .section-label-row {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-label-row .btn-small { letter-spacing: 0; }
+
+    /* Caixa de materiais detectados */
+    .mat-box {
+      border: 1.5px solid var(--borda);
+      border-radius: 6px;
+      background: #fff;
+      max-height: 180px; overflow-y: auto;
+    }
+    .mat-box .mat-item:last-child { border-bottom: none; }
+
+    /* Update banner */
+    .update-banner {
+      display: none;
+      align-items: center; justify-content: space-between; gap: 12px;
+      padding: 9px 18px;
+      background: #eaf4ff;
+      border-bottom: 1.5px solid #4DA8F0;
+      font-size: 12.5px; color: #1c4e80; font-weight: 600;
+    }
+    .update-banner.show { display: flex; }
+    .upd-btns { display: flex; gap: 7px; flex-shrink: 0; }
+    .upd-btn {
+      padding: 6px 14px; border-radius: 6px; border: none;
+      font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .upd-ok { background: var(--azul); color: #fff; }
+    .upd-no { background: #dfe7ef; color: #557; }
+
+    /* Progress */
+    .progress-bar-wrap { display: none; height: 3px; background: rgba(200,79,191,.12); }
+    .progress-bar { height: 3px; background: var(--g); width: 0%; transition: width .3s; }
+
+    /* ── Materiais (paleta do projeto) ── */
+    .mat-item { padding: 8px 16px; border-bottom: 1px solid #f0f0f4; }
+
+    .mat-row { display: flex; gap: 6px; align-items: center; }
+
+    .mat-row input {
+      flex: 1; min-width: 0;
+      background: #fff;
+      border: 1.5px solid var(--borda);
+      border-radius: 6px;
+      color: #222; font-size: 12px;
+      padding: 6px 9px;
+    }
+
+    .mat-row input:focus { outline: none; border-color: var(--rosa); box-shadow: 0 0 0 3px rgba(214,53,127,.1); }
+
+    .mat-del {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      border: 1.5px solid var(--borda); border-radius: 6px;
+      background: #fff; color: #bbb;
+      font-size: 16px; line-height: 1; cursor: pointer;
+      transition: all .15s;
+    }
+    .mat-del:hover { border-color: #e0436b; color: #e0436b; background: #fff0f4; }
+
+    .mat-filter {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11.5px; color: #777; margin-bottom: 8px; cursor: pointer;
+      user-select: none;
+    }
+    .mat-filter input { accent-color: var(--rosa); width: 14px; height: 14px; cursor: pointer; }
+    .mat-filter #matCount { color: #aaa; }
+
+    .mat-en {
+      font-size: 11px; color: var(--verde); font-weight: 600;
+      padding: 4px 2px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .mat-en.unmapped { color: #d68a2a; }
+
+    /* ── Prompt cards (Fase 2) ── */
+    .prompt-card {
+      border: 1px solid var(--borda);
+      border-radius: 9px;
+      margin-bottom: 11px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(200,79,191,.07);
+    }
+
+    .prompt-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px;
+      background: var(--g);
+    }
+
+    .prompt-scene { font-size: 12px; font-weight: 700; color: #fff; letter-spacing: .3px; }
+
+    .btn-copy {
+      font-size: 11px; font-weight: 700;
+      background: #fff; color: var(--azul);
+      border: none; border-radius: 5px;
+      padding: 4px 14px; cursor: pointer;
+      transition: opacity .15s;
+    }
+
+    .btn-copy:hover { opacity: .85; }
+
+    .prompt-text {
+      font-size: 11px; line-height: 1.55;
+      color: #444;
+      padding: 11px;
+      white-space: pre-wrap; word-break: break-word;
+      font-family: 'Consolas', 'Monaco', monospace;
+      max-height: 220px; overflow-y: auto;
+      background: #fcfcfe;
+    }
+
+    textarea { font-family: var(--font); }
+    textarea:focus { outline: none; border-color: var(--rosa) !important; box-shadow: 0 0 0 3px rgba(214,53,127,.1); }
+
+    /* ── Aba Logos ── */
+    #content-logos .logos-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; }
+    #content-logos input[type="password"], #content-logos input[type="text"] {
+      flex:1; padding:7px 10px; border:1.5px solid var(--borda); border-radius:6px;
+      font-size:12px; font-family:var(--font); background:#fafafa; color:#333;
+    }
+    #content-logos input:focus { outline:none; border-color:var(--rosa); }
+    .api-header { display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
+    .api-chevron { margin-left:auto; font-size:12px; color:#999; transition:transform .15s; }
+    .api-header.collapsed .api-chevron { transform:rotate(-90deg); }
+    #apiBody { overflow:hidden; transition:none; }
+    .api-header.collapsed + #apiBody { display:none; }
+    .api-badge {
+      font-size:10px; font-weight:800; padding:2px 9px; border-radius:20px;
+      letter-spacing:.3px; display:none;
+    }
+    .api-badge.connected { display:inline-block; background:#e3f6ec; color:var(--verde); }
+    .api-badge.empty     { display:inline-block; background:#fdeaf1; color:var(--rosa); }
+    .tint-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
+    #tintColor { width:42px; height:32px; padding:2px; border:1.5px solid var(--borda); border-radius:6px; cursor:pointer; background:#fff; }
+    #tintHex { max-width:110px; text-transform:uppercase; font-family:Consolas,monospace; }
+    .btn-tint { background:var(--azul); color:#fff; border-color:var(--azul); }
+    .btn-tint:hover { background:#142299; color:#fff; }
+    #btnEyedrop.armed { background:var(--rosa); color:#fff; border-color:var(--rosa); }
+    .tint-hint { font-size:10.5px; color:#999; margin-top:7px; line-height:1.4; }
+    .logo-preview-grid { display:flex; gap:16px; }
+    .logo-preview-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .logo-preview-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#999; }
+    .logo-img-box {
+      width:100%; min-height:170px; border-radius:9px;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .logo-img-box.orig { border:1.5px solid var(--borda); background:#eee; }
+    .logo-img-box.result { border:2px dashed var(--borda); background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 0 0/16px 16px; }
+    .logo-img-box.result.ready { border-color:var(--verde); }
+    .logo-img-box img { max-width:100%; max-height:170px; object-fit:contain; border-radius:6px; }
+    .logo-placeholder { font-size:12px; color:#bbb; text-align:center; padding:12px; }
+    #logoStatus { font-size:12px; min-height:18px; }
+    #logoStatus.ok  { color:var(--verde); }
+    #logoStatus.err { color:var(--rosa); }
+    .logo-actions { display:flex; gap:10px; }
+    .btn-green { background:var(--verde); }
+    .btn-green:not(:disabled):hover { background:#1e8a55; }
+
+    /* ── Crop editor modal ── */
+    #cropModal { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.82); flex-direction:column; }
+    #cropPreviewArea { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#111; padding:20px; }
+    #cropContainer { position:relative; user-select:none; line-height:0; }
+    #cropContainer img { display:block; max-width:100%; pointer-events:none; }
+    #cropBox { position:absolute; box-shadow:0 0 0 9999px rgba(0,0,0,.58); border:2px solid #FF4D8D; pointer-events:none; z-index:2; }
+    .crop-handle { position:absolute; z-index:5; }
+    .crop-handle-v { width:18px; top:0; bottom:0; cursor:ew-resize; transform:translateX(-50%); }
+    .crop-handle-h { height:18px; left:0; right:0; cursor:ns-resize; transform:translateY(-50%); }
+    .crop-handle::after { content:''; position:absolute; background:#FF4D8D; border-radius:3px; }
+    .crop-handle-v::after { width:4px; height:40px; left:50%; top:50%; transform:translate(-50%,-50%); box-shadow:0 0 6px rgba(255,77,141,.6); }
+    .crop-handle-h::after { height:4px; width:40px; top:50%; left:50%; transform:translate(-50%,-50%); box-shadow:0 0 6px rgba(255,77,141,.6); }
+    #cropFooter { background:#fff; padding:10px 18px; display:flex; align-items:center; gap:12px; flex-shrink:0; border-top:1px solid var(--borda); }
+    #cropReadout { flex:1; font-size:11.5px; color:#666; font-family:Consolas,monospace; }
+    .crop-loading { color:#fff; font-size:13px; text-align:center; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 7px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d4d4e0; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #c0c0d0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="h-logo"><img id="headerLogo" alt="Stand1"></div>
+  <h1>EVA Stand1</h1>
+  <div class="tabs">
+    <button class="tab active" id="tab-render" onclick="switchTab('render')">Render IA</button>
+    <button class="tab" id="tab-pres" onclick="switchTab('pres')">Apresentação</button>
+    <button class="tab" id="tab-logos" onclick="switchTab('logos')">Logos</button>
+  </div>
+  <span class="version" id="verLabel" title="Clique para checar atualização" style="cursor:pointer" onclick="su('check_update')">v1.0.0</span>
+</header>
+
+<div class="update-banner" id="updateBanner">
+  <span id="updateMsg">Nova versão disponível.</span>
+  <div class="upd-btns">
+    <button class="upd-btn upd-ok" id="updInstall">Atualizar</button>
+    <button class="upd-btn upd-no" onclick="dismissUpdate()">Depois</button>
+  </div>
+</div>
+
+<div class="progress-bar-wrap" id="progressWrap">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<!-- ════════════ TAB: RENDER IA ════════════ -->
+<div class="tab-content active" id="content-render">
+<div class="main">
+
+  <!-- Painel: Cenas -->
+  <div class="panel-scenes">
+    <div class="panel-title">
+      Cenas
+      <span id="rSceneCount" style="font-weight:600; color:#aaa"></span>
+    </div>
+    <div class="scenes-actions">
+      <button class="btn-small" onclick="markAll('r')">Marcar todas</button>
+    </div>
+    <div class="scenes-list" id="rScenesList">
+      <div class="empty-scenes">Carregando cenas...</div>
+    </div>
+  </div>
+
+  <!-- Painel: Configurações -->
+  <div class="panel-config">
+
+    <div class="section">
+      <div class="section-label">Descrição do estande
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— por projeto, igual em todos os ângulos</span>
+      </div>
+      <textarea id="boothDesc" onchange="saveSettings()"
+        placeholder="Âncora de consistência. Ex: Estande de dois pavimentos com mezanino e escada central; balcão curvo em napa branca; testeira retroiluminada com logo; pé-direito de 5m..."
+        style="width:100%;min-height:70px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Iluminação</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="btn-frio" onclick="setLight('frio')">Branco Frio</button>
+        <button class="toggle-btn" id="btn-quente" onclick="setLight('quente')">Branco Quente</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Tipo de estande</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="booth-ilha" onclick="setBooth('ilha')">Ilha<br><small style="opacity:.6;font-weight:400">4 lados</small></button>
+        <button class="toggle-btn" id="booth-ponta" onclick="setBooth('ponta')">Ponta<br><small style="opacity:.6;font-weight:400">3 lados</small></button>
+        <button class="toggle-btn" id="booth-esquina" onclick="setBooth('esquina')">Esquina<br><small style="opacity:.6;font-weight:400">2 lados</small></button>
+        <button class="toggle-btn" id="booth-corredor" onclick="setBooth('corredor')">Corredor<br><small style="opacity:.6;font-weight:400">1 lado</small></button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Ambiente do render</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="env-feira" onclick="setEnv('feira')">Feira</button>
+        <button class="toggle-btn" id="env-neutro_claro" onclick="setEnv('neutro_claro')">Neutro claro</button>
+        <button class="toggle-btn" id="env-neutro_cinza" onclick="setEnv('neutro_cinza')">Neutro cinza</button>
+        <button class="toggle-btn" id="env-neutro_escuro" onclick="setEnv('neutro_escuro')">Neutro escuro</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Pessoas</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="people-on" onclick="setPeople(true)">Com público</button>
+        <button class="toggle-btn" id="people-off" onclick="setPeople(false)">Sem público</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">CRITICALs adicionais (PT)</div>
+      <textarea id="criticals" rows="6" onchange="saveSettings()" placeholder="Um por linha. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
+        style="width:100%;min-height:140px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
+      <div style="font-size:10px;color:#888;margin-top:4px">Arraste o canto inferior direito para aumentar a caixa. O texto é salvo automaticamente.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Prompts gerados</div>
+      <div id="promptsOutput">
+        <div class="empty-scenes">Os prompts aparecerão aqui após gerar.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div class="status" id="statusR">Marque as cenas e clique em Gerar prompts.</div>
+  <button class="btn-export" id="btnBuild" onclick="doBuild()">Gerar prompts</button>
+</footer>
+</div><!-- /content-render -->
+
+<!-- ════════════ TAB: APRESENTAÇÃO ════════════ -->
+<div class="tab-content" id="content-pres">
+<div class="main">
+
+  <!-- Painel: Cenas -->
+  <div class="panel-scenes">
+    <div class="panel-title">
+      Cenas
+      <span id="pSceneCount" style="font-weight:600; color:#aaa"></span>
+    </div>
+    <div class="scenes-actions">
+      <button class="btn-small" onclick="markAll('p')">Marcar todas</button>
+    </div>
+    <div class="scenes-list" id="pScenesList">
+      <div class="empty-scenes">Carregando cenas...</div>
+    </div>
+  </div>
+
+  <!-- Painel: Configurações -->
+  <div class="panel-config">
+
+    <div class="section" style="padding-top:18px">
+      <div class="section-label">Fundo</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="pbg-white" onclick="setBg('p','white')">Branco</button>
+        <button class="toggle-btn" id="pbg-black" onclick="setBg('p','black')">Preto</button>
+        <button class="toggle-btn" id="pbg-transp" onclick="setBg('p','transparent')">Transparente</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Resolução</div>
+      <div class="res-row">
+        <input type="number" id="pResW" value="3840" min="100" max="7680" onchange="saveSettings()">
+        <span>×</span>
+        <input type="number" id="pResH" value="2160" min="100" max="4320" onchange="saveSettings()">
+        <span>px</span>
+      </div>
+      <div class="res-presets" id="pResPresets">
+        <button class="res-preset active" onclick="setRes('p',3840,2160,this)">4K</button>
+        <button class="res-preset" onclick="setRes('p',2560,1440,this)">2K</button>
+        <button class="res-preset" onclick="setRes('p',1920,1080,this)">FHD</button>
+        <button class="res-preset" onclick="setRes('p',1280,720,this)">HD</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Pasta de destino</div>
+      <div class="folder-row">
+        <div class="folder-path" id="pFolderPath">Nenhuma pasta selecionada</div>
+        <button class="btn-folder" onclick="chooseFolder('pres')">Escolher...</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" style="display:flex;align-items:center;gap:10px;margin-bottom:0">
+        Recortar margens
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;letter-spacing:0;color:#666;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="cropEnabled" onchange="toggleCrop()" style="accent-color:var(--rosa);width:14px;height:14px;cursor:pointer">
+          Ativar
+        </label>
+      </div>
+      <div id="cropInputs" style="display:none;margin-top:10px">
+        <button onclick="openCropEditor()"
+          style="width:100%;padding:9px;font-size:12px;font-weight:700;background:var(--g);border:none;border-radius:7px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(200,79,191,.25);">
+          Ajustar visualmente...
+        </button>
+        <div id="cropSummary" style="margin-top:8px;font-size:11px;color:#aaa;font-family:Consolas,monospace;">Nenhum recorte definido.</div>
+      </div>
+    </div>
+
+    <div class="section" style="color:#999;font-size:11.5px;line-height:1.5">
+      A apresentação exporta cada cena <b>exatamente como está</b> no SketchUp
+      (estilo, sombras e tags da própria cena), aplicando apenas o fundo e a
+      resolução escolhidos.
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div class="status" id="statusP">Marque as cenas e escolha a pasta.</div>
+  <button class="btn-export" id="btnExportP" onclick="doExportPres()" disabled>Exportar</button>
+</footer>
+</div><!-- /content-pres -->
+
+<!-- ════ ABA LOGOS ════ -->
+<div class="tab-content" id="content-logos">
+  <div class="logos-wrap">
+
+    <div class="section">
+      <div class="api-header" id="apiHeaderEl" onclick="toggleApiSection()">
+        <span class="section-label" style="margin:0;padding:0">Chave da API remove.bg</span>
+        <span id="apiBadge" class="api-badge"></span>
+        <span id="apiChevron" class="api-chevron">▾</span>
+      </div>
+      <div id="apiBody" style="margin-top:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="rbgApiKey" placeholder="Cole sua API key aqui..."
+                 oninput="onApiKeyInput()">
+          <button class="btn-small" id="btnApiVis" onclick="toggleApiKeyVis()">Mostrar</button>
+        </div>
+        <a href="#" onclick="su('open_url','https://www.remove.bg/api');return false;"
+           style="display:inline-block;font-size:10px;font-weight:600;color:var(--azul);margin-top:7px;text-decoration:none">
+          Obter key gratuita →
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Imagem da logo (PNG ou JPEG)</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <input type="text" id="logoFilePath" readonly placeholder="Nenhum arquivo selecionado">
+        <button class="btn-small" onclick="chooseLogoFile()">Selecionar...</button>
+      </div>
+    </div>
+
+    <div id="logoPreviewArea">
+      <div class="logo-preview-grid">
+        <div class="logo-preview-col">
+          <div class="logo-preview-label">Original</div>
+          <div class="logo-img-box orig">
+            <div class="logo-placeholder" id="logoOrigPlaceholder">Selecione uma logo</div>
+            <img id="logoOrigImg" alt="" style="display:none">
+          </div>
+        </div>
+        <div class="logo-preview-col">
+          <div class="logo-preview-label">Sem fundo</div>
+          <div class="logo-img-box result" id="logoResultBox">
+            <div class="logo-placeholder" id="logoResultPlaceholder">Aguardando processamento</div>
+            <img id="logoResultImg" alt="" style="display:none">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="tintSection">
+      <div class="section-label">Recolorir logo (tingir cor sólida)</div>
+      <div class="tint-row">
+        <input type="color" id="tintColor" value="#1A2DB8" onchange="onTintColorChange()" title="Escolher cor">
+        <input type="text" id="tintHex" value="#1A2DB8" maxlength="7" oninput="onTintHexInput()" placeholder="#RRGGBB">
+        <button class="btn-small" id="btnEyedrop" onclick="startEyedropper()" title="Capturar cor de uma face do modelo">⊙ Conta-gotas</button>
+        <button class="btn-small btn-tint" onclick="applyTint()">Aplicar cor</button>
+      </div>
+      <div class="tint-hint">Substitui toda a parte opaca pela cor escolhida, preservando a transparência. Funciona melhor após remover o fundo.</div>
+    </div>
+
+    <div id="logoStatus"></div>
+
+    <div class="logo-actions">
+      <button class="btn-export" id="btnRemoveBg" onclick="doRemoveBg()" disabled style="flex:1">
+        Remover fundo
+      </button>
+      <button class="btn-export btn-green" id="btnImportMat" onclick="doImportMaterial()" disabled style="flex:1">
+        Importar para o modelo
+      </button>
+    </div>
+
+  </div>
+</div><!-- /content-logos -->
+
+<script>var LOGO_B64='data:image/png;base64,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';</script>
+<script>window.addEventListener('load',function(){var i=document.getElementById('headerLogo');if(i&&typeof LOGO_B64!=='undefined')i.src=LOGO_B64;});</script>
+
+<!-- ════ CROP EDITOR MODAL ════ -->
+<div id="cropModal" style="display:none;">
+  <div style="background:var(--azul);color:#fff;padding:11px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+    <span style="font-weight:800;font-size:13px;letter-spacing:.3px;flex-shrink:0;">Ajustar recorte</span>
+    <select id="cropSceneSelect" onchange="cropChangeScene(this.value)"
+      style="flex:1;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:6px;color:#fff;font-size:12px;font-family:var(--font);padding:5px 8px;cursor:pointer;">
+    </select>
+    <style>#cropSceneSelect option { background:#fff; color:#1A2DB8; }</style>
+    <button onclick="closeCropEditor()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:0 2px;flex-shrink:0;">×</button>
+  </div>
+  <div id="cropPreviewArea">
+    <div id="cropLoading" class="crop-loading">Capturando preview da cena atual...</div>
+    <div id="cropContainer" style="display:none;">
+      <img id="cropPreviewImg" draggable="false" alt="">
+      <div id="cropBox"></div>
+      <div id="ch-left"   class="crop-handle crop-handle-v"></div>
+      <div id="ch-right"  class="crop-handle crop-handle-v"></div>
+      <div id="ch-top"    class="crop-handle crop-handle-h"></div>
+      <div id="ch-bottom" class="crop-handle crop-handle-h"></div>
+    </div>
+  </div>
+  <div id="cropFooter">
+    <span id="cropReadout">E: 0%  D: 0%  T: 0%  B: 0%</span>
+    <button onclick="resetCropEditor()"
+      style="padding:8px 16px;font-size:12px;font-weight:600;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#888;cursor:pointer;">
+      Resetar
+    </button>
+    <button onclick="applyCropFromEditor()"
+      style="padding:8px 22px;font-size:12px;font-weight:700;background:var(--g);border:none;border-radius:6px;color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(200,79,191,.25);">
+      Aplicar
+    </button>
+  </div>
+</div>
+
+<script>
+  // ── Estado ─────────────────────────────────────────────────────────────────
+  var scenes      = [];
+  var lighting    = 'frio';
+  var environment = 'feira';
+  var boothType   = 'ilha';
+  var people      = true;
+  var lastPrompts = [];
+
+  var ENV_BTNS   = ['env-feira','env-neutro_claro','env-neutro_cinza','env-neutro_escuro'];
+  var BOOTH_BTNS = ['booth-ilha','booth-ponta','booth-esquina','booth-corredor'];
+
+  // estado por aba: r = Render IA (cenas), p = Apresentação (cenas + export)
+  var st = {
+    r: { sel: {} },
+    p: { sel: {}, bg: 'white', folder: '' }
+  };
+
+  var BG_BTNS = {
+    r: [['rbg-black','black'], ['rbg-white','white'], ['rbg-transp','transparent']],
+    p: [['pbg-white','white'], ['pbg-black','black'], ['pbg-transp','transparent']]
+  };
+
+  // ── API SketchUp ────────────────────────────────────────────────────────────
+  function su(action, data) {
+    if (window.sketchup) { window.sketchup[action](data || ''); }
+  }
+
+  var _applying = false;
+
+  window.addEventListener('load', function() {
+    su('get_scenes');
+    su('get_settings');    // preferências salvas
+  });
+
+  // ── Persistência de preferências ────────────────────────────────────────────
+  window.applySettings = function(s) {
+    if (!s) return;
+    _applying = true;
+    try {
+      if (s.pBg)                         setBg('p', s.pBg);
+      if (s.lighting)                    setLight(s.lighting);
+      if (s.environment)                 setEnv(s.environment);
+      if (s.boothType)                   setBooth(s.boothType);
+      if (typeof s.people === 'boolean') setPeople(s.people);
+      if (typeof s.description === 'string') document.getElementById('boothDesc').value = s.description;
+      if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
+      if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
+      if (s.pFolder)                     window.setFolder('pres', s.pFolder);
+      if (typeof s.cropEnabled === 'boolean') {
+        document.getElementById('cropEnabled').checked = s.cropEnabled;
+        document.getElementById('cropInputs').style.display = s.cropEnabled ? 'block' : 'none';
+      }
+      if (s.crops && typeof s.crops === 'object') {
+        _cropRects = s.crops;
+        _updateCropSummary();
+      }
+      if (typeof s.rbgApiKey === 'string' && s.rbgApiKey) {
+        document.getElementById('rbgApiKey').value = s.rbgApiKey;
+        // Chave já salva: recolhe a seção e mostra "Conectada".
+        document.getElementById('apiHeaderEl').classList.add('collapsed');
+      }
+      updateApiBadge();
+    } catch (e) {}
+    _applying = false;
+  };
+
+  function applyRes(p, w, h) {
+    if (!w || !h) return;
+    document.getElementById(p + 'ResW').value = w;
+    document.getElementById(p + 'ResH').value = h;
+    document.getElementById(p + 'ResPresets').querySelectorAll('.res-preset')
+      .forEach(function(el) { el.classList.remove('active'); });
+  }
+
+  function saveSettings() {
+    if (_applying) return;
+    var pRes = readRes('p');
+    var s = {
+      pBg: st.p.bg, lighting: lighting, environment: environment,
+      boothType: boothType, people: people,
+      pRes: { w: pRes.width, h: pRes.height },
+      pFolder: st.p.folder,
+      description: document.getElementById('boothDesc').value,
+      criticals: document.getElementById('criticals').value,
+      cropEnabled: cropIsEnabled(),
+      crops: _cropRects,
+      rbgApiKey: document.getElementById('rbgApiKey').value
+    };
+    su('save_settings', JSON.stringify(s));
+  }
+
+  // ── Abas ───────────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    ['render','pres','logos'].forEach(function(t) {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      document.getElementById('content-' + t).classList.toggle('active', t === tab);
+    });
+  }
+
+  // ── Lista de cenas (renderizada nas duas abas) ──────────────────────────────
+  window.setScenes = function(data) {
+    scenes = data || [];
+    renderSceneList('r');
+    renderSceneList('p');
+    refreshButtons('r');
+    refreshButtons('p');
+  };
+
+  function renderSceneList(p) {
+    var list  = document.getElementById(p === 'r' ? 'rScenesList' : 'pScenesList');
+    var count = document.getElementById(p === 'r' ? 'rSceneCount' : 'pSceneCount');
+
+    if (!scenes || scenes.length === 0) {
+      list.innerHTML = '<div class="empty-scenes">Nenhuma cena salva no modelo.</div>';
+      count.textContent = '';
+      return;
+    }
+
+    count.textContent = scenes.length + ' cenas';
+    st[p].sel = {};
+    list.innerHTML = scenes.map(function(s, i) {
+      st[p].sel[i] = true;
+      return '<div class="scene-item checked" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
+             '<input type="checkbox" checked id="' + p + 'chk-' + i + '" onclick="boxClick(\'' + p + '\',' + i + ',event)">' +
+             '<label>' + escHtml(s.name) + '</label>' +
+             '</div>';
+    }).join('');
+  }
+
+  function rowClick(p, i) {
+    var chk = document.getElementById(p + 'chk-' + i);
+    chk.checked = !chk.checked;
+    syncScene(p, i);
+  }
+
+  function boxClick(p, i, ev) {
+    ev.stopPropagation();
+    syncScene(p, i);
+  }
+
+  function syncScene(p, i) {
+    var chk = document.getElementById(p + 'chk-' + i);
+    st[p].sel[i] = chk.checked;
+    document.getElementById(p + 'item-' + i).classList.toggle('checked', chk.checked);
+    refreshButtons(p);
+  }
+
+  function markAll(p) {
+    scenes.forEach(function(_, i) {
+      document.getElementById(p + 'chk-' + i).checked = true;
+      st[p].sel[i] = true;
+      document.getElementById(p + 'item-' + i).classList.add('checked');
+    });
+    refreshButtons(p);
+  }
+
+  function getSelected(p) {
+    return scenes.filter(function(_, i) { return st[p].sel[i]; })
+                 .map(function(s) { return s.name; });
+  }
+
+  // ── Pasta de destino ────────────────────────────────────────────────────────
+  function chooseFolder(target) { su('choose_folder', target); }
+
+  window.setFolder = function(target, path) {
+    var p = target === 'pres' ? 'p' : 'r';
+    st[p].folder = path;
+    var el = document.getElementById(p === 'r' ? 'rFolderPath' : 'pFolderPath');
+    el.textContent = path;
+    el.classList.add('set');
+    refreshButtons(p);
+    saveSettings();
+  };
+
+  // ── Seletores ───────────────────────────────────────────────────────────────
+  function setBg(p, val) {
+    st[p].bg = val;
+    BG_BTNS[p].forEach(function(pair) {
+      document.getElementById(pair[0]).classList.toggle('active', pair[1] === val);
+    });
+    saveSettings();
+  }
+
+  function setRes(p, w, h, btn) {
+    document.getElementById(p + 'ResW').value = w;
+    document.getElementById(p + 'ResH').value = h;
+    document.getElementById(p + 'ResPresets').querySelectorAll('.res-preset')
+      .forEach(function(el) { el.classList.remove('active'); });
+    btn.classList.add('active');
+    saveSettings();
+  }
+
+  function setLight(l) {
+    lighting = l;
+    document.getElementById('btn-frio').classList.toggle('active', l === 'frio');
+    document.getElementById('btn-quente').classList.toggle('active', l === 'quente');
+    saveSettings();
+  }
+
+  function setEnv(e) {
+    environment = e;
+    ENV_BTNS.forEach(function(id) {
+      document.getElementById(id).classList.toggle('active', id === 'env-' + e);
+    });
+    // Padrão inteligente: feira tem público, fundo neutro não (só em clique do usuário).
+    if (!_applying) setPeople(e === 'feira');
+    saveSettings();
+  }
+
+  function setBooth(b) {
+    boothType = b;
+    BOOTH_BTNS.forEach(function(id) {
+      document.getElementById(id).classList.toggle('active', id === 'booth-' + b);
+    });
+    saveSettings();
+  }
+
+  function setPeople(v) {
+    people = !!v;
+    document.getElementById('people-on').classList.toggle('active', people);
+    document.getElementById('people-off').classList.toggle('active', !people);
+    saveSettings();
+  }
+
+  function toggleCrop() {
+    var enabled = document.getElementById('cropEnabled').checked;
+    document.getElementById('cropInputs').style.display = enabled ? 'block' : 'none';
+    saveSettings();
+  }
+
+  function cropIsEnabled() {
+    return document.getElementById('cropEnabled').checked;
+  }
+
+  function readRes(p) {
+    return {
+      width:  parseInt(document.getElementById(p + 'ResW').value) || 3840,
+      height: parseInt(document.getElementById(p + 'ResH').value) || 2160
+    };
+  }
+
+  // ── Export (apenas Apresentação) ────────────────────────────────────────────
+  function doExportPres() {
+    var sel = getSelected('p');
+    if (sel.length === 0) { setStatusP('Marque ao menos uma cena.', 'error'); return; }
+    if (!st.p.folder)     { setStatusP('Escolha a pasta de destino.', 'error'); return; }
+
+    var config = {
+      mode: 'presentation', scenes: sel, folder: st.p.folder,
+      resolution: readRes('p'), background: st.p.bg,
+      crops: cropIsEnabled() ? _cropRects : null
+    };
+    document.getElementById('btnExportP').disabled = true;
+    setStatusP('Exportando ' + sel.length + ' cena(s)...', 'info');
+    showProgress();
+    su('export_scenes', JSON.stringify(config));
+  }
+
+  window.exportDone = function(result) {
+    hideProgress();
+    document.getElementById('btnExportP').disabled = false;
+
+    if (!result.ok) { setStatusP('Erro: ' + result.error, 'error'); return; }
+
+    var msg = result.exported.length + ' cena(s) exportadas para: ' + result.folder;
+    if (result.failed && result.failed.length > 0) {
+      msg += ' | Falhas: ' + result.failed.map(function(f){ return f.name; }).join(', ');
+      setStatusP(msg, 'error');
+    } else {
+      setStatusP(msg, 'ok');
+    }
+  };
+
+  // ── Prompts ─────────────────────────────────────────────────────────────────
+  function doBuild() {
+    var sel = getSelected('r');
+    if (sel.length === 0) { setStatusR('Marque ao menos uma cena.', 'error'); return; }
+
+    // persiste descrição + criticals antes de gerar (não depende do blur do campo)
+    saveSettings();
+
+    var criticals = document.getElementById('criticals').value
+      .split('\n').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
+
+    var config = {
+      scenes: sel, lighting: lighting, environment: environment,
+      booth_type: boothType, people: people,
+      description: document.getElementById('boothDesc').value.trim(),
+      criticals_pt: criticals
+    };
+
+    setStatusR('Gerando ' + sel.length + ' prompt(s)...', 'info');
+    document.getElementById('btnBuild').disabled = true;
+    su('build_prompts', JSON.stringify(config));
+  }
+
+  window.promptsDone = function(results) {
+    lastPrompts = results || [];
+    document.getElementById('btnBuild').disabled = false;
+    var out = document.getElementById('promptsOutput');
+
+    if (lastPrompts.length === 0) {
+      out.innerHTML = '<div class="empty-scenes">Nenhum prompt gerado.</div>';
+      setStatusR('Nenhum prompt gerado.', 'error');
+      return;
+    }
+
+    out.innerHTML = lastPrompts.map(function(p, i) {
+      return '<div class="prompt-card">' +
+        '<div class="prompt-head">' +
+          '<span class="prompt-scene">' + escHtml(p.scene) + '</span>' +
+          '<button class="btn-copy" onclick="copyPrompt(' + i + ')">Copiar</button>' +
+        '</div>' +
+        '<pre class="prompt-text" id="ptext-' + i + '">' + escHtml(p.prompt) + '</pre>' +
+      '</div>';
+    }).join('');
+
+    setStatusR(lastPrompts.length + ' prompt(s) gerados.', 'ok');
+  };
+
+  window.buildError = function(msg) {
+    document.getElementById('btnBuild').disabled = false;
+    hideProgress();
+    setStatusR('Erro: ' + (msg || 'falha ao gerar.'), 'error');
+  };
+
+  function copyPrompt(i) {
+    var text = lastPrompts[i].prompt;
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); setStatusR('Prompt "' + lastPrompts[i].scene + '" copiado!', 'ok'); }
+    catch (e) { setStatusR('Não foi possível copiar.', 'error'); }
+    document.body.removeChild(ta);
+  }
+
+  // ── Botões / status / progresso ─────────────────────────────────────────────
+  function refreshButtons(p) {
+    if (p !== 'p') return;   // Render IA: botão Gerar prompts valida no clique
+    var any = getSelected('p').length > 0;
+    document.getElementById('btnExportP').disabled = !(any && st.p.folder);
+  }
+
+  function setStatusR(msg, type) { setStatusEl('statusR', msg, type); }
+  function setStatusP(msg, type) { setStatusEl('statusP', msg, type); }
+  function setStatusEl(id, msg, type) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status' + (type ? ' ' + type : '');
+  }
+
+  function showProgress() {
+    var wrap = document.getElementById('progressWrap');
+    var bar  = document.getElementById('progressBar');
+    wrap.style.display = 'block';
+    bar.style.width = '60%';
+    setTimeout(function() { bar.style.width = '90%'; }, 800);
+  }
+
+  function hideProgress() {
+    var bar = document.getElementById('progressBar');
+    bar.style.width = '100%';
+    setTimeout(function() {
+      document.getElementById('progressWrap').style.display = 'none';
+      bar.style.width = '0%';
+    }, 400);
+  }
+
+  // ══════════════ AUTO-UPDATE ══════════════
+  window.mostrarUpdate = function(info) {
+    var banner = document.getElementById('updateBanner');
+    document.getElementById('updateMsg').textContent =
+      'Nova versão ' + info.versao + ' disponível.' + (info.notas ? ' ' + info.notas : '');
+    document.getElementById('updInstall').onclick = function() {
+      document.getElementById('updateMsg').textContent = 'Baixando atualização...';
+      su('install_update', info.rbz);
+    };
+    banner.classList.add('show');
+  };
+
+  window.semUpdate = function(ver) {
+    var el = document.getElementById('verLabel');
+    var old = el.textContent;
+    el.textContent = 'atualizado ✓';
+    setTimeout(function() { el.textContent = old; }, 2500);
+  };
+
+  window.updateErro = function() {
+    var el = document.getElementById('verLabel');
+    var old = el.textContent;
+    el.textContent = 'erro ao checar';
+    setTimeout(function() { el.textContent = old; }, 2500);
+  };
+
+  function dismissUpdate() {
+    document.getElementById('updateBanner').classList.remove('show');
+  }
+
+  // ══════════════ CROP EDITOR VISUAL ══════════════
+
+  var _cropDrag  = null;
+  var _cropRect  = { left: 0, top: 0, right: 0, bottom: 0 };  // crop da cena em edição
+  var _cropRects = {};   // { sceneName: {left,top,right,bottom} }
+  var _cropScene = '';   // cena atualmente no editor
+
+  function openCropEditor() {
+    var modal = document.getElementById('cropModal');
+    modal.style.display = 'flex';
+    document.getElementById('cropLoading').style.display = 'block';
+    document.getElementById('cropContainer').style.display = 'none';
+
+    // Popula seletor de cenas
+    var sel = document.getElementById('cropSceneSelect');
+    sel.innerHTML = scenes.map(function(s) {
+      return '<option value="' + escAttr(s.name) + '">' + escHtml(s.name) + '</option>';
+    }).join('');
+    // Pré-seleciona a primeira cena marcada na aba Apresentação
+    var firstSel = scenes.find(function(s, i) { return st.p.sel[i]; });
+    if (firstSel) sel.value = firstSel.name;
+
+    _loadSceneInEditor(sel.value);
+  }
+
+  function cropChangeScene(name) {
+    document.getElementById('cropLoading').style.display = 'block';
+    document.getElementById('cropContainer').style.display = 'none';
+    _loadSceneInEditor(name);
+  }
+
+  function _loadSceneInEditor(name) {
+    _cropScene = name;
+    // Carrega o crop salvo desta cena (ou zeros)
+    var saved = _cropRects[name];
+    _cropRect = saved
+      ? { left: saved.left, right: saved.right, top: saved.top, bottom: saved.bottom }
+      : { left: 0, top: 0, right: 0, bottom: 0 };
+    _captureForScene(name);
+  }
+
+  function _captureForScene(name) {
+    su('capture_preview', name || '');
+  }
+
+  function closeCropEditor() {
+    document.getElementById('cropModal').style.display = 'none';
+    _cropDrag = null;
+  }
+
+  window.showCropEditor = function(path) {
+    var url = 'file:///' + path.replace(/\\/g, '/') + '?t=' + Date.now();
+    var img = document.getElementById('cropPreviewImg');
+    img.onload = function() {
+      document.getElementById('cropLoading').style.display = 'none';
+      var container = document.getElementById('cropContainer');
+      container.style.display = 'block';
+      // Dimensiona o container para caber no preview area mantendo aspecto
+      var area = document.getElementById('cropPreviewArea');
+      var aw = area.offsetWidth  - 40;
+      var ah = area.offsetHeight - 40;
+      var scale = Math.min(aw / img.naturalWidth, ah / img.naturalHeight, 1);
+      var cw = Math.round(img.naturalWidth  * scale);
+      var ch = Math.round(img.naturalHeight * scale);
+      container.style.width  = cw + 'px';
+      container.style.height = ch + 'px';
+      img.style.width  = cw + 'px';
+      img.style.height = ch + 'px';
+      updateCropOverlay();
+      initCropDrag();
+    };
+    img.onerror = function() {
+      document.getElementById('cropLoading').textContent = 'Erro ao carregar preview.';
+    };
+    img.src = url;
+  };
+
+  window.cropPreviewError = function(msg) {
+    document.getElementById('cropLoading').textContent = 'Erro: ' + msg;
+  };
+
+  function updateCropOverlay() {
+    var r = _cropRect;
+    // Posições das linhas de corte (distância do topo/esquerda do container)
+    var lPct = r.left;
+    var tPct = r.top;
+    var rPct = 100 - r.right;
+    var bPct = 100 - r.bottom;
+
+    var box = document.getElementById('cropBox');
+    box.style.left   = lPct + '%';
+    box.style.top    = tPct + '%';
+    box.style.width  = Math.max(0, rPct - lPct) + '%';
+    box.style.height = Math.max(0, bPct - tPct) + '%';
+
+    // Handles posicionados na linha de corte (transform CSS centra no eixo)
+    document.getElementById('ch-left').style.left   = lPct + '%';
+    document.getElementById('ch-right').style.left  = rPct + '%';
+    document.getElementById('ch-top').style.top     = tPct + '%';
+    document.getElementById('ch-bottom').style.top  = bPct + '%';
+
+    document.getElementById('cropReadout').textContent =
+      'Esq: '  + r.left.toFixed(1)   + '%   ' +
+      'Dir: '  + r.right.toFixed(1)  + '%   ' +
+      'Topo: ' + r.top.toFixed(1)    + '%   ' +
+      'Base: ' + r.bottom.toFixed(1) + '%';
+  }
+
+  function initCropDrag() {
+    ['left','right','top','bottom'].forEach(function(side) {
+      var el = document.getElementById('ch-' + side);
+      el.onmousedown = function(e) {
+        e.preventDefault();
+        _cropDrag = side;
+      };
+    });
+  }
+
+  document.addEventListener('mousemove', function(e) {
+    if (!_cropDrag) return;
+    var container = document.getElementById('cropContainer');
+    var cr = container.getBoundingClientRect();
+    var xPct = Math.max(0, Math.min(100, (e.clientX - cr.left) / cr.width  * 100));
+    var yPct = Math.max(0, Math.min(100, (e.clientY - cr.top)  / cr.height * 100));
+    var MIN = 5;
+    var r = _cropRect;
+    switch (_cropDrag) {
+      case 'left':   r.left   = parseFloat(Math.max(0, Math.min(xPct,       100 - r.right  - MIN)).toFixed(1)); break;
+      case 'right':  r.right  = parseFloat(Math.max(0, Math.min(100 - xPct, 100 - r.left   - MIN)).toFixed(1)); break;
+      case 'top':    r.top    = parseFloat(Math.max(0, Math.min(yPct,       100 - r.bottom - MIN)).toFixed(1)); break;
+      case 'bottom': r.bottom = parseFloat(Math.max(0, Math.min(100 - yPct, 100 - r.top    - MIN)).toFixed(1)); break;
+    }
+    updateCropOverlay();
+  });
+
+  document.addEventListener('mouseup', function() { _cropDrag = null; });
+
+  function resetCropEditor() {
+    resetCropScene();
+  }
+
+  function applyCropFromEditor() {
+    // Salva crop da cena atual
+    var r = _cropRect;
+    var hasAnyCrop = r.left > 0 || r.right > 0 || r.top > 0 || r.bottom > 0;
+    if (hasAnyCrop) {
+      _cropRects[_cropScene] = { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    } else {
+      delete _cropRects[_cropScene];
+    }
+    _updateCropSummary();
+    saveSettings();
+    closeCropEditor();
+  }
+
+  function resetCropScene() {
+    delete _cropRects[_cropScene];
+    _cropRect = { left: 0, top: 0, right: 0, bottom: 0 };
+    updateCropOverlay();
+  }
+
+  function _updateCropSummary() {
+    var count = Object.keys(_cropRects).length;
+    var el = document.getElementById('cropSummary');
+    if (!el) return;
+    el.textContent = count > 0
+      ? count + ' cena(s) com recorte definido.'
+      : 'Nenhum recorte definido.';
+  }
+
+  function escAttr(s) {
+    return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Aba Logos ─────────────────────────────────────────────────────────────
+  var _logoFilePath   = '';
+  var _logoResultPath = '';
+  var _logoFileName   = '';
+
+  // ── API key: seção colapsável + estado conectado ──
+  function toggleApiSection() {
+    document.getElementById('apiHeaderEl').classList.toggle('collapsed');
+  }
+
+  function onApiKeyInput() {
+    updateApiBadge();
+    // Grava imediatamente em registro dedicado (não depende da saveSettings geral).
+    su('save_api_key', document.getElementById('rbgApiKey').value);
+  }
+
+  function updateApiBadge() {
+    var key   = document.getElementById('rbgApiKey').value.trim();
+    var badge = document.getElementById('apiBadge');
+    if (key) {
+      badge.className = 'api-badge connected';
+      badge.textContent = '✓ Conectada';
+    } else {
+      badge.className = 'api-badge empty';
+      badge.textContent = 'Sem chave';
+    }
+  }
+
+  function toggleApiKeyVis() {
+    var inp = document.getElementById('rbgApiKey');
+    var btn = document.getElementById('btnApiVis');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Ocultar'; }
+    else { inp.type = 'password'; btn.textContent = 'Mostrar'; }
+    event.stopPropagation();
+  }
+
+  function chooseLogoFile() { su('choose_logo_file', ''); }
+
+  // Recebe path + data URL (base64) — CEF do HtmlDialog bloqueia file:///,
+  // então o preview vem embutido como data:image.
+  window.setLogoFile = function(path, dataUrl) {
+    _logoFilePath   = path;
+    _logoResultPath = '';
+    _logoFileName   = path.replace(/.*[\\/]/, '').replace(/\.[^.]+$/, '');
+    document.getElementById('logoFilePath').value = path.replace(/.*[\\/]/, '');
+    document.getElementById('logoOrigImg').src = dataUrl || '';
+    document.getElementById('logoOrigImg').style.display = dataUrl ? 'block' : 'none';
+    document.getElementById('logoOrigPlaceholder').style.display = dataUrl ? 'none' : 'block';
+    document.getElementById('logoPreviewArea').style.display = 'block';
+    document.getElementById('logoResultImg').style.display   = 'none';
+    document.getElementById('logoResultImg').src = '';
+    document.getElementById('logoResultPlaceholder').style.display = 'block';
+    document.getElementById('logoResultBox').classList.remove('ready');
+    document.getElementById('btnRemoveBg').disabled  = false;
+    document.getElementById('btnImportMat').disabled = true;
+    document.getElementById('tintSection').style.display = 'block';
+    setLogoStatus('', '');
+  };
+
+  // Imagem de trabalho: resultado (sem fundo / tingido) se existir, senão original.
+  function _workingImage() { return _logoResultPath || _logoFilePath; }
+
+  // ── Recolorir (tingir cor sólida) ──
+  function _validHex(h) { return /^#[0-9a-fA-F]{6}$/.test(h); }
+
+  function onTintColorChange() {
+    document.getElementById('tintHex').value = document.getElementById('tintColor').value.toUpperCase();
+  }
+
+  function onTintHexInput() {
+    var h = document.getElementById('tintHex').value.trim();
+    if (_validHex(h)) document.getElementById('tintColor').value = h;
+  }
+
+  function startEyedropper() {
+    document.getElementById('btnEyedrop').classList.add('armed');
+    setLogoStatus('', 'Conta-gotas ativo — clique numa face do modelo.');
+    su('pick_color', '');
+  }
+
+  // Ruby devolve a cor capturada de uma face do modelo.
+  window.setPickedColor = function(hex) {
+    document.getElementById('btnEyedrop').classList.remove('armed');
+    if (hex && _validHex(hex)) {
+      document.getElementById('tintColor').value = hex;
+      document.getElementById('tintHex').value   = hex.toUpperCase();
+      setLogoStatus('ok', '✓ Cor capturada: ' + hex.toUpperCase());
+    } else {
+      setLogoStatus('err', 'Nenhuma cor de material encontrada nessa face.');
+    }
+  };
+
+  function applyTint() {
+    var hex = document.getElementById('tintHex').value.trim();
+    if (!_validHex(hex)) { setLogoStatus('err', 'Cor inválida. Use #RRGGBB.'); return; }
+    if (!_workingImage()) { setLogoStatus('err', 'Selecione uma imagem primeiro.'); return; }
+    setLogoStatus('', 'Aplicando cor...');
+    su('tint_logo', JSON.stringify({ path: _workingImage(), hex: hex, name: _logoFileName }));
+  }
+
+  window.tintDone = function(result) {
+    if (result.ok) {
+      _logoResultPath = result.path;
+      var img = document.getElementById('logoResultImg');
+      img.src = result.data || '';
+      img.style.display = 'block';
+      document.getElementById('logoResultPlaceholder').style.display = 'none';
+      document.getElementById('logoResultBox').classList.add('ready');
+      document.getElementById('btnImportMat').disabled = false;
+      setLogoStatus('ok', '✓ Cor aplicada.');
+    } else {
+      setLogoStatus('err', '✗ ' + result.error);
+    }
+  };
+
+  function doRemoveBg() {
+    var key = document.getElementById('rbgApiKey').value.trim();
+    if (!key)           { setLogoStatus('err', 'Informe a API key do remove.bg.'); return; }
+    if (!_logoFilePath) { setLogoStatus('err', 'Selecione uma imagem.'); return; }
+    document.getElementById('btnRemoveBg').disabled = true;
+    setLogoStatus('', 'Processando — aguarde...');
+    su('remove_bg', JSON.stringify({ path: _logoFilePath, apikey: key, name: _logoFileName }));
+  }
+
+  window.removeBgDone = function(result) {
+    document.getElementById('btnRemoveBg').disabled = false;
+    if (result.ok) {
+      _logoResultPath = result.path;
+      var img = document.getElementById('logoResultImg');
+      img.src = result.data || '';
+      img.style.display = 'block';
+      document.getElementById('logoResultPlaceholder').style.display = 'none';
+      document.getElementById('logoResultBox').classList.add('ready');
+      document.getElementById('btnImportMat').disabled = false;
+      setLogoStatus('ok', '✓ Fundo removido com sucesso.');
+    } else {
+      setLogoStatus('err', '✗ ' + result.error);
+    }
+  };
+
+  function doImportMaterial() {
+    if (!_logoResultPath) return;
+    document.getElementById('btnImportMat').disabled = true;
+    su('import_material', JSON.stringify({ path: _logoResultPath, name: _logoFileName || 'logo_sem_fundo' }));
+  }
+
+  window.importMatDone = function(result) {
+    if (result.ok) {
+      setLogoStatus('ok', '✓ Material "' + result.name + '" adicionado à paleta do SketchUp.');
+    } else {
+      document.getElementById('btnImportMat').disabled = false;
+      setLogoStatus('err', '✗ ' + result.error);
+    }
+  };
+
+  function setLogoStatus(cls, msg) {
+    var el = document.getElementById('logoStatus');
+    el.className = cls;
+    el.textContent = msg;
+  }
+</script>
+</body>
+</html>
