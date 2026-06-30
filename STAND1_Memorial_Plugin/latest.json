@@ -1,5 +1,5 @@
 {
-    "versao":  "7.1.4",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.4.rbz",
-    "notas":  "v7.1.4: corrige corrupcao de acentos (encoding) da v7.1.3. KVA com associacao por sinonimos (smart tv -\u003e TV LED) e proximidade numerica (tv 43 usa a TV LED 40 mais proxima). Itens locais nao somem ao sincronizar. Editor com secao de sinonimos."
+    "versao": "7.1.5",
+    "rbz": "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.5.rbz",
+    "notas": "v7.1.5: restaura os icones da toolbar (logo cubo) que faltavam no pacote desde a v7.1.x. Mantem KVA com sinonimos (smart tv = TV LED) e proximidade numerica, itens locais preservados no sync, e editor com secao de sinonimos."
 }
