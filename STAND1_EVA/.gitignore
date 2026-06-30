@@ -1,0 +1,6 @@
+# Tokens / chaves nunca vão para o repositório
+*.txt
+rbg_api_key*
+# Temporários
+*.tmp
+*.log
