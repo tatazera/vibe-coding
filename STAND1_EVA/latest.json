@@ -1,0 +1,5 @@
+{
+    "versao":  "1.2.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.2.0.rbz",
+    "notas":  "v1.2.0: aba Logos com preview e secao Recolorir sempre visiveis (com placeholder quando nao ha logo). Mantem persistencia robusta de CRITICALs/descricao/API key."
+}
