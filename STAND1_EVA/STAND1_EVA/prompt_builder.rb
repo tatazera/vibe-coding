@@ -66,6 +66,15 @@ module STAND1
                'lighting systems, with other booths visible in the background, slightly out of ' \
                'focus but realistic. The pavilion floor is entirely covered in polished concrete.'
         },
+        'feira_externa' => {
+          people: true,
+          env: 'Located in an open-air outdoor trade fair area, an event held outside under the ' \
+               'open sky. The booth stands out along the pedestrian circulation flow, with other ' \
+               'outdoor booths and event tents visible in the background, slightly out of focus ' \
+               'but realistic. Natural daylight with a clear sky and soft clouds, real outdoor ' \
+               'context with trees and landscaping in the distance. The ground is covered with ' \
+               'outdoor event flooring or paved concrete.'
+        },
         'neutro_claro' => {
           people: false,
           env: 'The booth is presented in isolation against a clean, seamless light off-white ' \
@@ -232,7 +241,7 @@ module STAND1
       # opts:
       #   page          => Sketchup::Page
       #   lighting      => 'frio' | 'quente'
-      #   environment   => 'feira' | 'neutro_claro' | 'neutro_cinza' | 'neutro_escuro'
+      #   environment   => 'feira' | 'feira_externa' | 'neutro_claro' | 'neutro_cinza' | 'neutro_escuro'
       #   criticals_pt  => array de strings em PT inseridas pelo usuário
       #   lang          => 'en' | 'pt'
 
