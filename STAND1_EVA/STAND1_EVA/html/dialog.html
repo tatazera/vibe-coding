@@ -434,6 +434,10 @@
     .btn-tint { background:var(--azul); color:#fff; border-color:var(--azul); }
     .btn-tint:hover { background:#142299; color:#fff; }
     #btnEyedrop.armed { background:var(--rosa); color:#fff; border-color:var(--rosa); }
+    #logoDropZone { margin-top:8px; padding:14px; border:2px dashed var(--borda); border-radius:8px;
+      text-align:center; font-size:11px; font-weight:600; color:#999; background:#fafafa;
+      cursor:default; transition:all .12s; }
+    #logoDropZone.drag { border-color:var(--azul); background:#eef1ff; color:var(--azul); }
     .tint-hint { font-size:10.5px; color:#999; margin-top:7px; line-height:1.4; }
     .logo-preview-grid { display:flex; gap:16px; }
     .logo-preview-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
@@ -557,6 +561,7 @@
       <div class="section-label">Ambiente do render</div>
       <div class="toggle-group">
         <button class="toggle-btn active" id="env-feira" onclick="setEnv('feira')">Feira</button>
+        <button class="toggle-btn" id="env-feira_externa" onclick="setEnv('feira_externa')">Feira externa</button>
         <button class="toggle-btn" id="env-neutro_claro" onclick="setEnv('neutro_claro')">Neutro claro</button>
         <button class="toggle-btn" id="env-neutro_cinza" onclick="setEnv('neutro_cinza')">Neutro cinza</button>
         <button class="toggle-btn" id="env-neutro_escuro" onclick="setEnv('neutro_escuro')">Neutro escuro</button>
@@ -730,6 +735,10 @@
         <input type="text" id="logoFilePath" readonly placeholder="Nenhum arquivo selecionado">
         <button class="btn-small" onclick="chooseLogoFile()">Selecionar...</button>
       </div>
+      <div id="logoDropZone"
+           ondragover="logoDragOver(event)" ondragleave="logoDragLeave(event)" ondrop="logoDrop(event)">
+        ⬇ Arraste um PNG ou JPEG aqui
+      </div>
     </div>
 
     <div id="logoPreviewArea">
@@ -768,8 +777,8 @@
       <button class="btn-export" id="btnRemoveBg" onclick="doRemoveBg()" disabled style="flex:1">
         Remover fundo
       </button>
-      <button class="btn-export btn-green" id="btnImportMat" onclick="doImportMaterial()" disabled style="flex:1">
-        Importar para o modelo
+      <button class="btn-export btn-green" id="btnSaveLogo" onclick="doSaveLogo()" disabled style="flex:1">
+        Salvar PNG...
       </button>
     </div>
 
@@ -825,7 +834,7 @@
   var sceneThumbs = {};          // sid => dataURL
   var curSid      = '';          // cena selecionada para CRITICALs por cena
 
-  var ENV_BTNS   = ['env-feira','env-neutro_claro','env-neutro_cinza','env-neutro_escuro'];
+  var ENV_BTNS   = ['env-feira','env-feira_externa','env-neutro_claro','env-neutro_cinza','env-neutro_escuro'];
   var BOOTH_BTNS = ['booth-ilha','booth-ponta','booth-esquina','booth-corredor'];
 
   // estado por aba: r = Render IA (cenas), p = Apresentação (cenas + export)
@@ -1097,8 +1106,8 @@
     ENV_BTNS.forEach(function(id) {
       document.getElementById(id).classList.toggle('active', id === 'env-' + e);
     });
-    // Padrão inteligente: feira tem público, fundo neutro não (só em clique do usuário).
-    if (!_applying) setPeople(e === 'feira');
+    // Padrão inteligente: feira (interna/externa) tem público, fundo neutro não (só em clique do usuário).
+    if (!_applying) setPeople(e === 'feira' || e === 'feira_externa');
     saveSettings();
   }
 
@@ -1559,11 +1568,30 @@
     document.getElementById('logoResultImg').src = '';
     document.getElementById('logoResultPlaceholder').style.display = 'block';
     document.getElementById('logoResultBox').classList.remove('ready');
-    document.getElementById('btnRemoveBg').disabled  = false;
-    document.getElementById('btnImportMat').disabled = true;
+    document.getElementById('btnRemoveBg').disabled = false;
+    document.getElementById('btnSaveLogo').disabled = false;
     document.getElementById('tintSection').style.display = 'block';
     setLogoStatus('', '');
   };
+
+  // ── Drag-and-drop de imagem ──
+  function logoDragOver(e)  { e.preventDefault(); e.stopPropagation(); document.getElementById('logoDropZone').classList.add('drag'); }
+  function logoDragLeave(e) { e.preventDefault(); document.getElementById('logoDropZone').classList.remove('drag'); }
+  function logoDrop(e) {
+    e.preventDefault(); e.stopPropagation();
+    document.getElementById('logoDropZone').classList.remove('drag');
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) { setLogoStatus('err', 'Não consegui ler o arquivo arrastado.'); return; }
+    if (!/image\/(png|jpeg)/.test(f.type) && !/\.(png|jpe?g)$/i.test(f.name)) {
+      setLogoStatus('err', 'Arraste um arquivo PNG ou JPEG.'); return;
+    }
+    setLogoStatus('', 'Carregando ' + f.name + '...');
+    var r = new FileReader();
+    r.onload  = function() { su('load_logo_data', JSON.stringify({ name: f.name, data: r.result })); };
+    r.onerror = function() { setLogoStatus('err', 'Falha ao ler o arquivo.'); };
+    r.readAsDataURL(f);
+  }
+  window.dropError = function(m) { setLogoStatus('err', '✗ ' + m); };
 
   // Imagem de trabalho: resultado (sem fundo / tingido) se existir, senão original.
   function _workingImage() { return _logoResultPath || _logoFilePath; }
@@ -1582,7 +1610,7 @@
 
   function startEyedropper() {
     document.getElementById('btnEyedrop').classList.add('armed');
-    setLogoStatus('', 'Conta-gotas ativo — clique numa face do modelo.');
+    setLogoStatus('', 'Conta-gotas ativo — clique em qualquer lugar da tela (dentro ou fora do SketchUp). ESC cancela.');
     su('pick_color', '');
   }
 
@@ -1594,7 +1622,7 @@
       document.getElementById('tintHex').value   = hex.toUpperCase();
       setLogoStatus('ok', '✓ Cor capturada: ' + hex.toUpperCase());
     } else {
-      setLogoStatus('err', 'Nenhuma cor de material encontrada nessa face.');
+      setLogoStatus('', 'Conta-gotas cancelado.');
     }
   };
 
@@ -1614,7 +1642,7 @@
       img.style.display = 'block';
       document.getElementById('logoResultPlaceholder').style.display = 'none';
       document.getElementById('logoResultBox').classList.add('ready');
-      document.getElementById('btnImportMat').disabled = false;
+      document.getElementById('btnSaveLogo').disabled = false;
       setLogoStatus('ok', '✓ Cor aplicada.');
     } else {
       setLogoStatus('err', '✗ ' + result.error);
@@ -1639,24 +1667,24 @@
       img.style.display = 'block';
       document.getElementById('logoResultPlaceholder').style.display = 'none';
       document.getElementById('logoResultBox').classList.add('ready');
-      document.getElementById('btnImportMat').disabled = false;
+      document.getElementById('btnSaveLogo').disabled = false;
       setLogoStatus('ok', '✓ Fundo removido com sucesso.');
     } else {
       setLogoStatus('err', '✗ ' + result.error);
     }
   };
 
-  function doImportMaterial() {
-    if (!_logoResultPath) return;
-    document.getElementById('btnImportMat').disabled = true;
-    su('import_material', JSON.stringify({ path: _logoResultPath, name: _logoFileName || 'logo_sem_fundo' }));
+  function doSaveLogo() {
+    var img = _workingImage();
+    if (!img) { setLogoStatus('err', 'Selecione ou processe uma imagem primeiro.'); return; }
+    setLogoStatus('', 'Escolha a pasta e o nome do arquivo...');
+    su('save_logo_png', JSON.stringify({ path: img, name: _logoFileName || 'logo' }));
   }
 
-  window.importMatDone = function(result) {
+  window.saveLogoDone = function(result) {
     if (result.ok) {
-      setLogoStatus('ok', '✓ Material "' + result.name + '" adicionado à paleta do SketchUp.');
+      setLogoStatus('ok', '✓ PNG salvo em: ' + result.path);
     } else {
-      document.getElementById('btnImportMat').disabled = false;
       setLogoStatus('err', '✗ ' + result.error);
     }
   };
@@ -1666,6 +1694,10 @@
     el.className = cls;
     el.textContent = msg;
   }
+
+  // Impede que soltar um arquivo fora da drop zone faça o CEF abrir/navegar.
+  window.addEventListener('dragover', function(e) { e.preventDefault(); }, false);
+  window.addEventListener('drop',     function(e) { e.preventDefault(); }, false);
 </script>
 </body>
 </html>
