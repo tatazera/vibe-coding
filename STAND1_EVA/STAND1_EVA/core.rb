@@ -59,6 +59,7 @@ module STAND1
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
       @dialog.add_action_callback('open_url')         { |_, url| UI.openURL(url)             }
       @dialog.add_action_callback('save_scene_criticals') { |_, msg| save_scene_criticals(msg) }
+      @dialog.add_action_callback('save_scene_camera')    { |_, msg| save_scene_camera(msg)    }
       @dialog.add_action_callback('get_scene_thumbs')     { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
       @dialog.show
@@ -113,6 +114,20 @@ module STAND1
     rescue
     end
 
+    # Salva o override de ângulo de UMA cena (por sid). msg = { sid, camera }.
+    # camera = '' (automático) ou uma das chaves de PromptBuilder::CAMERA_OVERRIDES.
+    def self.save_scene_camera(msg)
+      data  = JSON.parse(msg) rescue nil
+      return unless data && data['sid']
+      model = Sketchup.active_model
+      store = read_scene_store(model)
+      entry = store[data['sid']] || {}
+      entry['camera'] = data['camera'].to_s
+      store[data['sid']] = entry
+      write_scene_store(model, store)
+    rescue
+    end
+
     # ── Persistência de preferências (entre sessões) ──────────────────────────
 
     # Pasta de backup fora do plugin (sobrevive a reinstalação do .rbz e a
@@ -127,6 +142,21 @@ module STAND1
 
     def self.api_key_backup_file
       File.join(backup_dir, 'rbg_api_key.txt')
+    end
+
+    # Chave estável POR PROJETO: hash do caminho do .skp. Modelo nunca salvo
+    # usa 'unsaved' (compartilhado entre não-salvos — melhor que perder o texto).
+    def self.project_key(model)
+      path = (model && model.path.to_s) || ''
+      return 'unsaved' if path.strip.empty?
+      require 'digest'
+      Digest::MD5.hexdigest(path.downcase)
+    end
+
+    # Sidecar dos CRITICALs gerais: arquivo por projeto em %APPDATA%/STAND1_EVA.
+    # Persiste mesmo que o usuário NÃO salve o .skp, sem vazar entre projetos.
+    def self.criticals_backup_file(model)
+      File.join(backup_dir, "criticals_#{project_key(model)}.txt")
     end
 
     # Lê um campo por-projeto do modelo; se vazio, cai no último valor global
@@ -146,9 +176,15 @@ module STAND1
       # Descrição e CRITICALs são por-projeto (modelo .skp), com fallback ao
       # último valor global — não some mesmo se o usuário não salvou o .skp.
       obj['description'] = read_project_field(model, 'description', 'last_description')
-      # CRITICALs gerais: por-projeto SÓ no .skp (sem fallback global) — não
-      # vazam de um projeto para outro; modelo novo/vazio abre limpo.
-      obj['criticals']   = (model ? (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '') : '')
+      # CRITICALs gerais: por-projeto, no .skp + sidecar por projeto (arquivo
+      # chaveado pelo caminho do .skp). O sidecar garante que o texto NÃO some
+      # se o usuário fechar sem salvar o .skp; e não vaza entre projetos.
+      crit = (model ? (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '') : '')
+      if crit.empty?
+        f = criticals_backup_file(model)
+        crit = (File.read(f, encoding: 'UTF-8').to_s rescue '') if File.file?(f)
+      end
+      obj['criticals'] = crit
       # API key: registro dedicado + fallback em arquivo (robusto contra reset).
       key = (Sketchup.read_default(SETTINGS_KEY, 'rbg_api_key', '').to_s rescue '')
       if key.empty? && File.file?(api_key_backup_file)
@@ -170,12 +206,16 @@ module STAND1
       # Descrição e CRITICALs: gravam no modelo (.skp) E no registro global como
       # "último valor", garantindo persistência mesmo sem salvar o .skp.
       save_project_field(model, parsed.delete('description'), 'description', 'last_description')
-      # CRITICALs gerais: grava SÓ no .skp (sem registro global) — evita bleed
-      # entre projetos. Limpa o resíduo global antigo, se existir.
+      # CRITICALs gerais: grava no .skp + sidecar por projeto (arquivo chaveado
+      # pelo caminho do .skp). Sem registro global — não vaza entre projetos —
+      # mas sobrevive mesmo se o usuário não salvar o .skp.
       crit = parsed.delete('criticals')
-      if !crit.nil? && model
-        cur = (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '')
-        model.set_attribute(SETTINGS_KEY, 'criticals', crit.to_s) if cur != crit.to_s
+      unless crit.nil?
+        if model
+          cur = (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '')
+          model.set_attribute(SETTINGS_KEY, 'criticals', crit.to_s) if cur != crit.to_s
+        end
+        File.open(criticals_backup_file(model), 'w:UTF-8') { |f| f.write(crit.to_s) } rescue nil
       end
       Sketchup.write_default(SETTINGS_KEY, 'last_criticals', '') rescue nil
       # API key: NUNCA sobrescreve com vazio aqui (evita apagar a chave numa
@@ -270,13 +310,17 @@ module STAND1
       store       = read_scene_store(model)
 
       # Mapa nome-da-cena => criticals específicos (do store, por sid), em linhas.
+      # E mapa nome-da-cena => override de ângulo (do store, por sid).
       scene_crit = {}
+      scene_cam  = {}
       model.pages.each do |p|
         next unless scene_names.include?(p.name)
         entry = store[scene_sid(p)]
-        txt   = entry && entry['criticals']
-        next if txt.nil? || txt.to_s.strip.empty?
-        scene_crit[p.name] = txt.to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)
+        next unless entry
+        txt = entry['criticals']
+        scene_crit[p.name] = txt.to_s.split(/\r?\n/).map(&:strip).reject(&:empty?) unless txt.nil? || txt.to_s.strip.empty?
+        cam = entry['camera']
+        scene_cam[p.name] = cam.to_s unless cam.nil? || cam.to_s.strip.empty?
       end
 
       shared = {
@@ -286,7 +330,8 @@ module STAND1
         people:          config[:people],
         description:     config[:description]   || '',
         criticals_pt:    config[:criticals_pt] || [], # gerais (todas as cenas)
-        scene_criticals: scene_crit                    # específicos por cena
+        scene_criticals: scene_crit,                   # específicos por cena
+        scene_cameras:   scene_cam                     # override de ângulo por cena
       }
 
       results = PromptBuilder.build_all(model, scene_names, shared)
