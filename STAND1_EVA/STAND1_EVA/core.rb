@@ -52,7 +52,8 @@ module STAND1
       @dialog.add_action_callback('capture_preview')  { |_, msg| send_preview(msg)          }
       @dialog.add_action_callback('choose_logo_file') { |_, _|   choose_logo_file            }
       @dialog.add_action_callback('remove_bg')        { |_, msg| handle_remove_bg(msg)       }
-      @dialog.add_action_callback('import_material')  { |_, msg| handle_import_material(msg) }
+      @dialog.add_action_callback('save_logo_png')    { |_, msg| save_logo_png(msg)         }
+      @dialog.add_action_callback('load_logo_data')   { |_, msg| load_logo_data(msg)        }
       @dialog.add_action_callback('pick_color')       { |_, _|   start_color_pick           }
       @dialog.add_action_callback('tint_logo')        { |_, msg| handle_tint_logo(msg)       }
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
@@ -373,6 +374,19 @@ module STAND1
       ''
     end
 
+    # Executa um script PowerShell SEM piscar janela de console. `system` abre um
+    # console (mesmo com -WindowStyle Hidden o conhost aparece por um instante);
+    # o WScript.Shell.Run com estilo 0 roda totalmente oculto. Espera terminar
+    # (bWaitOnReturn=true) e devolve true se o código de saída for 0.
+    def self.run_ps_hidden(tmp_ps)
+      cmd = "powershell -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File \"#{tmp_ps}\""
+      require 'win32ole'
+      shell = WIN32OLE.new('WScript.Shell')
+      shell.Run(cmd, 0, true) == 0
+    rescue
+      system(cmd)
+    end
+
     # ── Aba Logos: remoção de fundo via remove.bg API ─────────────────────────
     # Usa System.Net.Http via PowerShell (compatível com PS 5.1+) para enviar
     # multipart form-data sem dependências externas.
@@ -428,7 +442,7 @@ module STAND1
       File.delete(err_path) rescue nil
       tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_rmbg_#{Process.pid}.ps1")
       File.write(tmp_ps, ps, encoding: 'UTF-8')
-      ok = system("powershell -NonInteractive -ExecutionPolicy Bypass -File \"#{tmp_ps}\"")
+      ok = run_ps_hidden(tmp_ps)
       File.delete(tmp_ps) rescue nil
 
       if ok && File.exist?(out_path)
@@ -455,11 +469,71 @@ module STAND1
       d.length > 160 ? (d[0, 160] + '…') : d
     end
 
-    # ── Aba Logos: conta-gotas — captura cor de uma face do modelo ────────────
+    # ── Aba Logos: conta-gotas GLOBAL — captura a cor de QUALQUER pixel da tela ─
+    # Funciona dentro do SketchUp OU em qualquer outro programa. Um processo
+    # PowerShell fica em segundo plano aguardando o próximo clique (ou ESC) e lê
+    # a cor do pixel sob o cursor. O SketchUp não trava: acompanhamos por timer.
 
     def self.start_color_pick
-      model = Sketchup.active_model
-      model.select_tool(ColorPickTool.new) if model
+      out    = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_pick_#{Process.pid}.txt")
+      tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_pick_#{Process.pid}.ps1")
+      File.delete(out) rescue nil
+      safe_out = out.gsub("'", "''")
+
+      ps = <<~PS
+        Add-Type -AssemblyName System.Drawing
+        Add-Type @"
+        using System;
+        using System.Runtime.InteropServices;
+        public class EvaPick {
+          [DllImport("user32.dll")] public static extern short GetAsyncKeyState(int k);
+          [DllImport("user32.dll")] public static extern bool GetCursorPos(out POINT p);
+          [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+          public struct POINT { public int X; public int Y; }
+        }
+        "@
+        [void][EvaPick]::SetProcessDPIAware()
+        Start-Sleep -Milliseconds 350   # ignora o clique que abriu o modo
+        $hex = 'CANCEL'
+        while ($true) {
+          if (([EvaPick]::GetAsyncKeyState(0x1B) -band 0x8000) -ne 0) { break }   # ESC cancela
+          if (([EvaPick]::GetAsyncKeyState(0x01) -band 0x8000) -ne 0) {           # clique esquerdo
+            $p = New-Object EvaPick+POINT
+            [void][EvaPick]::GetCursorPos([ref]$p)
+            $bmp = New-Object System.Drawing.Bitmap 1,1
+            $g   = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($p.X, $p.Y, 0, 0, (New-Object System.Drawing.Size 1,1))
+            $c   = $bmp.GetPixel(0,0)
+            $hex = ('{0:X2}{1:X2}{2:X2}' -f $c.R, $c.G, $c.B)
+            $g.Dispose(); $bmp.Dispose()
+            break
+          }
+          Start-Sleep -Milliseconds 20
+        }
+        [System.IO.File]::WriteAllText('#{safe_out}', $hex)
+      PS
+
+      File.write(tmp_ps, ps, encoding: 'UTF-8')
+      # Lança em segundo plano (não bloqueia o SketchUp) e sem piscar console.
+      Thread.new { run_ps_hidden(tmp_ps) }
+
+      # Cancela um pick anterior ainda pendente (evita timer órfão).
+      UI.stop_timer(@pick_timer) if @pick_timer
+      ticks = 0
+      @pick_timer = UI.start_timer(0.25, true) do
+        ticks += 1
+        done = File.exist?(out)
+        # Timeout de segurança (~30s) caso o PowerShell não escreva o resultado.
+        if done || ticks > 120
+          UI.stop_timer(@pick_timer) rescue nil
+          @pick_timer = nil
+          val = done ? (File.read(out).strip rescue '') : ''
+          File.delete(out) rescue nil
+          File.delete(tmp_ps) rescue nil
+          hex = (val =~ /\A#?[0-9A-Fa-f]{6}\z/) ? ('#' + val.delete('#').upcase) : nil
+          report_picked_color(hex)
+        end
+      end
     end
 
     # Devolve a cor capturada (#RRGGBB) ao HTML; nil dispara mensagem de erro.
@@ -520,7 +594,7 @@ module STAND1
       File.delete(out_path) rescue nil
       tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_tint_#{Process.pid}.ps1")
       File.write(tmp_ps, ps, encoding: 'UTF-8')
-      ok = system("powershell -NonInteractive -ExecutionPolicy Bypass -File \"#{tmp_ps}\"")
+      ok = run_ps_hidden(tmp_ps)
       File.delete(tmp_ps) rescue nil
 
       if ok && File.exist?(out_path)
@@ -533,65 +607,43 @@ module STAND1
       @dialog.execute_script("window.tintDone(#{{ ok: false, error: e.message }.to_json})")
     end
 
-    # ── Aba Logos: importa PNG resultante como material no modelo ─────────────
+    # ── Aba Logos: carrega imagem arrastada (drag-and-drop) ───────────────────
+    # O HTML lê o arquivo solto como data URL base64 e manda pra cá; gravamos
+    # num temp e devolvemos como se tivesse sido escolhido pelo seletor.
 
-    def self.handle_import_material(msg)
+    def self.load_logo_data(msg)
       config = JSON.parse(msg)
-      path   = config['path'].to_s
-      name   = config['name'].to_s
-      name   = 'logo_sem_fundo' if name.empty?
-
-      model = Sketchup.active_model
-      existing = model.materials[name]
-      model.materials.remove(existing) if existing
-      mat = model.materials.add(name)
-      mat.texture = path
-
-      @dialog.execute_script("window.importMatDone(#{{ ok: true, name: name }.to_json})")
+      data   = config['data'].to_s
+      raw    = config['name'].to_s
+      base   = File.basename(raw, File.extname(raw))
+      base   = 'logo' if base.strip.empty?
+      base   = base.gsub(/[^a-z0-9\-_]/i, '_')
+      ext    = data =~ %r{image/jpe?g} ? '.jpg' : '.png'
+      b64    = data.sub(/\Adata:[^,]*,/, '')
+      path   = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_drop_#{base}#{ext}")
+      File.binwrite(path, b64.unpack1('m0'))
+      @dialog.execute_script("window.setLogoFile(#{path.to_json}, #{data.to_json})")
     rescue => e
-      @dialog.execute_script("window.importMatDone(#{{ ok: false, error: e.message }.to_json})")
+      @dialog.execute_script("window.dropError(#{e.message.to_json})")
     end
 
-    # ── Conta-gotas: ferramenta que captura a cor do material sob o cursor ────
+    # ── Aba Logos: salva o PNG resultante numa pasta escolhida ────────────────
 
-    class ColorPickTool
-      def activate
-        Sketchup.set_status_text('Clique numa face para capturar a cor do material. ESC cancela.')
-        @ph = Sketchup.active_model.active_view.pick_helper
-      end
+    def self.save_logo_png(msg)
+      config = JSON.parse(msg)
+      src    = config['path'].to_s
+      name   = (config['name'].to_s.strip.empty? ? 'logo' : config['name'].to_s)
+      raise 'Nenhuma imagem para salvar.' unless File.exist?(src)
 
-      def deactivate(view)
-        Sketchup.set_status_text('')
-        view.invalidate
-      end
+      dest = UI.savepanel('Salvar PNG', @last_logo_dir || '', "#{name}.png")
+      return unless dest
+      dest += '.png' unless dest.downcase.end_with?('.png')
+      @last_logo_dir = File.dirname(dest)
+      File.binwrite(dest, File.binread(src))
 
-      def onMouseMove(_flags, x, y, view)
-        @ph.do_pick(x, y)
-        view.tooltip = color_under(view, x, y) ? 'Capturar esta cor' : 'Sem material aqui'
-      end
-
-      def onLButtonDown(_flags, x, y, view)
-        color = color_under(view, x, y)
-        hex   = color ? format('#%02X%02X%02X', color.red, color.green, color.blue) : nil
-        STAND1::EVA.report_picked_color(hex)
-        view.model.select_tool(nil)
-      end
-
-      def onCancel(_reason, view)
-        STAND1::EVA.report_picked_color(nil)
-        view.model.select_tool(nil)
-      end
-
-      # Resolve a cor do material da face sob o cursor (front, depois back).
-      def color_under(view, x, y)
-        @ph.do_pick(x, y)
-        ent = @ph.best_picked
-        return nil unless ent.is_a?(Sketchup::Face)
-        mat = ent.material || ent.back_material
-        mat && mat.color
-      rescue
-        nil
-      end
+      @dialog.execute_script("window.saveLogoDone(#{{ ok: true, path: dest }.to_json})")
+    rescue => e
+      @dialog.execute_script("window.saveLogoDone(#{{ ok: false, error: e.message }.to_json})")
     end
 
     # ── Menu + Toolbar ────────────────────────────────────────────────────────
