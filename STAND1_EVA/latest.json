@@ -1,5 +1,5 @@
 {
-    "versao":  "1.2.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.2.0.rbz",
-    "notas":  "v1.2.0: aba Logos com preview e secao Recolorir sempre visiveis (com placeholder quando nao ha logo). Mantem persistencia robusta de CRITICALs/descricao/API key."
+    "versao":  "1.3.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.3.0.rbz",
+    "notas":  "v1.3.0: CRITICALs e prompts salvos por cena (ID estavel, sobrevive a renomear) com seletor de cena; angulo da camera lido pela geometria real do estande (independente dos eixos); prompt reestruturado em secoes com ancoragem reforcada; botoes Desmarcar todas, Atualizar cenas, Miniaturas, Copiar todos e Salvar .txt."
 }
