@@ -9,7 +9,7 @@ module STAND1
 
     module AutoUpdate
 
-      VERSION       = '1.3.0'
+      VERSION       = '1.3.1'
       URL_MANIFESTO = 'https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/latest.json'
 
       # Compara "a.b.c" numericamente: remota > local?
