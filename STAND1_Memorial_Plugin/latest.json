@@ -1,5 +1,5 @@
 {
-    "versao": "7.1.5",
-    "rbz": "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.1.5.rbz",
-    "notas": "v7.1.5: restaura os icones da toolbar (logo cubo) que faltavam no pacote desde a v7.1.x. Mantem KVA com sinonimos (smart tv = TV LED) e proximidade numerica, itens locais preservados no sync, e editor com secao de sinonimos."
+    "versao":  "7.2.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.2.0.rbz",
+    "notas":  "v7.2.0: KVA reformulado - badge e painel atualizam ao vivo; editor com grupos por categoria, busca e janela redimensionavel; match automatico por similaridade de palavras (smart tv = TV LED); botao Ligar em itens sem cadastro; novo modo / m2 para paineis de LED (usa area real do modelo); publicar agora mescla com o GitHub antes de subir (nao apaga itens de outros PCs)."
 }
