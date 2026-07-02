@@ -132,6 +132,12 @@
       width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
     }
 
+    .scene-thumb {
+      width: 46px; height: 28px; flex-shrink: 0;
+      object-fit: cover; border-radius: 4px; border: 1px solid var(--borda);
+      background: #f0f0f0;
+    }
+
     .scene-item label {
       cursor: pointer; flex: 1;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -507,6 +513,9 @@
     </div>
     <div class="scenes-actions">
       <button class="btn-small" onclick="markAll('r')">Marcar todas</button>
+      <button class="btn-small" onclick="unmarkAll('r')">Desmarcar todas</button>
+      <button class="btn-small" onclick="refreshScenes()" title="Reler as cenas do SketchUp">↻ Atualizar</button>
+      <button class="btn-small" onclick="requestThumbs()" title="Gerar miniaturas das cenas">🖼 Miniaturas</button>
     </div>
     <div class="scenes-list" id="rScenesList">
       <div class="empty-scenes">Carregando cenas...</div>
@@ -562,14 +571,32 @@
     </div>
 
     <div class="section">
-      <div class="section-label">CRITICALs adicionais (PT)</div>
-      <textarea id="criticals" rows="6" onchange="saveSettings()" placeholder="Um por linha. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
-        style="width:100%;min-height:140px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
-      <div style="font-size:10px;color:#888;margin-top:4px">Arraste o canto inferior direito para aumentar a caixa. O texto é salvo automaticamente.</div>
+      <div class="section-label">CRITICALs gerais (todas as cenas)</div>
+      <textarea id="criticals" rows="4" onchange="saveSettings()" placeholder="Um por linha — valem para TODAS as cenas. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
+        style="width:100%;min-height:100px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
     </div>
 
     <div class="section">
-      <div class="section-label">Prompts gerados</div>
+      <div class="section-label">CRITICALs da cena
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— específicos, salvos por cena</span>
+      </div>
+      <select id="sceneSelect" onchange="onSceneSelect()"
+        style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff;margin-bottom:6px">
+        <option value="">— selecione uma cena —</option>
+      </select>
+      <textarea id="sceneCriticals" rows="3" onchange="saveSceneCriticals()" disabled placeholder="Selecione uma cena acima. Estes CRITICALs valem só para a cena escolhida."
+        style="width:100%;min-height:80px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
+      <div style="font-size:10px;color:#888;margin-top:4px">Salvo automaticamente por cena (sobrevive a renomear a cena).</div>
+    </div>
+
+    <div class="section">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Prompts gerados</span>
+        <span id="promptsActions" style="display:none;gap:6px">
+          <button class="btn-small" onclick="copyAllPrompts()">Copiar todos</button>
+          <button class="btn-small" onclick="savePromptsTxt()">Salvar .txt</button>
+        </span>
+      </div>
       <div id="promptsOutput">
         <div class="empty-scenes">Os prompts aparecerão aqui após gerar.</div>
       </div>
@@ -596,6 +623,9 @@
     </div>
     <div class="scenes-actions">
       <button class="btn-small" onclick="markAll('p')">Marcar todas</button>
+      <button class="btn-small" onclick="unmarkAll('p')">Desmarcar todas</button>
+      <button class="btn-small" onclick="refreshScenes()" title="Reler as cenas do SketchUp">↻ Atualizar</button>
+      <button class="btn-small" onclick="requestThumbs()" title="Gerar miniaturas das cenas">🖼 Miniaturas</button>
     </div>
     <div class="scenes-list" id="pScenesList">
       <div class="empty-scenes">Carregando cenas...</div>
@@ -784,12 +814,15 @@
 
 <script>
   // ── Estado ─────────────────────────────────────────────────────────────────
-  var scenes      = [];
+  var scenes      = [];          // [{name, sid}]
   var lighting    = 'frio';
   var environment = 'feira';
   var boothType   = 'ilha';
   var people      = true;
   var lastPrompts = [];
+  var sceneStore  = {};          // sid => { criticals, prompt }
+  var sceneThumbs = {};          // sid => dataURL
+  var curSid      = '';          // cena selecionada para CRITICALs por cena
 
   var ENV_BTNS   = ['env-feira','env-neutro_claro','env-neutro_cinza','env-neutro_escuro'];
   var BOOTH_BTNS = ['booth-ilha','booth-ponta','booth-esquina','booth-corredor'];
@@ -844,10 +877,23 @@
         // Chave já salva: recolhe a seção e mostra "Conectada".
         document.getElementById('apiHeaderEl').classList.add('collapsed');
       }
+      if (s.sceneStore && typeof s.sceneStore === 'object') {
+        sceneStore = s.sceneStore;
+        populateSceneSelect();
+        renderSavedPrompts();
+      }
       updateApiBadge();
     } catch (e) {}
     _applying = false;
   };
+
+  // Reexibe os últimos prompts salvos por cena (por projeto), ao reabrir o plugin.
+  function renderSavedPrompts() {
+    if (lastPrompts.length) return; // já há prompts recém-gerados na tela
+    var saved = scenes.filter(function(s){ return sceneStore[s.sid] && sceneStore[s.sid].prompt; })
+                      .map(function(s){ return { scene: s.name, sid: s.sid, prompt: sceneStore[s.sid].prompt }; });
+    if (saved.length) { lastPrompts = saved; paintPrompts(); }
+  }
 
   function applyRes(p, w, h) {
     if (!w || !h) return;
@@ -889,7 +935,14 @@
     renderSceneList('p');
     refreshButtons('r');
     refreshButtons('p');
+    populateSceneSelect();
+    renderSavedPrompts();
   };
+
+  function thumbTag(sid) {
+    var u = sceneThumbs[sid];
+    return u ? '<img class="scene-thumb" src="' + u + '" alt="">' : '';
+  }
 
   function renderSceneList(p) {
     var list  = document.getElementById(p === 'r' ? 'rScenesList' : 'pScenesList');
@@ -907,6 +960,7 @@
       st[p].sel[i] = true;
       return '<div class="scene-item checked" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
              '<input type="checkbox" checked id="' + p + 'chk-' + i + '" onclick="boxClick(\'' + p + '\',' + i + ',event)">' +
+             thumbTag(s.sid) +
              '<label>' + escHtml(s.name) + '</label>' +
              '</div>';
     }).join('');
@@ -939,9 +993,64 @@
     refreshButtons(p);
   }
 
+  function unmarkAll(p) {
+    scenes.forEach(function(_, i) {
+      document.getElementById(p + 'chk-' + i).checked = false;
+      st[p].sel[i] = false;
+      document.getElementById(p + 'item-' + i).classList.remove('checked');
+    });
+    refreshButtons(p);
+  }
+
   function getSelected(p) {
     return scenes.filter(function(_, i) { return st[p].sel[i]; })
                  .map(function(s) { return s.name; });
+  }
+
+  // ── U3: reler cenas do SketchUp ; U4: miniaturas ────────────────────────────
+  function refreshScenes() { su('get_scenes'); }
+
+  function requestThumbs() {
+    setStatusR('Gerando miniaturas...', '');
+    su('get_scene_thumbs', JSON.stringify({ scenes: scenes.map(function(s){ return s.name; }) }));
+  }
+
+  window.setSceneThumbs = function(map) {
+    sceneThumbs = map || {};
+    renderSceneList('r');
+    renderSceneList('p');
+    setStatusR(Object.keys(sceneThumbs).length + ' miniatura(s) geradas.', 'ok');
+  };
+
+  // ── CRITICALs por cena (seletor) ────────────────────────────────────────────
+  function populateSceneSelect() {
+    var sel = document.getElementById('sceneSelect');
+    if (!sel) return;
+    var keep = curSid;
+    sel.innerHTML = '<option value="">— selecione uma cena —</option>' +
+      scenes.map(function(s) {
+        return '<option value="' + escHtml(s.sid) + '">' + escHtml(s.name) + '</option>';
+      }).join('');
+    // restaura seleção se a cena ainda existe
+    if (keep && scenes.some(function(s){ return s.sid === keep; })) { sel.value = keep; onSceneSelect(); }
+    else { curSid = ''; document.getElementById('sceneCriticals').value = ''; document.getElementById('sceneCriticals').disabled = true; }
+  }
+
+  function onSceneSelect() {
+    var sel = document.getElementById('sceneSelect');
+    curSid = sel.value || '';
+    var ta = document.getElementById('sceneCriticals');
+    if (!curSid) { ta.value = ''; ta.disabled = true; return; }
+    ta.disabled = false;
+    ta.value = (sceneStore[curSid] && sceneStore[curSid].criticals) || '';
+  }
+
+  function saveSceneCriticals() {
+    if (!curSid) return;
+    var val = document.getElementById('sceneCriticals').value;
+    if (!sceneStore[curSid]) sceneStore[curSid] = {};
+    sceneStore[curSid].criticals = val;
+    su('save_scene_criticals', JSON.stringify({ sid: curSid, criticals: val }));
   }
 
   // ── Pasta de destino ────────────────────────────────────────────────────────
@@ -1061,8 +1170,9 @@
     var sel = getSelected('r');
     if (sel.length === 0) { setStatusR('Marque ao menos uma cena.', 'error'); return; }
 
-    // persiste descrição + criticals antes de gerar (não depende do blur do campo)
+    // persiste descrição + criticals gerais + criticals da cena antes de gerar
     saveSettings();
+    saveSceneCriticals();
 
     var criticals = document.getElementById('criticals').value
       .split('\n').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
@@ -1082,14 +1192,24 @@
   window.promptsDone = function(results) {
     lastPrompts = results || [];
     document.getElementById('btnBuild').disabled = false;
-    var out = document.getElementById('promptsOutput');
+    // sincroniza o store local com os prompts gerados (por sid)
+    lastPrompts.forEach(function(p) {
+      if (p.sid) { if (!sceneStore[p.sid]) sceneStore[p.sid] = {}; sceneStore[p.sid].prompt = p.prompt; }
+    });
+    paintPrompts();
+    setStatusR(lastPrompts.length ? (lastPrompts.length + ' prompt(s) gerados.') : 'Nenhum prompt gerado.',
+               lastPrompts.length ? 'ok' : 'error');
+  };
 
-    if (lastPrompts.length === 0) {
-      out.innerHTML = '<div class="empty-scenes">Nenhum prompt gerado.</div>';
-      setStatusR('Nenhum prompt gerado.', 'error');
+  // Renderiza lastPrompts (usado ao gerar e ao reabrir prompts salvos).
+  function paintPrompts() {
+    var out = document.getElementById('promptsOutput');
+    var act = document.getElementById('promptsActions');
+    if (!lastPrompts.length) {
+      out.innerHTML = '<div class="empty-scenes">Os prompts aparecerão aqui após gerar.</div>';
+      if (act) act.style.display = 'none';
       return;
     }
-
     out.innerHTML = lastPrompts.map(function(p, i) {
       return '<div class="prompt-card">' +
         '<div class="prompt-head">' +
@@ -1099,8 +1219,28 @@
         '<pre class="prompt-text" id="ptext-' + i + '">' + escHtml(p.prompt) + '</pre>' +
       '</div>';
     }).join('');
+    if (act) act.style.display = 'flex';
+  }
 
-    setStatusR(lastPrompts.length + ' prompt(s) gerados.', 'ok');
+  // ── U2: copiar todos / salvar .txt ──────────────────────────────────────────
+  function copyAllPrompts() {
+    if (!lastPrompts.length) return;
+    var text = lastPrompts.map(function(p){ return '=== ' + p.scene + ' ===\n' + p.prompt; }).join('\n\n');
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); setStatusR(lastPrompts.length + ' prompt(s) copiados!', 'ok'); }
+    catch (e) { setStatusR('Não foi possível copiar.', 'error'); }
+    document.body.removeChild(ta);
+  }
+
+  function savePromptsTxt() {
+    if (!lastPrompts.length) { setStatusR('Nada para salvar.', 'error'); return; }
+    su('export_prompts_txt', JSON.stringify({ prompts: lastPrompts, name: 'prompts_EVA' }));
+  }
+
+  window.promptsTxtDone = function(res) {
+    if (res && res.error) { setStatusR('Erro ao salvar: ' + res.error, 'error'); }
+    else if (res) { setStatusR('Prompts salvos em ' + res, 'ok'); }
   };
 
   window.buildError = function(msg) {
@@ -1122,7 +1262,12 @@
 
   // ── Botões / status / progresso ─────────────────────────────────────────────
   function refreshButtons(p) {
-    if (p !== 'p') return;   // Render IA: botão Gerar prompts valida no clique
+    if (p === 'r') {
+      var anyR = getSelected('r').length > 0;
+      var b = document.getElementById('btnBuild');
+      if (b) b.disabled = !anyR;
+      return;
+    }
     var any = getSelected('p').length > 0;
     document.getElementById('btnExportP').disabled = !(any && st.p.folder);
   }
