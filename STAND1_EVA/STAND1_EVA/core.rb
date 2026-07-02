@@ -145,7 +145,9 @@ module STAND1
       # Descrição e CRITICALs são por-projeto (modelo .skp), com fallback ao
       # último valor global — não some mesmo se o usuário não salvou o .skp.
       obj['description'] = read_project_field(model, 'description', 'last_description')
-      obj['criticals']   = read_project_field(model, 'criticals',   'last_criticals')
+      # CRITICALs gerais: por-projeto SÓ no .skp (sem fallback global) — não
+      # vazam de um projeto para outro; modelo novo/vazio abre limpo.
+      obj['criticals']   = (model ? (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '') : '')
       # API key: registro dedicado + fallback em arquivo (robusto contra reset).
       key = (Sketchup.read_default(SETTINGS_KEY, 'rbg_api_key', '').to_s rescue '')
       if key.empty? && File.file?(api_key_backup_file)
@@ -167,7 +169,14 @@ module STAND1
       # Descrição e CRITICALs: gravam no modelo (.skp) E no registro global como
       # "último valor", garantindo persistência mesmo sem salvar o .skp.
       save_project_field(model, parsed.delete('description'), 'description', 'last_description')
-      save_project_field(model, parsed.delete('criticals'),   'criticals',   'last_criticals')
+      # CRITICALs gerais: grava SÓ no .skp (sem registro global) — evita bleed
+      # entre projetos. Limpa o resíduo global antigo, se existir.
+      crit = parsed.delete('criticals')
+      if !crit.nil? && model
+        cur = (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '')
+        model.set_attribute(SETTINGS_KEY, 'criticals', crit.to_s) if cur != crit.to_s
+      end
+      Sketchup.write_default(SETTINGS_KEY, 'last_criticals', '') rescue nil
       # API key: NUNCA sobrescreve com vazio aqui (evita apagar a chave numa
       # gravação geral disparada por outro campo). Limpar só pelo onApiKeyInput.
       api_key = parsed.delete('rbgApiKey')
