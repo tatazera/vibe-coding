@@ -57,6 +57,9 @@ module STAND1
       @dialog.add_action_callback('tint_logo')        { |_, msg| handle_tint_logo(msg)       }
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
       @dialog.add_action_callback('open_url')         { |_, url| UI.openURL(url)             }
+      @dialog.add_action_callback('save_scene_criticals') { |_, msg| save_scene_criticals(msg) }
+      @dialog.add_action_callback('get_scene_thumbs')     { |_, msg| send_scene_thumbs(msg)    }
+      @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
       @dialog.show
 
       # Checagem silenciosa de atualização ao abrir (não bloqueia a UI).
@@ -67,8 +70,46 @@ module STAND1
 
     def self.send_scenes
       model  = Sketchup.active_model
-      scenes = model.pages.map { |p| { name: p.name } }
+      scenes = model.pages.map { |p| { name: p.name, sid: scene_sid(p) } }
       @dialog.execute_script("window.setScenes(#{scenes.to_json})")
+    end
+
+    # ID estável por cena, gravado na própria Page (sobrevive a renomear a cena).
+    def self.scene_sid(page)
+      sid = (page.get_attribute(SETTINGS_KEY, 'sid', nil) rescue nil)
+      if sid.nil? || sid.to_s.empty?
+        sid = "s#{Time.now.to_i}#{rand(100000)}"
+        page.set_attribute(SETTINGS_KEY, 'sid', sid) rescue nil
+      end
+      sid.to_s
+    end
+
+    # ── Store por cena: { sid => { "criticals" => "...", "prompt" => "..." } } ──
+    # Gravado no modelo (.skp) + fallback global (registro), como os demais campos.
+    def self.read_scene_store(model)
+      raw = (model && model.get_attribute(SETTINGS_KEY, 'scene_store', nil) rescue nil)
+      raw = (Sketchup.read_default(SETTINGS_KEY, 'last_scene_store', '') rescue '') if raw.nil? || raw.to_s.empty?
+      h = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
+      h.is_a?(Hash) ? h : {}
+    end
+
+    def self.write_scene_store(model, store)
+      json = store.to_json
+      model.set_attribute(SETTINGS_KEY, 'scene_store', json) if model
+      Sketchup.write_default(SETTINGS_KEY, 'last_scene_store', json) rescue nil
+    end
+
+    # Salva os criticals de UMA cena (por sid). msg = { sid, criticals }.
+    def self.save_scene_criticals(msg)
+      data  = JSON.parse(msg) rescue nil
+      return unless data && data['sid']
+      model = Sketchup.active_model
+      store = read_scene_store(model)
+      entry = store[data['sid']] || {}
+      entry['criticals'] = data['criticals'].to_s
+      store[data['sid']] = entry
+      write_scene_store(model, store)
+    rescue
     end
 
     # ── Persistência de preferências (entre sessões) ──────────────────────────
@@ -113,6 +154,8 @@ module STAND1
         Sketchup.write_default(SETTINGS_KEY, 'rbg_api_key', key) unless key.empty?
       end
       obj['rbgApiKey'] = key
+      # Store por cena (criticals + últimos prompts), chaveado por sid.
+      obj['sceneStore'] = read_scene_store(model)
       @dialog.execute_script("window.applySettings(#{obj.to_json})")
     end
 
@@ -213,19 +256,88 @@ module STAND1
       model  = Sketchup.active_model
       config = JSON.parse(msg, symbolize_names: true)
 
+      scene_names = config[:scenes] || []
+      store       = read_scene_store(model)
+
+      # Mapa nome-da-cena => criticals específicos (do store, por sid), em linhas.
+      scene_crit = {}
+      model.pages.each do |p|
+        next unless scene_names.include?(p.name)
+        entry = store[scene_sid(p)]
+        txt   = entry && entry['criticals']
+        next if txt.nil? || txt.to_s.strip.empty?
+        scene_crit[p.name] = txt.to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)
+      end
+
       shared = {
-        lighting:     config[:lighting]     || 'frio',
-        environment:  config[:environment]  || 'feira',
-        booth_type:   config[:booth_type]   || 'ilha',
-        people:       config[:people],
-        description:  config[:description]   || '',
-        criticals_pt: config[:criticals_pt] || []
+        lighting:        config[:lighting]     || 'frio',
+        environment:     config[:environment]  || 'feira',
+        booth_type:      config[:booth_type]   || 'ilha',
+        people:          config[:people],
+        description:     config[:description]   || '',
+        criticals_pt:    config[:criticals_pt] || [], # gerais (todas as cenas)
+        scene_criticals: scene_crit                    # específicos por cena
       }
 
-      results = PromptBuilder.build_all(model, config[:scenes] || [], shared)
+      results = PromptBuilder.build_all(model, scene_names, shared)
+
+      # Persiste o prompt gerado de cada cena no store (por sid) + devolve sid ao JS.
+      results.each do |r|
+        page = model.pages.find { |p| p.name == r[:scene] }
+        next unless page
+        sid = scene_sid(page)
+        entry = store[sid] || {}
+        entry['prompt'] = r[:prompt]
+        store[sid] = entry
+        r[:sid] = sid
+      end
+      write_scene_store(model, store)
+
       @dialog.execute_script("window.promptsDone(#{results.to_json})")
     rescue => e
       @dialog.execute_script("window.buildError(#{e.message.to_json})")
+    end
+
+    # ── U2: exporta os prompts para um .txt (savepanel) ───────────────────────
+    def self.export_prompts_txt(msg)
+      data = JSON.parse(msg) rescue nil
+      items = data && data['prompts']
+      return unless items.is_a?(Array) && !items.empty?
+      default = (data['name'].to_s.strip.empty? ? 'prompts_EVA' : data['name'].to_s) + '.txt'
+      path = UI.savepanel('Salvar prompts', '', default)
+      return unless path
+      path += '.txt' unless path.downcase.end_with?('.txt')
+      body = items.map do |it|
+        "=== #{it['scene']} ===\n#{it['prompt']}\n"
+      end.join("\n")
+      File.open(path, 'w:UTF-8') { |f| f.write(body) }
+      @dialog.execute_script("window.promptsTxtDone(#{path.to_json})")
+    rescue => e
+      @dialog.execute_script("window.promptsTxtDone(#{ { error: e.message }.to_json })")
+    end
+
+    # ── U4: miniaturas das cenas (sem trocar de página, restaura a câmera) ─────
+    def self.send_scene_thumbs(msg)
+      model = Sketchup.active_model
+      view  = model.active_view
+      names = (JSON.parse(msg)['scenes'] rescue nil)
+      pages = model.pages.select { |p| names.nil? || names.include?(p.name) }
+      orig  = view.camera
+      out   = {}
+      tmp   = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_thumb.png')
+      pages.each do |p|
+        begin
+          view.camera = p.camera
+          view.write_image(filename: tmp, width: 160, height: 96, antialias: true)
+          out[scene_sid(p)] = image_data_url(tmp)
+        rescue
+        end
+      end
+      view.camera = orig
+      view.invalidate
+      @dialog.execute_script("window.setSceneThumbs(#{out.to_json})")
+    rescue => e
+      @dialog.execute_script("window.setSceneThumbs({})")
     end
 
     # ── Aba Logos: seleção de arquivo (PNG ou JPEG) ──────────────────────────
