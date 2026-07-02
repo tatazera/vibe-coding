@@ -1,5 +1,5 @@
 {
-    "versao":  "1.3.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.3.1.rbz",
-    "notas":  "v1.3.1: correcao dos botoes da barra de Cenas (nao ficam mais escondidos); CRITICALs gerais agora salvos so por projeto (.skp), sem vazar entre projetos; numero de versao removido do cabecalho; ajustes no auto-update."
+    "versao":  "1.3.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.3.2.rbz",
+    "notas":  "v1.3.2: novo ambiente Feira externa (area externa ao ar livre); conta-gotas agora captura cor de QUALQUER lugar da tela (dentro ou fora do SketchUp); botao Importar substituido por Salvar PNG numa pasta; arrastar PNG/JPEG direto para carregar; correcao da janela do PowerShell que piscava ao aplicar cor."
 }
