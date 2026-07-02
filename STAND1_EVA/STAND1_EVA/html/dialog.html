@@ -97,10 +97,11 @@
     }
 
     .scenes-actions {
-      display: flex; gap: 8px;
+      display: flex; flex-wrap: wrap; gap: 6px;
       padding: 8px 16px;
       border-bottom: 1px solid var(--borda);
     }
+    .scenes-actions .btn-small { flex: 0 0 auto; }
 
     .btn-small {
       font-size: 11px; font-weight: 600;
@@ -486,7 +487,7 @@
     <button class="tab" id="tab-pres" onclick="switchTab('pres')">Apresentação</button>
     <button class="tab" id="tab-logos" onclick="switchTab('logos')">Logos</button>
   </div>
-  <span class="version" id="verLabel" title="Clique para checar atualização" style="cursor:pointer" onclick="su('check_update')">v1.0.0</span>
+  <span class="version" id="verLabel" title="Verificar atualização" style="cursor:pointer;margin-left:auto" onclick="su('check_update')">⟳</span>
 </header>
 
 <div class="update-banner" id="updateBanner">
