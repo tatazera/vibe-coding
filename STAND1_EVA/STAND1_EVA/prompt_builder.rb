@@ -10,12 +10,18 @@ module STAND1
 
       # ── Descrição fixa do estande (independe do ambiente) ────────────────────
 
+      # Intro enxuta: só a estética. A obrigação de "preservar o projeto" migrou para a
+      # âncora (2º parágrafo) e para o CRITICAL de ancoragem — evita redundância.
       INTRO = <<~TXT.strip
-        Contemporary exhibition booth with clean and contemporary architectural language, \
-        precise geometries, balanced proportions and refined details. The structure rigorously \
-        preserves the exact materials and geometry of the original reference image, without \
-        alterations or substitutions.
+        Contemporary exhibition booth with a clean architectural language, precise geometries, \
+        balanced proportions and refined details.
       TXT
+
+      # CRITICAL de ancoragem — reforça a descrição/projeto de referência (ponto forte p/ o modelo).
+      ANCHOR_CRITICAL =
+        'STRICTLY PRESERVE THE EXACT GEOMETRY, MATERIALS, PROPORTIONS, COLORS AND LAYOUT OF THE ' \
+        'ORIGINAL PROJECT AS DESCRIBED AND SHOWN IN THE REFERENCE IMAGE — NO ALTERATIONS, ' \
+        'ADDITIONS OR SUBSTITUTIONS.'
 
       # Bloco de pessoas — REAIS, fotografadas (combate o look de boneco/CGI).
       PEOPLE = <<~TXT.strip
@@ -94,9 +100,9 @@ module STAND1
         'quente' => 'warm white'
       }.freeze
 
+      # A preservação de geometria/proporções ficou no ANCHOR_CRITICAL (evita duplicar).
       CRITICALS_FIXED = [
         'DO NOT ADD SUSPENDED BOXTRUSS STRUCTURES.',
-        'PRESERVE EXACT GEOMETRY AND PROPORTIONS OF THE ORIGINAL PROJECT.',
         'DO NOT ADD NEW LOGOS OR GRAPHICS NOT PRESENT IN THE ORIGINAL PROJECT.'
       ].freeze
 
@@ -114,14 +120,59 @@ module STAND1
                        .sort_by(&:downcase)
       end
 
-      # ── Converte câmera de uma Scene em descrição fotográfica ────────────────
+      # ── Eixo principal da planta (independente dos eixos do mundo) ───────────
+      #
+      # O bounding box do SketchUp é sempre alinhado ao mundo, então não revela a
+      # orientação real de um estande modelado girado. Calculamos o eixo principal
+      # via PCA (análise de componentes principais) dos vértices projetados no plano
+      # XY — dá a direção dominante da geometria real, mesmo rotacionada.
 
-      # Converte a câmera da cena em descrição fotográfica. Detecta:
-      #   - projeção: perspectiva / isométrica (paralela) / planta / elevação
-      #   - orientação horizontal: frontal / três-quartos / lateral / traseira
-      #     (relativa à FRENTE do modelo = eixo -Y / "Front" padrão do SketchUp)
-      #   - altura da câmera e FOV
-      def self.camera_description(page)
+      # Coleta pontos XY da geometria (recursivo em grupos/componentes), com teto.
+      def self.collect_xy(model, cap = 4000)
+        pts = []
+        walk = nil
+        walk = lambda do |entities, tr|
+          entities.each do |e|
+            return if pts.size >= cap
+            if e.is_a?(Sketchup::Face)
+              e.vertices.each do |v|
+                p = v.position.transform(tr)
+                pts << [p.x.to_f, p.y.to_f]
+              end
+            elsif e.is_a?(Sketchup::Group)
+              walk.call(e.entities, tr * e.transformation)
+            elsif e.is_a?(Sketchup::ComponentInstance)
+              walk.call(e.definition.entities, tr * e.transformation)
+            end
+          end
+        end
+        walk.call(model.entities, Geom::Transformation.new)
+        pts
+      end
+
+      # Ângulo (radianos) do eixo principal da planta, ou nil se degenerado.
+      def self.footprint_axis(model)
+        pts = collect_xy(model)
+        return nil if pts.size < 3
+        n  = pts.size.to_f
+        mx = pts.reduce(0.0) { |s, p| s + p[0] } / n
+        my = pts.reduce(0.0) { |s, p| s + p[1] } / n
+        sxx = sxy = syy = 0.0
+        pts.each do |x, y|
+          dx = x - mx; dy = y - my
+          sxx += dx * dx; sxy += dx * dy; syy += dy * dy
+        end
+        return nil if sxx.abs < 1e-9 && syy.abs < 1e-9 && sxy.abs < 1e-9
+        0.5 * Math.atan2(2 * sxy, sxx - syy)
+      end
+
+      # ── Converte câmera de uma Scene em descrição fotográfica ────────────────
+      #
+      # axis_rad = eixo principal da planta (de footprint_axis). Se presente, a
+      # orientação horizontal é medida em relação à geometria REAL do estande
+      # (frontal/centralizada x três-quartos de esquina x lateral), independente
+      # de como o modelo está girado no mundo. Se nil, cai no eixo -Y do mundo.
+      def self.camera_description(page, axis_rad = nil)
         cam = (page.respond_to?(:camera) && page.camera) ? page.camera : nil
         return 'Three-quarter eye-level perspective view of the booth.' unless cam
 
@@ -131,40 +182,39 @@ module STAND1
 
         height_m = (eye.z.to_f * 0.0254).round(2)
 
-        # Pitch: inclinação vertical do olhar
         horiz = Math.sqrt(dir.x.to_f**2 + dir.y.to_f**2)
         pitch = horiz.zero? ? (dir.z.to_f >= 0 ? 90.0 : -90.0) :
                               Math.atan2(dir.z.to_f, horiz) * 180.0 / Math::PI
 
-        # Azimute da câmera relativo à frente (-Y): 0 = frontal, + = direita
-        to_cam = eye - target
-        az = Math.atan2(to_cam.x.to_f, -to_cam.y.to_f) * 180.0 / Math::PI
-
         perspective = cam.perspective?
-        plan_view   = pitch <= -75   # olhando quase reto para baixo
+        plan_view   = pitch <= -75
 
         view_type =
           if !perspective && plan_view          then 'Top-down orthographic plan view'
-          elsif !perspective && pitch.abs < 15  then 'Orthographic front elevation view'
+          elsif !perspective && pitch.abs < 15  then 'Orthographic elevation view'
           elsif !perspective                    then 'Isometric axonometric view'
           elsif plan_view                       then 'High-angle aerial perspective view'
           else                                       'Perspective view'
           end
 
-        # Orientação horizontal (não se aplica a planta pura)
-        orient =
-          if plan_view
-            nil
-          else
-            a    = az.abs
-            side = az >= 0 ? 'right' : 'left'
-            if a < 22.5      then 'seen from the front'
-            elsif a < 67.5   then "seen at three-quarter angle from the front-#{side}"
-            elsif a < 112.5  then "seen from the #{side} side"
-            elsif a < 157.5  then "seen at three-quarter angle from the rear-#{side}"
-            else                  'seen from the rear'
+        # Orientação horizontal relativa à geometria real (eixo principal da planta).
+        orient = nil
+        unless plan_view || horiz.zero?
+          cam_ang = Math.atan2(dir.y.to_f, dir.x.to_f) * 180.0 / Math::PI
+          ref     = axis_rad ? (axis_rad * 180.0 / Math::PI) : -90.0 # -90° = olhar p/ -Y (fallback mundo)
+          rel     = cam_ang - ref
+          rel -= 360.0 while rel > 180.0
+          rel += 360.0 while rel <= -180.0
+          # Dobra para o "facade" mais próximo (fachadas a cada 90°): offset em (-45,45].
+          k        = (rel / 90.0).round
+          face_off = rel - k * 90.0
+          a        = face_off.abs
+          side     = face_off >= 0 ? 'left' : 'right'
+          orient =
+            if a < 22.5 then 'seen centered and head-on to one facade'
+            else             "seen at a three-quarter corner angle from the #{side}"
             end
-          end
+        end
 
         parts = [view_type, 'of the booth']
         parts << orient if orient
@@ -193,6 +243,7 @@ module STAND1
         booth_key    = opts[:booth_type]   || 'ilha'
         criticals_pt = opts[:criticals_pt] || []
         description  = opts[:description].to_s.strip   # âncora, igual em todos os ângulos
+        axis_rad     = opts[:axis_rad]                 # eixo principal da planta (ou nil)
 
         light_en   = LIGHTING[lighting_key] || 'cold white'
         env        = ENVIRONMENTS[env_key]  || ENVIRONMENTS['feira']
@@ -201,32 +252,37 @@ module STAND1
         # Pessoas: toggle explícito; se não vier (nil), segue o padrão do ambiente.
         people = opts[:people].nil? ? env[:people] : opts[:people]
 
-        # Descrição do ângulo (lida da câmera da cena)
-        angle = page ? camera_description(page) : 'Three-quarter eye-level view of the booth.'
+        # Descrição do ângulo (lida da câmera da cena, relativa à geometria real)
+        angle = page ? camera_description(page, axis_rad) : 'Three-quarter eye-level view of the booth.'
 
         lighting_block = "Integrated architectural lighting is a key element: #{light_en} " \
           "artificial lighting creates a dramatic atmosphere with strong contrast and sculpted shadows, " \
           "creating a sharp luminous outline that enhances the volumetry."
 
-        # CRITICALs (fixos + pessoas, se houver + usuário traduzidos)
-        user_criticals = criticals_pt.reject { |c| c.strip.empty? }.map do |c|
+        # SUBJECT = estética (INTRO) + âncora do projeto (2º parágrafo, alta atenção).
+        subject = description.empty? ? INTRO : "#{INTRO} #{description}"
+
+        # CRITICALs: âncora primeiro (reforço), depois fixos, pessoas e os do usuário.
+        user_criticals = criticals_pt.reject { |c| c.to_s.strip.empty? }.map do |c|
           Dictionary.translate(c).upcase
         end
-        all_criticals = CRITICALS_FIXED.dup
+        all_criticals = []
+        all_criticals << ANCHOR_CRITICAL unless description.empty?
+        all_criticals += CRITICALS_FIXED
         all_criticals << PEOPLE_CRITICAL if people
         all_criticals += user_criticals
         criticals = all_criticals.map { |c| "CRITICAL: #{c}" }
 
+        # Blocos rotulados (agrupados) — o modelo interpreta melhor e fica mais enxuto.
         blocks = []
-        blocks << angle
-        blocks << INTRO
-        blocks << description unless description.empty?
-        blocks << booth_line
-        blocks << env[:env]
-        blocks << PEOPLE if people
-        blocks << lighting_block
-        blocks << CAMERA_TECH
-        blocks << criticals.join("\n")
+        blocks << "[SCENE]\n#{angle}"
+        blocks << "[SUBJECT]\n#{subject}"
+        blocks << "[BOOTH TYPE]\n#{booth_line}"
+        blocks << "[ENVIRONMENT]\n#{env[:env]}"
+        blocks << "[PEOPLE]\n#{PEOPLE}" if people
+        blocks << "[LIGHTING]\n#{lighting_block}"
+        blocks << "[PHOTOGRAPHY]\n#{CAMERA_TECH}"
+        blocks << "[CRITICALS]\n#{criticals.join("\n")}"
 
         safe_utf8(blocks.join("\n\n"))
       end
@@ -242,11 +298,16 @@ module STAND1
       # ── Monta prompts para várias Scenes ─────────────────────────────────────
 
       def self.build_all(model, scene_names, shared_opts)
+        # Eixo principal da planta: calculado UMA vez por modelo (custo amortizado).
+        axis_rad = (footprint_axis(model) rescue nil)
         pages = model.pages.select { |p| scene_names.include?(p.name) }
         pages.map do |page|
+          # criticals por cena (se vierem no mapa), senão os gerais compartilhados.
+          per_scene = shared_opts[:scene_criticals] && shared_opts[:scene_criticals][page.name]
+          crit = (shared_opts[:criticals_pt] || []) + (per_scene || [])
           {
             scene:  safe_utf8(page.name),
-            prompt: build(shared_opts.merge(page: page))
+            prompt: build(shared_opts.merge(page: page, axis_rad: axis_rad, criticals_pt: crit))
           }
         end
       end
