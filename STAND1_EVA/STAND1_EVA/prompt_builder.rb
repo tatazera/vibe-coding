@@ -109,6 +109,20 @@ module STAND1
         'quente' => 'warm white'
       }.freeze
 
+      # ── Ângulos de câmera para OVERRIDE manual ───────────────────────────────
+      # Quando o usuário escolhe um destes por cena, a frase abaixo SUBSTITUI por
+      # completo a leitura automática (camera_description). '' ou 'auto' = automático.
+      CAMERA_OVERRIDES = {
+        'centered'  => 'Perspective eye-level view of the booth, seen centered and head-on to its main facade, camera at approximately 1.6m height.',
+        'tq_left'   => 'Perspective eye-level view of the booth, seen at a three-quarter corner angle from the left, camera at approximately 1.6m height.',
+        'tq_right'  => 'Perspective eye-level view of the booth, seen at a three-quarter corner angle from the right, camera at approximately 1.6m height.',
+        'lateral'   => 'Perspective eye-level view of the booth, seen from the side along its length, camera at approximately 1.6m height.',
+        'iso'       => 'Isometric axonometric view of the booth, three-quarter angle showing two adjacent sides.',
+        'plan'      => 'Top-down orthographic plan view of the booth, seen directly from above.',
+        'aerial'    => 'High-angle aerial perspective view of the booth, looking down at a three-quarter angle.',
+        'elevation' => 'Orthographic front elevation view of the booth, head-on and perfectly level.'
+      }.freeze
+
       # A preservação de geometria/proporções ficou no ANCHOR_CRITICAL (evita duplicar).
       CRITICALS_FIXED = [
         'DO NOT ADD SUSPENDED BOXTRUSS STRUCTURES.',
@@ -253,6 +267,7 @@ module STAND1
         criticals_pt = opts[:criticals_pt] || []
         description  = opts[:description].to_s.strip   # âncora, igual em todos os ângulos
         axis_rad     = opts[:axis_rad]                 # eixo principal da planta (ou nil)
+        cam_override = opts[:camera_override].to_s.strip # ângulo manual por cena ('' = auto)
 
         light_en   = LIGHTING[lighting_key] || 'cold white'
         env        = ENVIRONMENTS[env_key]  || ENVIRONMENTS['feira']
@@ -261,8 +276,16 @@ module STAND1
         # Pessoas: toggle explícito; se não vier (nil), segue o padrão do ambiente.
         people = opts[:people].nil? ? env[:people] : opts[:people]
 
-        # Descrição do ângulo (lida da câmera da cena, relativa à geometria real)
-        angle = page ? camera_description(page, axis_rad) : 'Three-quarter eye-level view of the booth.'
+        # Ângulo: override manual (substitui a leitura automática) OU leitura da
+        # câmera da cena relativa à geometria real. Só uma fonte entra no [SCENE].
+        angle =
+          if CAMERA_OVERRIDES.key?(cam_override)
+            CAMERA_OVERRIDES[cam_override]
+          elsif page
+            camera_description(page, axis_rad)
+          else
+            'Three-quarter eye-level view of the booth.'
+          end
 
         lighting_block = "Integrated architectural lighting is a key element: #{light_en} " \
           "artificial lighting creates a dramatic atmosphere with strong contrast and sculpted shadows, " \
@@ -314,9 +337,10 @@ module STAND1
           # criticals por cena (se vierem no mapa), senão os gerais compartilhados.
           per_scene = shared_opts[:scene_criticals] && shared_opts[:scene_criticals][page.name]
           crit = (shared_opts[:criticals_pt] || []) + (per_scene || [])
+          cam  = shared_opts[:scene_cameras] && shared_opts[:scene_cameras][page.name]
           {
             scene:  safe_utf8(page.name),
-            prompt: build(shared_opts.merge(page: page, axis_rad: axis_rad, criticals_pt: crit))
+            prompt: build(shared_opts.merge(page: page, axis_rad: axis_rad, criticals_pt: crit, camera_override: cam))
           }
         end
       end
