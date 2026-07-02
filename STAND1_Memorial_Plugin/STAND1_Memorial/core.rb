@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.1.5"
+  VERSAO        = "7.2.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1387,9 +1387,13 @@ module STAND1_Memorial
       it["dim_l"] = l; it["dim_p"] = p; it["dim_a"] = a
       it
 
-    # EQUIPAMENTOS: apenas nome + quantidade
+    # EQUIPAMENTOS: nome + quantidade. Carrega a área unitária da face frontal
+    # (2 maiores dimensões) para o cálculo de KVA "/ m²" (painéis de LED etc.).
     when "EQUIPAMENTOS"
-      build_item(nome, qtd, "und.")
+      it = build_item(nome, qtd, "und.")
+      d1, d2, _esp = [l, p, a].sort.reverse
+      it["area_m2"] = (d1 * d2).round(2)
+      it
 
     # ELÉTRICA: fitas LED em metro linear (área da textura ÷ largura), demais em und.
     when "ELÉTRICA"
@@ -1859,8 +1863,22 @@ module STAND1_Memorial
         http.open_timeout = 10; http.read_timeout = 30
         req_get = Net::HTTP::Get.new(uri.request_uri)
         req_get["Authorization"] = "token #{token}"; req_get["User-Agent"] = "STAND1_Memorial/#{VERSAO}"
-        sha = JSON.parse(http.request(req_get).body)["sha"] rescue nil
+        # Merge-on-publish: mescla com o remoto ANTES do PUT (local vence em conflito,
+        # itens/sinônimos só-remotos são preservados) — evita last-writer-wins entre PCs.
+        sha = nil; remoto = nil
+        begin
+          gj  = JSON.parse(http.request(req_get).body)
+          sha = gj["sha"]
+          remoto = JSON.parse(Base64.decode64(gj["content"].to_s).force_encoding("UTF-8")) if gj["content"]
+        rescue; end
         tabela_obj = JSON.parse(tabela_json)
+        if remoto
+          itens = mesclar_itens_kva(normalizar_kva(tabela_obj), normalizar_kva(remoto))
+          sins  = mesclar_sinonimos_kva(extrair_sinonimos_kva(tabela_obj), extrair_sinonimos_kva(remoto))
+          tabela_obj = { "itens" => itens, "_sinonimos" => sins }
+          # Estado local reflete o merged (o que foi publicado é o que fica).
+          salvar_kva_table_local(tabela_obj); salvar_kva_sinonimos(sins)
+        end
         body_put = { message: "kva_table: atualizado pelo plugin v#{VERSAO}", content: Base64.strict_encode64(JSON.pretty_generate(tabela_obj)) }
         body_put[:sha] = sha if sha
         req_put = Net::HTTP::Put.new(uri.request_uri)
