@@ -578,7 +578,7 @@
 
     <div class="section">
       <div class="section-label">CRITICALs gerais (todas as cenas)</div>
-      <textarea id="criticals" rows="4" onchange="saveSettings()" placeholder="Um por linha — valem para TODAS as cenas. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
+      <textarea id="criticals" rows="4" onchange="saveSettings()" oninput="criticalsDebounce()" placeholder="Um por linha — valem para TODAS as cenas. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
         style="width:100%;min-height:100px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
     </div>
 
@@ -590,9 +590,26 @@
         style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff;margin-bottom:6px">
         <option value="">— selecione uma cena —</option>
       </select>
-      <textarea id="sceneCriticals" rows="3" onchange="saveSceneCriticals()" disabled placeholder="Selecione uma cena acima. Estes CRITICALs valem só para a cena escolhida."
+      <textarea id="sceneCriticals" rows="3" onchange="saveSceneCriticals()" oninput="sceneCriticalsDebounce()" disabled placeholder="Selecione uma cena acima. Estes CRITICALs valem só para a cena escolhida."
         style="width:100%;min-height:80px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
       <div style="font-size:10px;color:#888;margin-top:4px">Salvo automaticamente por cena (sobrevive a renomear a cena).</div>
+
+      <div class="section-label" style="margin-top:12px">Ângulo da câmera
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— só use se a leitura automática errar</span>
+      </div>
+      <select id="sceneCamera" onchange="saveSceneCamera()" disabled
+        style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff">
+        <option value="">Automático (ler da cena)</option>
+        <option value="centered">Frontal / centralizado</option>
+        <option value="tq_left">Três-quartos — esquina esquerda</option>
+        <option value="tq_right">Três-quartos — esquina direita</option>
+        <option value="lateral">Lateral</option>
+        <option value="iso">Isométrica</option>
+        <option value="aerial">Aérea (alto ângulo)</option>
+        <option value="plan">Planta (vista de cima)</option>
+        <option value="elevation">Elevação frontal</option>
+      </select>
+      <div style="font-size:10px;color:#888;margin-top:4px">Ao escolher um ângulo, ele SUBSTITUI a leitura automática (não soma).</div>
     </div>
 
     <div class="section">
@@ -1043,16 +1060,23 @@
       }).join('');
     // restaura seleção se a cena ainda existe
     if (keep && scenes.some(function(s){ return s.sid === keep; })) { sel.value = keep; onSceneSelect(); }
-    else { curSid = ''; document.getElementById('sceneCriticals').value = ''; document.getElementById('sceneCriticals').disabled = true; }
+    else {
+      curSid = '';
+      document.getElementById('sceneCriticals').value = ''; document.getElementById('sceneCriticals').disabled = true;
+      var cam = document.getElementById('sceneCamera'); cam.value = ''; cam.disabled = true;
+    }
   }
 
   function onSceneSelect() {
     var sel = document.getElementById('sceneSelect');
     curSid = sel.value || '';
-    var ta = document.getElementById('sceneCriticals');
-    if (!curSid) { ta.value = ''; ta.disabled = true; return; }
-    ta.disabled = false;
-    ta.value = (sceneStore[curSid] && sceneStore[curSid].criticals) || '';
+    var ta  = document.getElementById('sceneCriticals');
+    var cam = document.getElementById('sceneCamera');
+    if (!curSid) { ta.value = ''; ta.disabled = true; cam.value = ''; cam.disabled = true; return; }
+    ta.disabled  = false;
+    ta.value     = (sceneStore[curSid] && sceneStore[curSid].criticals) || '';
+    cam.disabled = false;
+    cam.value    = (sceneStore[curSid] && sceneStore[curSid].camera) || '';
   }
 
   function saveSceneCriticals() {
@@ -1061,6 +1085,26 @@
     if (!sceneStore[curSid]) sceneStore[curSid] = {};
     sceneStore[curSid].criticals = val;
     su('save_scene_criticals', JSON.stringify({ sid: curSid, criticals: val }));
+  }
+
+  function saveSceneCamera() {
+    if (!curSid) return;
+    var val = document.getElementById('sceneCamera').value;
+    if (!sceneStore[curSid]) sceneStore[curSid] = {};
+    sceneStore[curSid].camera = val;
+    su('save_scene_camera', JSON.stringify({ sid: curSid, camera: val }));
+  }
+
+  // Salva enquanto digita (debounce 800ms) — o onchange (blur) pode nunca
+  // disparar se o usuário fechar o diálogo com o foco ainda no textarea.
+  var _critT = null, _scritT = null;
+  function criticalsDebounce() {
+    clearTimeout(_critT);
+    _critT = setTimeout(saveSettings, 800);
+  }
+  function sceneCriticalsDebounce() {
+    clearTimeout(_scritT);
+    _scritT = setTimeout(saveSceneCriticals, 800);
   }
 
   // ── Pasta de destino ────────────────────────────────────────────────────────
