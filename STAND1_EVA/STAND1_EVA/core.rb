@@ -329,7 +329,9 @@ module STAND1
         criticals_pt:    config[:criticals_pt] || [], # gerais (todas as cenas)
         scene_criticals: scene_crit,                   # específicos por cena
         scene_cameras:   scene_cam,                    # override de ângulo por cena
-        image_mode:      !!config[:image_mode]         # prompt p/ PNG anexado
+        # O EVA sempre gera prompt ancorado na imagem exportada (config[:image_mode]
+        # não vem mais do HTML desde a simplificação do toggle "Texto puro"; default true).
+        image_mode:      config.key?(:image_mode) ? !!config[:image_mode] : true
       }
 
       results = PromptBuilder.build_all(model, scene_names, shared)
