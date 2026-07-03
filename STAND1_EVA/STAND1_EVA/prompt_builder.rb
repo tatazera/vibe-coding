@@ -42,6 +42,14 @@ module STAND1
         'SAME PROPORTIONS AND SAME LAYOUT. DO NOT ADD, REMOVE, MOVE, RESIZE OR REDESIGN ANY ' \
         'ELEMENT OF THE BOOTH.'
 
+      # Nota para imagens de referência extras (multi-imagem): a 1ª imagem é a
+      # viewport (âncora); as seguintes são referências de elementos específicos.
+      REFERENCES_NOTE =
+        'The first attached image is the booth viewport (the anchor). Any additional attached ' \
+        'images are visual references for specific elements — logos, materials, colors or finishes. ' \
+        'Reproduce those referenced elements faithfully and apply them to the matching parts of the ' \
+        'booth, WITHOUT changing the geometry, camera or layout of the viewport.'
+
       # Bloco de pessoas — REAIS, fotografadas (combate o look de boneco/CGI).
       PEOPLE = <<~TXT.strip
         The people are real human beings captured in a candid street and documentary photograph — \
@@ -335,8 +343,11 @@ module STAND1
         criticals = all_criticals.map { |c| "CRITICAL: #{c}" }
 
         # Blocos rotulados (agrupados) — o modelo interpreta melhor e fica mais enxuto.
+        ref_count = opts[:ref_count].to_i
+
         blocks = []
         blocks << "[TASK]\n#{IMAGE_TASK}" if image_mode
+        blocks << "[REFERENCES]\n#{REFERENCES_NOTE}" if image_mode && ref_count > 0
         blocks << "[SCENE]\n#{angle}" if angle
         blocks << "[SUBJECT]\n#{subject}"
         blocks << "[BOOTH TYPE]\n#{booth_line}"
