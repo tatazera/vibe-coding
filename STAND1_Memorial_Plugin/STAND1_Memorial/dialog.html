@@ -131,6 +131,13 @@
   .btn-lupa svg { width: 11px; height: 11px; }
   .btn-excluir { color: #ccc; font-size: 10px; font-weight: 700; font-family: var(--font); }
   .btn-excluir:hover { background: #e74c3c; color: #fff; border-color: transparent; }
+  .btn-olho { background: transparent; border: 1px solid var(--borda); border-radius: 4px; width: 20px; height: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; padding: 0; color: #bbb; }
+  .btn-olho:hover { color: var(--azul); border-color: var(--azul); }
+  .btn-olho.oculto { color: #fff; background: #8a8a96; border-color: transparent; }
+  .btn-olho svg { width: 12px; height: 12px; }
+  li.item-oculto .item-desc, li.item-oculto .qtd, li.item-oculto .item-obs-print { opacity: .42; text-decoration: line-through; text-decoration-color: rgba(0,0,0,.35); }
+  li.item-oculto::before { opacity: .35; }
+  .tag-oculto { font-size: 8.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; color: #8a8a96; border: 1px solid #cfcfd8; border-radius: 3px; padding: 1px 5px; flex-shrink: 0; align-self: center; white-space: nowrap; }
 
   /* Modal base */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: flex; align-items: center; justify-content: center; }
@@ -304,7 +311,11 @@
   body.dark .item-desc-edit { border-bottom-color: rgba(125,162,255,0.35); }
   body.dark .item-desc-edit:hover { background: rgba(125,162,255,0.10); }
   body.dark .item-desc-edit:focus { background: rgba(125,162,255,0.16); border-bottom-color: #7da2ff; }
-  body.dark .btn-lupa, body.dark .btn-excluir, body.dark .btn-obs { border-color: #2e2f3a; }
+  body.dark .btn-lupa, body.dark .btn-excluir, body.dark .btn-obs, body.dark .btn-olho { border-color: #2e2f3a; }
+  body.dark .btn-olho:hover { color: #7da2ff; border-color: #7da2ff; }
+  body.dark .btn-olho.oculto { background: #3a3c4a; border-color: transparent; }
+  body.dark li.item-oculto .item-desc, body.dark li.item-oculto .qtd { text-decoration-color: rgba(255,255,255,.4); }
+  body.dark .tag-oculto { color: #8a8ea6; border-color: #3a3c4a; }
   body.dark .btn-lupa { color: #7da2ff; }
   body.dark .item-obs-input { color: #b8b9c6; border-bottom-color: #3a3c52; }
   body.dark .item-obs-print { color: #8a8b99; }
@@ -343,7 +354,8 @@
     ul.itens li::before { content: '■' !important; color: #1A2DB8 !important; background: none !important; }
     .item-desc { color: #222 !important; display: inline !important; }
     .qtd { color: #1A2DB8 !important; background: none !important; }
-    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .drag-handle, .badge-manual { display: none !important; }
+    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .btn-olho, .drag-handle, .badge-manual, .tag-oculto { display: none !important; }
+    li.item-oculto { display: none !important; }
     .item-qtd-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; }
     .item-desc-edit, body.bloqueado .item-desc-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; pointer-events: none !important; }
     .item-obs-wrap { display: none !important; }
@@ -891,7 +903,23 @@ function _acharSecaoIdx(sn, esp){
 
 function excluirItem(sn,ch,esp){ var i=_acharSecaoIdx(sn,esp); if(i>=0){dadosMemorial[i].itens=dadosMemorial[i].itens.filter(function(it){return it.chave!==ch;}); if(!dadosMemorial[i].itens.length) dadosMemorial.splice(i,1);} atualizarStatus(); renderizar(); persistirEstado(); }
 
-function atualizarStatus(){ var t=dadosMemorial.reduce(function(s,sc){return s+sc.itens.length;},0); document.getElementById('statusTag').textContent=dadosMemorial.length+' seção(ões) · '+t+' item(ns)'; }
+function atualizarStatus(){ var t=0,oc=0; dadosMemorial.forEach(function(sc){ sc.itens.forEach(function(it){ t++; if(it.oculto) oc++; }); }); document.getElementById('statusTag').textContent=dadosMemorial.length+' seção(ões) · '+t+' item(ns)'+(oc?' · '+oc+' oculto(s)':''); }
+
+// Oculta/mostra o item nas exportações (PDF/TXT/Copiar/KVA). Continua visível
+// no preview interno, esmaecido. Flag persiste no .skp e sobrevive ao Atualizar.
+function toggleOcultarItem(sn,ch,esp){
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  for(var j=0;j<dadosMemorial[i].itens.length;j++){
+    if(dadosMemorial[i].itens[j].chave===ch){
+      dadosMemorial[i].itens[j].oculto=!dadosMemorial[i].itens[j].oculto;
+      break;
+    }
+  }
+  atualizarStatus(); renderizar(); persistirEstado();
+}
+
+// Itens que entram nas exportações e no cálculo de KVA (exclui os ocultos).
+function _itensExport(sec){ return (sec.itens||[]).filter(function(it){ return !it.oculto; }); }
 function atualizarProjeto(v){ nomeProjeto=v; document.querySelectorAll('.fpn').forEach(function(e){e.textContent=v||nomeArquivo;}); document.querySelectorAll('.meta-proj').forEach(function(e){e.textContent=v?'Projeto: '+v:'';}); persistirEstado(); }
 function atualizarResponsavel(v){ nomeResponsavel=v; document.querySelectorAll('.meta-resp').forEach(function(e){e.textContent=v?'Resp.: '+v:'';}); persistirEstado(); }
 function atualizarRevisao(v){ revisao=v||'00'; document.querySelectorAll('.meta-rev').forEach(function(e){e.textContent='Revisão: '+revisao;}); persistirEstado(); }
@@ -1535,7 +1563,12 @@ function renderizar(){
       var descHtml='<span class="item-desc-edit" contenteditable="true" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-ch="'+escaparAttr(item.chave||'')+'" onblur="salvarDescricao(this)" title="Clique para editar a descrição">'+escaparAttr(fmtMedidas(item.descricao))+'</span>';
       var handle='<span class="drag-handle" draggable="true" ondragstart="dragItem(event,this.parentNode)" title="Arrastar para reordenar">⋮</span>';
       var badge=(item.origem==='manual'||item.editado)?'<span class="badge-manual" title="Item manual ou editado — preservado no Atualizar">✎</span>':'';
-      return '<li data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+lupa+btnObs+exc+obsWrap+obsPrint+'</li>';
+      var eyeSvg=item.oculto
+        ?'<svg viewBox="0 0 16 16" fill="none"><path d="M2 10c1.5 1.6 3.5 2.6 6 2.6s4.5-1 6-2.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 12.8v1.6M4 11.9l-.9 1.4M12 11.9l.9 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+        :'<svg viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.9" stroke="currentColor" stroke-width="1.4"/></svg>';
+      var olho=item.chave?'<button class="btn-olho'+(item.oculto?' oculto':'')+'" title="'+(item.oculto?'Mostrar na exportação':'Ocultar na exportação')+'" onclick="toggleOcultarItem(\''+escaparChave(sn)+'\',\''+escaparChave(item.chave)+'\',\''+escaparChave(esp)+'\')">'+eyeSvg+'</button>':'';
+      var tagOculto=item.oculto?'<span class="tag-oculto">oculto no export</span>':'';
+      return '<li'+(item.oculto?' class="item-oculto"':'')+' data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+tagOculto+lupa+btnObs+olho+exc+obsWrap+obsPrint+'</li>';
     }).join('');
     return cab+'<div class="secao" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+escaparAttr(_secaoBase(sn))+'</div><ul class="itens">'+ih+'</ul></div>';
   }).join('');
@@ -1578,13 +1611,15 @@ function buildHTMLStandalone(){
 
   var _lastEspP=null;
   var corpo=dadosMemorial.map(function(sec){
+    var visiveis=_itensExport(sec);
+    if(!visiveis.length) return '';
     var cab='';
     if(sec._espaco && sec._espaco!==_lastEspP){
       if(_lastEspP!==null) cab+='<div class="pespaco-divisor"></div>';
       cab+='<div class="pespaco-titulo">'+escaparHtml(sec._espaco)+'</div>';
       _lastEspP=sec._espaco;
     }
-    var itens=sec.itens.map(function(it){
+    var itens=visiveis.map(function(it){
       var d=escaparHtml(fmtMedidas(it.descricao));
       var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
       return '<li>'+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+'</li>';
@@ -1719,6 +1754,8 @@ function buildTextoMemorial(ocultarMedidas, comDecoracao){
   t+=comDecoracao ? '============================================================\n\n' : '\n';
   var _lastEspT=null;
   dadosMemorial.forEach(function(sec){
+    var visiveis=_itensExport(sec);
+    if(!visiveis.length) return;
     if(sec._espaco && sec._espaco!==_lastEspT){
       if(_lastEspT!==null) t+='\n────────────────────────────────────────\n\n';
       t+='### '+sec._espaco.toUpperCase()+' ###\n\n';
@@ -1726,7 +1763,7 @@ function buildTextoMemorial(ocultarMedidas, comDecoracao){
     }
     t+=_secaoBase(sec.secao)+'\n';
     if(comDecoracao) t+='----------------------------------------\n';
-    sec.itens.forEach(function(item){
+    visiveis.forEach(function(item){
       var desc=ocultarMedidas ? limparDescricao(item.descricao) : fmtMedidas(item.descricao);
       t+='  '+desc+' - '+fmtQtd(item.quantidade)+' '+item.unidade+'\n';
       if(item.obs&&item.obs.trim()) t+='    Obs: '+item.obs.trim()+'\n';
@@ -1958,7 +1995,7 @@ function buildHTMLRevisaoCompleta(){
       _lastEspR=sec._espaco;
     }
     var ksec=(sec._espaco?sec._espaco+'::':'')+_secaoBase(sec.secao);
-    var itens=sec.itens.map(function(it){
+    var itens=_itensExport(sec).map(function(it){
       var d=escaparHtml(fmtMedidas(it.descricao));
       var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
       var info=alterados[chaveDiff(sec._espaco,sec.secao,it.descricao)];
@@ -2155,7 +2192,7 @@ function calcularKVAJS(){
   dadosMemorial.forEach(function(sec){
     if(SECOES_KVA.indexOf(_secaoBase(sec.secao)) < 0) return;
     var itens = [];
-    (sec.itens||[]).forEach(function(item){
+    _itensExport(sec).forEach(function(item){
       var desc = (item.descricao||''), qtd = parseFloat(item.quantidade)||0;
       var achado = _matchKVA(desc, entradas);
       var match = achado && achado.entrada;
