@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.0.rbz",
-    "notas":  "v1.4.0: modo de prompt Com imagem anexada (a viewport vira a ancora de geometria e camera); nova aba Estudio para gerar render direto no plugin via API do Gemini (Nano Banana); sincronizacao por projeto reforcada (criticals por cena, descricao e prompts nao vazam mais entre projetos)."
+    "versao":  "1.4.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.1.rbz",
+    "notas":  "v1.4.1: aba Estudio remodelada (visual moderno, visualizador unico com Viewport/Render e segurar-para-comparar, chave API ocultavel, progresso); campo Instrucoes desta cena para sinalizar itens especificos; imagens de referencia (logo/material) enviadas junto da viewport."
 }
