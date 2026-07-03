@@ -1,5 +1,5 @@
 {
-    "versao":  "7.2.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.2.0.rbz",
-    "notas":  "v7.2.0: KVA reformulado - badge e painel atualizam ao vivo; editor com grupos por categoria, busca e janela redimensionavel; match automatico por similaridade de palavras (smart tv = TV LED); botao Ligar em itens sem cadastro; novo modo / m2 para paineis de LED (usa area real do modelo); publicar agora mescla com o GitHub antes de subir (nao apaga itens de outros PCs)."
+    "versao":  "7.2.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.2.1.rbz",
+    "notas":  "v7.2.1: novo botao de olho por item para ocultar itens na exportacao - item oculto continua no memorial (esmaecido) mas sai do PDF, TXT, Copiar e do calculo de KVA; contador de ocultos na barra de status; flag persiste no arquivo e sobrevive ao Atualizar."
 }
