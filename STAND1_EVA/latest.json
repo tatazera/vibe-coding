@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.1.rbz",
-    "notas":  "v1.4.1: aba Estudio remodelada (visual moderno, visualizador unico com Viewport/Render e segurar-para-comparar, chave API ocultavel, progresso); campo Instrucoes desta cena para sinalizar itens especificos; imagens de referencia (logo/material) enviadas junto da viewport."
+    "versao":  "1.4.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.2.rbz",
+    "notas":  "v1.4.2: simplificacao do prompt — removido o modo Texto puro; o prompt agora e SEMPRE ancorado na imagem da cena (gerar prompt + anexar o print da mesma cena no Nano Banana). Menos confusao, ancoragem maxima por padrao."
 }
