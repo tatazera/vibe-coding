@@ -628,16 +628,12 @@
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-label">Modo do prompt</div>
-      <div class="toggle-group">
-        <button class="toggle-btn active" id="pmode-text" onclick="setPromptMode('text')">Texto puro</button>
-        <button class="toggle-btn" id="pmode-image" onclick="setPromptMode('image')">Com imagem anexada ★</button>
-      </div>
-      <div style="font-size:10.5px;color:#999;margin-top:6px;line-height:1.4">
-        <b>Com imagem anexada (recomendado):</b> exporte o PNG da cena na aba Apresentação e anexe
-        junto do prompt no Nano Banana. A imagem vira a âncora de geometria e câmera — o prompt
-        instrui a preservar tudo e não descreve o ângulo (o ângulo por cena é ignorado neste modo).
+    <div class="section" style="background:#f4f6ff;border:1px solid #dde3ff;border-radius:8px;padding:10px 12px">
+      <div style="font-size:11.5px;color:var(--azul);font-weight:700">🖼️ Prompt ancorado na imagem</div>
+      <div style="font-size:10.5px;color:#666;margin-top:4px;line-height:1.4">
+        O prompt é gerado para uso <b>sempre junto</b> com o PNG da cena (exporte na aba Apresentação
+        e anexe os dois no Nano Banana). A imagem é a âncora de geometria e câmera — o prompt não
+        descreve o ângulo em texto, só instrui a preservar exatamente o que está na foto.
       </div>
     </div>
 
@@ -1065,7 +1061,6 @@
       if (s.lighting)                    setLight(s.lighting);
       if (s.environment)                 setEnv(s.environment);
       if (s.boothType)                   setBooth(s.boothType);
-      if (s.promptMode)                  setPromptMode(s.promptMode);
       if (typeof s.people === 'boolean') setPeople(s.people);
       if (typeof s.description === 'string') document.getElementById('boothDesc').value = s.description;
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
@@ -1122,7 +1117,7 @@
     var pRes = readRes('p');
     var s = {
       pBg: st.p.bg, lighting: lighting, environment: environment,
-      boothType: boothType, people: people, promptMode: promptMode,
+      boothType: boothType, people: people,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
       description: document.getElementById('boothDesc').value,
@@ -1346,14 +1341,6 @@
     saveSettings();
   }
 
-  var promptMode = 'text';
-  function setPromptMode(m) {
-    promptMode = (m === 'image') ? 'image' : 'text';
-    document.getElementById('pmode-text').classList.toggle('active', promptMode === 'text');
-    document.getElementById('pmode-image').classList.toggle('active', promptMode === 'image');
-    saveSettings();
-  }
-
   function setBooth(b) {
     boothType = b;
     BOOTH_BTNS.forEach(function(id) {
@@ -1433,7 +1420,7 @@
     var config = {
       scenes: sel, lighting: lighting, environment: environment,
       booth_type: boothType, people: people,
-      image_mode: promptMode === 'image',
+      image_mode: true, // o prompt do EVA é sempre ancorado na imagem exportada
       description: document.getElementById('boothDesc').value.trim(),
       criticals_pt: criticals
     };
