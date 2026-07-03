@@ -1,5 +1,5 @@
 {
-    "versao":  "1.3.3",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.3.3.rbz",
-    "notas":  "v1.3.3: angulo da camera manual por cena (substitui a leitura automatica quando escolhido); CRITICALs gerais nao somem mais (salvos por projeto em arquivo, mesmo sem salvar o .skp); criticals salvam enquanto digita."
+    "versao":  "1.4.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.0.rbz",
+    "notas":  "v1.4.0: modo de prompt Com imagem anexada (a viewport vira a ancora de geometria e camera); nova aba Estudio para gerar render direto no plugin via API do Gemini (Nano Banana); sincronizacao por projeto reforcada (criticals por cena, descricao e prompts nao vazam mais entre projetos)."
 }
