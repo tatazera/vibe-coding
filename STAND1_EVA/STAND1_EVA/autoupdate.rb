@@ -9,7 +9,7 @@ module STAND1
 
     module AutoUpdate
 
-      VERSION       = '1.4.2'
+      VERSION       = '1.4.3'
       URL_MANIFESTO = 'https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/latest.json'
 
       # Compara "a.b.c" numericamente: remota > local?
@@ -75,7 +75,10 @@ module STAND1
           next unless ok && body
           begin
             # Remove BOM (UTF-8) eventual no início — senão JSON.parse falha.
-            limpo = body.to_s.dup.force_encoding('UTF-8').sub(/\A\xEF\xBB\xBF/n, '').sub(/\Aï»¿/, '')
+            # IMPORTANTE: usar o escape \uFEFF (regexp UTF-8), NUNCA a forma
+            # regexp binária (/n) lança Encoding::CompatibilityError se o corpo
+            # tiver qualquer caractere não-ASCII (ex.: um travessão nas notas).
+            limpo = body.to_s.dup.force_encoding('UTF-8').scrub('').sub(/\A\uFEFF/, '')
             info  = JSON.parse(limpo)
             nova  = info['versao'].to_s
             if maior?(nova, VERSION)
