@@ -57,6 +57,7 @@ module STAND1
       @dialog.add_action_callback('save_gemini_key')  { |_, key| save_gemini_key(key)       }
       @dialog.add_action_callback('studio_generate')  { |_, msg| studio_generate(msg)       }
       @dialog.add_action_callback('save_studio_png')  { |_, msg| save_studio_png(msg)       }
+      @dialog.add_action_callback('choose_ref_image') { |_, _|   choose_ref_image           }
       @dialog.add_action_callback('pick_color')       { |_, _|   start_color_pick           }
       @dialog.add_action_callback('tint_logo')        { |_, msg| handle_tint_logo(msg)       }
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
@@ -731,6 +732,7 @@ module STAND1
       store = read_scene_store(model)
       entry = store[scene_sid(page)]
       per_scene = (entry && entry['criticals'].to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)) || []
+      refs = (config[:refs] || []).select { |d| d.to_s.start_with?('data:image') }
       shared = {
         lighting:     config[:lighting]    || 'frio',
         environment:  config[:environment] || 'feira',
@@ -739,28 +741,42 @@ module STAND1
         description:  config[:description] || '',
         criticals_pt: (config[:criticals_pt] || []) + per_scene,
         page:         page,
-        image_mode:   true
+        image_mode:   true,
+        ref_count:    refs.size
       }
       prompt = PromptBuilder.build(shared)
 
-      # 3) Chamada assíncrona à API
+      # 3) Chamada assíncrona à API (viewport + referências)
       gem_model = config[:model].to_s.strip
       gem_model = 'gemini-3.1-flash-image-preview' if gem_model.empty?
-      call_gemini_async(api_key, gem_model, prompt, cap)
+      call_gemini_async(api_key, gem_model, prompt, cap, refs)
     rescue => e
       @dialog.execute_script("window.studioDone(#{{ ok: false, error: e.message }.to_json})")
     end
 
-    def self.call_gemini_async(api_key, gem_model, prompt, img_path)
+    # refs = array de data URLs (imagens de referência opcionais). O body JSON é
+    # montado no RUBY (texto + viewport + N referências) e gravado num arquivo; o
+    # PowerShell só lê o arquivo e faz o POST — evita escapar JSON no PS e permite
+    # número variável de imagens (o Nano Banana aceita várias inline_data).
+    def self.call_gemini_async(api_key, gem_model, prompt, img_path, refs = [])
       base    = ENV['TEMP'] || Dir.tmpdir
       # Nomes ÚNICOS por execução: um run antigo (timeout) nunca contamina o
       # resultado do run atual, e o timer só enxerga os arquivos deste run.
-      run     = "#{Process.pid}_#{(Time.now.to_f * 1000).to_i}"
-      out     = File.join(base, "eva_studio_out_#{run}.png")
-      err     = File.join(base, "eva_studio_err_#{run}.txt")
-      ptxt    = File.join(base, "eva_studio_prompt_#{run}.txt")
-      tmp_ps  = File.join(base, "eva_studio_#{run}.ps1")
-      File.write(ptxt, prompt, encoding: 'UTF-8')
+      run      = "#{Process.pid}_#{(Time.now.to_f * 1000).to_i}"
+      out      = File.join(base, "eva_studio_out_#{run}.png")
+      err      = File.join(base, "eva_studio_err_#{run}.txt")
+      bodyfile = File.join(base, "eva_studio_body_#{run}.json")
+      tmp_ps   = File.join(base, "eva_studio_#{run}.ps1")
+
+      # Monta as parts: texto + viewport + referências.
+      parts = [{ text: prompt }]
+      parts << { inline_data: { mime_type: 'image/png', data: [File.binread(img_path)].pack('m0') } }
+      (refs || []).each do |durl|
+        m = durl.to_s.match(%r{\Adata:(image/[a-zA-Z0-9.+\-]+);base64,(.+)\z}m)
+        next unless m
+        parts << { inline_data: { mime_type: m[1], data: m[2] } }
+      end
+      File.write(bodyfile, { contents: [{ parts: parts }] }.to_json, encoding: 'UTF-8')
 
       url = "https://generativelanguage.googleapis.com/v1beta/models/#{gem_model}:generateContent?key=#{api_key}"
       safe = ->(s) { s.gsub("'", "''") }
@@ -768,11 +784,7 @@ module STAND1
       ps = <<~PS
         Add-Type -AssemblyName System.Net.Http
         try {
-          $imgB64 = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes('#{safe.call(img_path)}'))
-          $ptxt   = [System.IO.File]::ReadAllText('#{safe.call(ptxt)}', [System.Text.Encoding]::UTF8)
-          # ConvertTo-Json em string escapa aspas/quebras corretamente.
-          $pjson  = $ptxt | ConvertTo-Json -Compress
-          $body   = '{"contents":[{"parts":[{"text":' + $pjson + '},{"inline_data":{"mime_type":"image/png","data":"' + $imgB64 + '"}}]}]}'
+          $body   = [System.IO.File]::ReadAllText('#{safe.call(bodyfile)}', [System.Text.Encoding]::UTF8)
           $client = [System.Net.Http.HttpClient]::new()
           $client.Timeout = [System.TimeSpan]::FromSeconds(180)
           $content = [System.Net.Http.StringContent]::new($body, [System.Text.Encoding]::UTF8, 'application/json')
@@ -812,8 +824,8 @@ module STAND1
         if done_ok || done_err || ticks > 380
           UI.stop_timer(@studio_timer) rescue nil
           @studio_timer = nil
-          File.delete(tmp_ps) rescue nil
-          File.delete(ptxt)   rescue nil
+          File.delete(tmp_ps)   rescue nil
+          File.delete(bodyfile) rescue nil
           if done_ok
             data = image_data_url(out)
             @dialog.execute_script("window.studioDone(#{{ ok: true, path: out, data: data }.to_json})")
@@ -836,6 +848,13 @@ module STAND1
       return 'Bloqueado por política de conteúdo — ajuste o prompt.'      if d =~ /SAFETY|blocked/i
       return 'Tempo de conexão esgotado. Verifique a internet.'           if d =~ /timeout|timed out|Tempo esgotado/i
       d.length > 200 ? (d[0, 200] + '…') : d
+    end
+
+    # Escolhe uma imagem de referência (openpanel) e devolve o data URL ao HTML.
+    def self.choose_ref_image
+      path = UI.openpanel('Imagem de referência', '', 'Imagens|*.png;*.jpg;*.jpeg||')
+      return unless path
+      @dialog.execute_script("window.addStudioRef(#{image_data_url(path).to_json})")
     end
 
     def self.save_studio_png(msg)
