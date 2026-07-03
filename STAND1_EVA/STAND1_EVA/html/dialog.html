@@ -411,17 +411,18 @@
     textarea:focus { outline: none; border-color: var(--rosa) !important; box-shadow: 0 0 0 3px rgba(214,53,127,.1); }
 
     /* ── Aba Logos ── */
-    #content-logos .logos-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; }
-    #content-logos input[type="password"], #content-logos input[type="text"] {
+    #content-logos .logos-wrap, #content-studio .logos-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; }
+    #content-logos input[type="password"], #content-logos input[type="text"],
+    #content-studio input[type="password"], #content-studio input[type="text"] {
       flex:1; padding:7px 10px; border:1.5px solid var(--borda); border-radius:6px;
       font-size:12px; font-family:var(--font); background:#fafafa; color:#333;
     }
-    #content-logos input:focus { outline:none; border-color:var(--rosa); }
+    #content-logos input:focus, #content-studio input:focus { outline:none; border-color:var(--rosa); }
     .api-header { display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
     .api-chevron { margin-left:auto; font-size:12px; color:#999; transition:transform .15s; }
     .api-header.collapsed .api-chevron { transform:rotate(-90deg); }
-    #apiBody { overflow:hidden; transition:none; }
-    .api-header.collapsed + #apiBody { display:none; }
+    #apiBody, #gemBody { overflow:hidden; transition:none; }
+    .api-header.collapsed + #apiBody, .api-header.collapsed + #gemBody { display:none; }
     .api-badge {
       font-size:10px; font-weight:800; padding:2px 9px; border-radius:20px;
       letter-spacing:.3px; display:none;
@@ -457,6 +458,75 @@
     .logo-actions { display:flex; gap:10px; }
     .btn-green { background:var(--verde); }
     .btn-green:not(:disabled):hover { background:#1e8a55; }
+
+    /* ── Aba Estúdio ── */
+    #content-studio .studio-row { display:flex; gap:10px; }
+    #content-studio .studio-field { flex:1; display:flex; flex-direction:column; gap:5px; min-width:0; }
+    #content-studio .studio-field label { font-size:9.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#999; }
+    #content-studio select {
+      width:100%; padding:8px 9px; border:1.5px solid var(--borda); border-radius:8px;
+      font-size:12px; color:#222; background:#fff; font-family:var(--font); cursor:pointer;
+    }
+    #content-studio select:focus { outline:none; border-color:var(--rosa); }
+    #studioViewer {
+      position:relative; width:100%; aspect-ratio:16/9; background:#14151d;
+      border-radius:12px; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    #studioViewImg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; }
+    #studioEmpty {
+      position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:8px; color:#5a5c6e; font-size:12px; text-align:center; padding:0 30px;
+    }
+    #studioEmpty .ic { font-size:30px; opacity:.85; }
+    #studioPills {
+      position:absolute; top:10px; left:50%; transform:translateX(-50%); display:none; gap:4px;
+      background:rgba(10,10,16,.55); backdrop-filter:blur(6px); padding:4px; border-radius:99px; z-index:4;
+    }
+    .studio-pill {
+      border:none; border-radius:99px; padding:5px 14px; font-size:10.5px; font-weight:700;
+      font-family:var(--font); color:#cfd0dc; background:transparent; cursor:pointer; letter-spacing:.3px;
+    }
+    .studio-pill.active { background:var(--g); color:#fff; }
+    .studio-pill:disabled { opacity:.35; cursor:default; }
+    #studioHold {
+      position:absolute; bottom:10px; right:12px; z-index:4; display:none; font-size:9.5px;
+      color:#cfd0dc; background:rgba(10,10,16,.55); padding:4px 10px; border-radius:99px; user-select:none;
+    }
+    #studioProgress {
+      position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+      justify-content:center; gap:14px; background:rgba(10,10,16,.72); z-index:6;
+    }
+    .studio-bar { width:56%; height:5px; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; position:relative; }
+    .studio-bar::after {
+      content:''; position:absolute; top:0; bottom:0; width:38%; border-radius:99px;
+      background:var(--g); animation:studioSlide 1.2s ease-in-out infinite;
+    }
+    @keyframes studioSlide { 0% { left:-38%; } 100% { left:100%; } }
+    #studioProgressText { font-size:11.5px; color:#e8e9f2; font-weight:600; letter-spacing:.3px; }
+    #studioStatus { font-size:12px; min-height:18px; }
+    #studioStatus.ok  { color:var(--verde); }
+    #studioStatus.err { color:var(--rosa); }
+    .btn-regen { background:#fff !important; color:var(--azul) !important; border:1.5px solid var(--borda) !important; box-shadow:none !important; }
+    .btn-regen:hover:not(:disabled) { border-color:var(--azul) !important; opacity:1 !important; }
+    #content-studio textarea {
+      width:100%; padding:9px; border:1.5px solid var(--borda); border-radius:8px;
+      font-size:12px; font-family:var(--font); background:#fafafa; color:#333; resize:vertical; min-height:62px;
+    }
+    #content-studio textarea:focus { outline:none; border-color:var(--rosa); }
+    #content-studio textarea:disabled { background:#f0f0f4; color:#aaa; }
+    .studio-refs { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+    .ref-thumb { position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:1.5px solid var(--borda); background:#eee; }
+    .ref-thumb img { width:100%; height:100%; object-fit:cover; }
+    .ref-thumb button {
+      position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
+      border:none; background:var(--rosa); color:#fff; font-size:12px; line-height:1; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.3);
+    }
+    .ref-add {
+      width:56px; height:56px; border-radius:8px; border:2px dashed var(--borda); background:#fafafa;
+      color:#aaa; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    }
+    .ref-add:hover { border-color:var(--azul); color:var(--azul); }
 
     /* ── Crop editor modal ── */
     #cropModal { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.82); flex-direction:column; }
@@ -821,54 +891,87 @@
   <div class="logos-wrap">
 
     <div class="section">
-      <div class="section-label">API key do Gemini (Google AI Studio)</div>
-      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-        <input type="password" id="geminiApiKey" placeholder="Cole sua API key do Google AI Studio"
-               oninput="onGeminiKeyInput()" style="flex:1">
-        <span class="api-badge empty" id="geminiBadge">Sem chave</span>
+      <div class="api-header" id="gemHeaderEl" onclick="toggleGemSection()">
+        <span class="section-label" style="margin:0;padding:0">API key do Gemini</span>
+        <span id="geminiBadge" class="api-badge empty">Sem chave</span>
+        <span class="api-chevron">▾</span>
       </div>
-      <a href="#" onclick="su('open_url','https://aistudio.google.com/apikey');return false;"
-         style="display:inline-block;font-size:10px;font-weight:600;color:var(--azul);margin-top:7px;text-decoration:none">
-        Obter key →
-      </a>
-      <div style="font-size:10px;color:#999;margin-top:4px">A geração via API é cobrada pelo Google por imagem (centavos de dólar). O modo grátis continua na aba Render IA.</div>
+      <div id="gemBody" style="margin-top:8px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="geminiApiKey" placeholder="Cole sua API key do Google AI Studio"
+                 oninput="onGeminiKeyInput()" style="flex:1">
+          <button class="btn-small" id="btnGemVis" onclick="toggleGemKeyVis()">Mostrar</button>
+        </div>
+        <a href="#" onclick="su('open_url','https://aistudio.google.com/apikey');return false;"
+           style="display:inline-block;font-size:10px;font-weight:600;color:var(--azul);margin-top:7px;text-decoration:none">
+          Obter key →
+        </a>
+        <div style="font-size:10px;color:#999;margin-top:4px">Cobrada pelo Google por imagem gerada (centavos de dólar). O modo grátis continua na aba Render IA.</div>
+      </div>
     </div>
 
-    <div class="section">
-      <div class="section-label">Cena e modelo</div>
-      <select id="studioScene" style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff;margin-top:6px">
-        <option value="">— selecione uma cena —</option>
-      </select>
-      <select id="studioModel" style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff;margin-top:6px">
-        <option value="gemini-3.1-flash-image-preview">Nano Banana 2 — equilíbrio (~US$ 0,045/img)</option>
-        <option value="gemini-3-pro-image-preview">Nano Banana Pro — melhor qualidade (~US$ 0,134/img)</option>
-        <option value="gemini-2.5-flash-image">Nano Banana — mais barato (~US$ 0,039/img)</option>
-      </select>
-      <div style="font-size:10px;color:#999;margin-top:6px">Usa as configurações da aba Render IA (ambiente, iluminação, pessoas, descrição e CRITICALs) no modo imagem — a viewport da cena é capturada e enviada como âncora.</div>
+    <div class="studio-row">
+      <div class="studio-field" style="flex:1.25">
+        <label>Cena</label>
+        <select id="studioScene" onchange="onStudioSceneSelect()">
+          <option value="">— selecione —</option>
+        </select>
+      </div>
+      <div class="studio-field" style="flex:1.6">
+        <label>Modelo</label>
+        <select id="studioModel">
+          <option value="gemini-3.1-flash-image-preview">Nano Banana 2 — equilíbrio (~US$ 0,045)</option>
+          <option value="gemini-3-pro-image-preview">Nano Banana Pro — melhor qualidade (~US$ 0,134)</option>
+          <option value="gemini-2.5-flash-image">Nano Banana — mais barato (~US$ 0,039)</option>
+        </select>
+      </div>
     </div>
 
-    <div class="logo-preview-grid">
-      <div class="logo-preview-col">
-        <div class="logo-preview-label">Viewport (enviada)</div>
-        <div class="logo-img-box orig">
-          <div class="logo-placeholder" id="studioOrigPh">Capture gerando um render</div>
-          <img id="studioOrigImg" alt="" style="display:none">
-        </div>
+    <div class="studio-field">
+      <label>Instruções desta cena
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— itens específicos, salvos por cena</span>
+      </label>
+      <textarea id="studioSceneInstr" disabled placeholder="Selecione uma cena. Um por linha. Ex.:&#10;Balcão à esquerda em aço escovado&#10;Logo do fundo em verde neon&#10;Piso de madeira clara"
+        oninput="studioInstrDebounce()"></textarea>
+    </div>
+
+    <div class="studio-field">
+      <label>Imagens de referência
+        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— opcional: logo, material, cor (enviadas junto)</span>
+      </label>
+      <div class="studio-refs" id="studioRefs"
+           ondragover="studioRefsDragOver(event)" ondragleave="studioRefsDragLeave(event)" ondrop="studioRefsDrop(event)">
+        <div class="ref-add" onclick="su('choose_ref_image')" title="Adicionar referência">+</div>
       </div>
-      <div class="logo-preview-col">
-        <div class="logo-preview-label">Render gerado</div>
-        <div class="logo-img-box result" id="studioResultBox">
-          <div class="logo-placeholder" id="studioResultPh">Aguardando geração</div>
-          <img id="studioResultImg" alt="" style="display:none">
-        </div>
+      <div style="font-size:10px;color:#999;margin-top:4px">A viewport é sempre a âncora. As referências guiam elementos específicos (ex.: aplicar a logo fiel). Pode arrastar imagens aqui também.</div>
+    </div>
+
+    <div id="studioViewer">
+      <img id="studioViewImg" alt="">
+      <div id="studioEmpty">
+        <div class="ic">✨</div>
+        <div><b>Estúdio EVA</b></div>
+        <div>Escolha a cena e clique em <b>Gerar render</b> — a viewport é capturada e enviada como âncora, com as configurações da aba Render IA.</div>
+      </div>
+      <div id="studioPills">
+        <button class="studio-pill" id="pillOrig" onclick="studioShow('orig')">Viewport</button>
+        <button class="studio-pill" id="pillResult" onclick="studioShow('result')" disabled>Render</button>
+      </div>
+      <div id="studioHold">segure para comparar</div>
+      <div id="studioProgress">
+        <div class="studio-bar"></div>
+        <div id="studioProgressText">Gerando…</div>
       </div>
     </div>
 
     <div id="studioStatus"></div>
 
     <div class="logo-actions">
-      <button class="btn-export" id="btnStudioGen" onclick="doStudioGenerate()" style="flex:1">
-        Gerar render
+      <button class="btn-export" id="btnStudioGen" onclick="doStudioGenerate()" style="flex:1.4">
+        ✨ Gerar render
+      </button>
+      <button class="btn-export btn-regen" id="btnStudioRegen" onclick="doStudioGenerate()" style="display:none">
+        ↻
       </button>
       <button class="btn-export btn-green" id="btnStudioSave" onclick="saveStudioPng()" disabled style="flex:1">
         Salvar PNG...
@@ -984,10 +1087,13 @@
       if (s.sceneStore && typeof s.sceneStore === 'object') {
         sceneStore = s.sceneStore;
         populateSceneSelect();
+        onStudioSceneSelect();
         renderSavedPrompts();
       }
       if (typeof s.geminiApiKey === 'string' && s.geminiApiKey) {
         document.getElementById('geminiApiKey').value = s.geminiApiKey;
+        // Chave já salva: recolhe a seção (fica só o badge "✓ Conectada").
+        document.getElementById('gemHeaderEl').classList.add('collapsed');
       }
       updateApiBadge();
       updateGeminiBadge();
@@ -1167,6 +1273,9 @@
     if (!sceneStore[curSid]) sceneStore[curSid] = {};
     sceneStore[curSid].criticals = val;
     su('save_scene_criticals', JSON.stringify({ sid: curSid, criticals: val }));
+    // Reflete no campo equivalente do Estúdio, se for a mesma cena.
+    if (_sidForName(document.getElementById('studioScene').value) === curSid)
+      document.getElementById('studioSceneInstr').value = val;
   }
 
   function saveSceneCamera() {
@@ -1832,17 +1941,108 @@
 
   // ── Aba Estúdio (geração via API Gemini) ────────────────────────────────────
   var _studioResultPath = '';
-  var _studioBusy = false;
+  var _studioOrigData   = '';
+  var _studioResultData = '';
+  var _studioBusy       = false;
+  var _studioView       = 'orig';   // 'orig' | 'result'
+  var _studioTick       = null;
 
   function populateStudioScenes() {
     var sel = document.getElementById('studioScene');
     if (!sel) return;
     var keep = sel.value;
-    sel.innerHTML = '<option value="">— selecione uma cena —</option>' +
+    sel.innerHTML = '<option value="">— selecione —</option>' +
       scenes.map(function(s) {
         return '<option value="' + escHtml(s.name) + '">' + escHtml(s.name) + '</option>';
       }).join('');
     if (keep && scenes.some(function(s){ return s.name === keep; })) sel.value = keep;
+    onStudioSceneSelect();
+  }
+
+  function _sidForName(name) {
+    var s = scenes.filter(function(x){ return x.name === name; })[0];
+    return s ? s.sid : '';
+  }
+
+  // Instruções da cena = os MESMOS CRITICALs por cena da aba Render IA (store por
+  // sid, sincronizado por projeto). Editar aqui reflete lá e vice-versa.
+  function onStudioSceneSelect() {
+    var name = document.getElementById('studioScene').value;
+    var ta   = document.getElementById('studioSceneInstr');
+    var sid  = _sidForName(name);
+    if (!sid) { ta.value = ''; ta.disabled = true; return; }
+    ta.disabled = false;
+    ta.value = (sceneStore[sid] && sceneStore[sid].criticals) || '';
+  }
+
+  function saveStudioInstr() {
+    var name = document.getElementById('studioScene').value;
+    var sid  = _sidForName(name);
+    if (!sid) return;
+    var val = document.getElementById('studioSceneInstr').value;
+    if (!sceneStore[sid]) sceneStore[sid] = {};
+    sceneStore[sid].criticals = val;
+    su('save_scene_criticals', JSON.stringify({ sid: sid, criticals: val }));
+    // Reflete no campo equivalente da aba Render IA, se for a mesma cena selecionada.
+    if (curSid === sid) document.getElementById('sceneCriticals').value = val;
+  }
+  var _instrT = null;
+  function studioInstrDebounce() { clearTimeout(_instrT); _instrT = setTimeout(saveStudioInstr, 800); }
+
+  // ── Imagens de referência (multi-imagem) ──
+  var _studioRefs = [];   // array de data URLs
+  var STUDIO_REF_MAX = 3;
+
+  function renderStudioRefs() {
+    var box = document.getElementById('studioRefs');
+    var html = _studioRefs.map(function(d, i) {
+      return '<div class="ref-thumb"><img src="' + d + '" alt="">' +
+             '<button onclick="removeStudioRef(' + i + ')" title="Remover">×</button></div>';
+    }).join('');
+    if (_studioRefs.length < STUDIO_REF_MAX) {
+      html += '<div class="ref-add" onclick="su(\'choose_ref_image\')" title="Adicionar referência">+</div>';
+    }
+    box.innerHTML = html;
+  }
+
+  window.addStudioRef = function(dataUrl) {
+    if (!dataUrl || !/^data:image\//.test(dataUrl)) return;
+    if (_studioRefs.length >= STUDIO_REF_MAX) { setStudioStatus('err', 'Máximo de ' + STUDIO_REF_MAX + ' referências.'); return; }
+    _studioRefs.push(dataUrl);
+    renderStudioRefs();
+  };
+  function removeStudioRef(i) { _studioRefs.splice(i, 1); renderStudioRefs(); }
+
+  function studioRefsDragOver(e)  { e.preventDefault(); e.stopPropagation(); document.getElementById('studioRefs').style.opacity = '.7'; }
+  function studioRefsDragLeave(e) { e.preventDefault(); document.getElementById('studioRefs').style.opacity = '1'; }
+  function studioRefsDrop(e) {
+    e.preventDefault(); e.stopPropagation();
+    document.getElementById('studioRefs').style.opacity = '1';
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (!files) return;
+    function readOne(f) {
+      var r = new FileReader();
+      r.onload = function() { window.addStudioRef(r.result); };
+      r.readAsDataURL(f);
+    }
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!/image\/(png|jpeg)/.test(f.type) && !/\.(png|jpe?g)$/i.test(f.name)) continue;
+      readOne(f);
+    }
+  }
+
+  // ── API key (colapsável, como a do remove.bg) ──
+  function toggleGemSection() {
+    document.getElementById('gemHeaderEl').classList.toggle('collapsed');
+  }
+
+  function toggleGemKeyVis() {
+    var inp = document.getElementById('geminiApiKey');
+    var btn = document.getElementById('btnGemVis');
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Ocultar'; }
+    else { inp.type = 'password'; btn.textContent = 'Mostrar'; }
+    event.stopPropagation();
   }
 
   function onGeminiKeyInput() {
@@ -1855,6 +2055,52 @@
     var badge = document.getElementById('geminiBadge');
     badge.className   = key ? 'api-badge connected' : 'api-badge empty';
     badge.textContent = key ? '✓ Conectada' : 'Sem chave';
+  }
+
+  // ── Viewer: uma imagem grande + pills Viewport/Render ──
+  function studioShow(which) {
+    if (which === 'result' && !_studioResultData) return;
+    if (which === 'orig'   && !_studioOrigData)   return;
+    _studioView = which;
+    var img = document.getElementById('studioViewImg');
+    img.src = which === 'result' ? _studioResultData : _studioOrigData;
+    img.style.display = 'block';
+    document.getElementById('studioEmpty').style.display = 'none';
+    document.getElementById('pillOrig').classList.toggle('active',   which === 'orig');
+    document.getElementById('pillResult').classList.toggle('active', which === 'result');
+    document.getElementById('studioHold').style.display =
+      (which === 'result' && _studioOrigData) ? 'block' : 'none';
+  }
+
+  // Segurar para comparar: no modo Render, pressionar mostra a viewport.
+  function _studioHoldStart(e) {
+    if (_studioView !== 'result' || !_studioOrigData) return;
+    document.getElementById('studioViewImg').src = _studioOrigData;
+  }
+  function _studioHoldEnd(e) {
+    if (_studioView !== 'result' || !_studioResultData) return;
+    document.getElementById('studioViewImg').src = _studioResultData;
+  }
+  window.addEventListener('load', function() {
+    var v = document.getElementById('studioViewer');
+    if (!v) return;
+    v.addEventListener('mousedown',  _studioHoldStart);
+    v.addEventListener('mouseup',    _studioHoldEnd);
+    v.addEventListener('mouseleave', _studioHoldEnd);
+  });
+
+  function _studioProgress(on, startedAt) {
+    var el = document.getElementById('studioProgress');
+    el.style.display = on ? 'flex' : 'none';
+    clearInterval(_studioTick);
+    if (on) {
+      var txt = document.getElementById('studioProgressText');
+      txt.textContent = 'Gerando…';
+      _studioTick = setInterval(function() {
+        var s = Math.round((Date.now() - startedAt) / 1000);
+        txt.textContent = 'Gerando… ' + s + 's';
+      }, 1000);
+    }
   }
 
   function doStudioGenerate() {
@@ -1873,12 +2119,13 @@
 
     _studioBusy = true;
     _studioResultPath = '';
-    document.getElementById('btnStudioGen').disabled  = true;
-    document.getElementById('btnStudioSave').disabled = true;
-    document.getElementById('studioResultImg').style.display = 'none';
-    document.getElementById('studioResultPh').style.display  = 'block';
-    document.getElementById('studioResultBox').classList.remove('ready');
-    setStudioStatus('', 'Capturando viewport e gerando — pode levar até 1 minuto...');
+    _studioResultData = '';
+    document.getElementById('btnStudioGen').disabled   = true;
+    document.getElementById('btnStudioRegen').disabled = true;
+    document.getElementById('btnStudioSave').disabled  = true;
+    document.getElementById('pillResult').disabled     = true;
+    _studioProgress(true, Date.now());
+    setStudioStatus('', '');
 
     su('studio_generate', JSON.stringify({
       scene: scene,
@@ -1886,30 +2133,31 @@
       lighting: lighting, environment: environment,
       booth_type: boothType, people: people,
       description: document.getElementById('boothDesc').value.trim(),
-      criticals_pt: criticals
+      criticals_pt: criticals,
+      refs: _studioRefs
     }));
   }
 
   // Preview da viewport capturada (chega antes do resultado).
   window.studioOrig = function(dataUrl) {
-    var img = document.getElementById('studioOrigImg');
-    img.src = dataUrl || '';
-    img.style.display = dataUrl ? 'block' : 'none';
-    document.getElementById('studioOrigPh').style.display = dataUrl ? 'none' : 'block';
+    _studioOrigData = dataUrl || '';
+    document.getElementById('studioPills').style.display = _studioOrigData ? 'flex' : 'none';
+    if (_studioOrigData) studioShow('orig');
   };
 
   window.studioDone = function(result) {
     _studioBusy = false;
-    document.getElementById('btnStudioGen').disabled = false;
+    _studioProgress(false);
+    document.getElementById('btnStudioGen').disabled   = false;
+    document.getElementById('btnStudioRegen').disabled = false;
     if (result.ok) {
       _studioResultPath = result.path;
-      var img = document.getElementById('studioResultImg');
-      img.src = result.data || '';
-      img.style.display = 'block';
-      document.getElementById('studioResultPh').style.display = 'none';
-      document.getElementById('studioResultBox').classList.add('ready');
+      _studioResultData = result.data || '';
+      document.getElementById('pillResult').disabled = false;
       document.getElementById('btnStudioSave').disabled = false;
-      setStudioStatus('ok', '✓ Render gerado.');
+      document.getElementById('btnStudioRegen').style.display = 'block';
+      studioShow('result');
+      setStudioStatus('ok', '✓ Render gerado — segure na imagem para comparar com a viewport.');
     } else {
       setStudioStatus('err', '✗ ' + result.error);
     }
