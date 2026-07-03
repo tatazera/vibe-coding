@@ -23,6 +23,25 @@ module STAND1
         'ORIGINAL PROJECT AS DESCRIBED AND SHOWN IN THE REFERENCE IMAGE — NO ALTERATIONS, ' \
         'ADDITIONS OR SUBSTITUTIONS.'
 
+      # ── Modo "imagem anexada" (v1.4.0) ────────────────────────────────────────
+      # Quando o usuário anexa o PNG exportado da viewport junto do prompt (o Nano
+      # Banana aceita imagem + texto), a ancoragem vem da IMAGEM: o [TASK] manda
+      # transformar a foto preservando tudo, e o [SCENE]/ângulo SAI do prompt —
+      # a câmera já está na imagem; descrevê-la seria redundante ou conflitante.
+      IMAGE_TASK = <<~TXT.strip
+        The attached image is the exact viewport export of a SketchUp model of an exhibition \
+        booth. Transform this exact image into an ultra-realistic professional photograph. \
+        Keep the exact camera angle, framing, perspective, geometry, proportions and layout \
+        shown in the image — only upgrade realism: materials, textures, lighting, reflections, \
+        environment and people.
+      TXT
+
+      # Substitui o ANCHOR_CRITICAL no modo imagem (a âncora passa a ser a imagem).
+      IMAGE_ANCHOR_CRITICAL =
+        'MATCH THE ATTACHED IMAGE EXACTLY: SAME CAMERA ANGLE, SAME FRAMING, SAME GEOMETRY, ' \
+        'SAME PROPORTIONS AND SAME LAYOUT. DO NOT ADD, REMOVE, MOVE, RESIZE OR REDESIGN ANY ' \
+        'ELEMENT OF THE BOOTH.'
+
       # Bloco de pessoas — REAIS, fotografadas (combate o look de boneco/CGI).
       PEOPLE = <<~TXT.strip
         The people are real human beings captured in a candid street and documentary photograph — \
@@ -268,6 +287,7 @@ module STAND1
         description  = opts[:description].to_s.strip   # âncora, igual em todos os ângulos
         axis_rad     = opts[:axis_rad]                 # eixo principal da planta (ou nil)
         cam_override = opts[:camera_override].to_s.strip # ângulo manual por cena ('' = auto)
+        image_mode   = !!opts[:image_mode]             # prompt p/ uso com PNG anexado
 
         light_en   = LIGHTING[lighting_key] || 'cold white'
         env        = ENVIRONMENTS[env_key]  || ENVIRONMENTS['feira']
@@ -278,14 +298,18 @@ module STAND1
 
         # Ângulo: override manual (substitui a leitura automática) OU leitura da
         # câmera da cena relativa à geometria real. Só uma fonte entra no [SCENE].
-        angle =
-          if CAMERA_OVERRIDES.key?(cam_override)
-            CAMERA_OVERRIDES[cam_override]
-          elsif page
-            camera_description(page, axis_rad)
-          else
-            'Three-quarter eye-level view of the booth.'
-          end
+        # No modo imagem o ângulo NÃO entra: a câmera já está na imagem anexada.
+        angle = nil
+        unless image_mode
+          angle =
+            if CAMERA_OVERRIDES.key?(cam_override)
+              CAMERA_OVERRIDES[cam_override]
+            elsif page
+              camera_description(page, axis_rad)
+            else
+              'Three-quarter eye-level view of the booth.'
+            end
+        end
 
         lighting_block = "Integrated architectural lighting is a key element: #{light_en} " \
           "artificial lighting creates a dramatic atmosphere with strong contrast and sculpted shadows, " \
@@ -299,7 +323,12 @@ module STAND1
           Dictionary.translate(c).upcase
         end
         all_criticals = []
-        all_criticals << ANCHOR_CRITICAL unless description.empty?
+        if image_mode
+          # A âncora é a imagem anexada — reforço no 1º CRITICAL.
+          all_criticals << IMAGE_ANCHOR_CRITICAL
+        elsif !description.empty?
+          all_criticals << ANCHOR_CRITICAL
+        end
         all_criticals += CRITICALS_FIXED
         all_criticals << PEOPLE_CRITICAL if people
         all_criticals += user_criticals
@@ -307,7 +336,8 @@ module STAND1
 
         # Blocos rotulados (agrupados) — o modelo interpreta melhor e fica mais enxuto.
         blocks = []
-        blocks << "[SCENE]\n#{angle}"
+        blocks << "[TASK]\n#{IMAGE_TASK}" if image_mode
+        blocks << "[SCENE]\n#{angle}" if angle
         blocks << "[SUBJECT]\n#{subject}"
         blocks << "[BOOTH TYPE]\n#{booth_line}"
         blocks << "[ENVIRONMENT]\n#{env[:env]}"
