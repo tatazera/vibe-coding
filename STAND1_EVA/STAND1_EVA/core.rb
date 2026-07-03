@@ -54,6 +54,9 @@ module STAND1
       @dialog.add_action_callback('remove_bg')        { |_, msg| handle_remove_bg(msg)       }
       @dialog.add_action_callback('save_logo_png')    { |_, msg| save_logo_png(msg)         }
       @dialog.add_action_callback('load_logo_data')   { |_, msg| load_logo_data(msg)        }
+      @dialog.add_action_callback('save_gemini_key')  { |_, key| save_gemini_key(key)       }
+      @dialog.add_action_callback('studio_generate')  { |_, msg| studio_generate(msg)       }
+      @dialog.add_action_callback('save_studio_png')  { |_, msg| save_studio_png(msg)       }
       @dialog.add_action_callback('pick_color')       { |_, _|   start_color_pick           }
       @dialog.add_action_callback('tint_logo')        { |_, msg| handle_tint_logo(msg)       }
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
@@ -86,11 +89,16 @@ module STAND1
       sid.to_s
     end
 
-    # ── Store por cena: { sid => { "criticals" => "...", "prompt" => "..." } } ──
-    # Gravado no modelo (.skp) + fallback global (registro), como os demais campos.
+    # ── Store por cena: { sid => { criticals, prompt, camera } } ───────────────
+    # Gravado no modelo (.skp) + sidecar POR PROJETO (não usa mais registro
+    # global — o fallback global vazava dados entre projetos e era sobrescrito
+    # pelo último projeto aberto).
     def self.read_scene_store(model)
       raw = (model && model.get_attribute(SETTINGS_KEY, 'scene_store', nil) rescue nil)
-      raw = (Sketchup.read_default(SETTINGS_KEY, 'last_scene_store', '') rescue '') if raw.nil? || raw.to_s.empty?
+      if raw.nil? || raw.to_s.empty?
+        f = project_text_file(model, 'scene_store')
+        raw = (File.read(f, encoding: 'UTF-8') rescue '') if File.file?(f)
+      end
       h = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
       h.is_a?(Hash) ? h : {}
     end
@@ -98,7 +106,9 @@ module STAND1
     def self.write_scene_store(model, store)
       json = store.to_json
       model.set_attribute(SETTINGS_KEY, 'scene_store', json) if model
-      Sketchup.write_default(SETTINGS_KEY, 'last_scene_store', json) rescue nil
+      File.open(project_text_file(model, 'scene_store'), 'w:UTF-8') { |f| f.write(json) } rescue nil
+      # Limpa o resíduo global antigo (não é mais usado).
+      Sketchup.write_default(SETTINGS_KEY, 'last_scene_store', '') rescue nil
     end
 
     # Salva os criticals de UMA cena (por sid). msg = { sid, criticals }.
@@ -153,38 +163,41 @@ module STAND1
       Digest::MD5.hexdigest(path.downcase)
     end
 
-    # Sidecar dos CRITICALs gerais: arquivo por projeto em %APPDATA%/STAND1_EVA.
-    # Persiste mesmo que o usuário NÃO salve o .skp, sem vazar entre projetos.
-    def self.criticals_backup_file(model)
-      File.join(backup_dir, "criticals_#{project_key(model)}.txt")
+    # ── Sidecar POR PROJETO (%APPDATA%/STAND1_EVA/<campo>_<hash-do-path>.txt) ──
+    # Regra de sincronização por projeto: cada campo por-projeto grava no .skp
+    # (attr) E no sidecar; leitura tenta o .skp e cai no sidecar. Assim o dado
+    # sobrevive mesmo sem salvar o .skp e NUNCA vaza entre projetos.
+    def self.project_text_file(model, attr)
+      File.join(backup_dir, "#{attr}_#{project_key(model)}.txt")
     end
 
-    # Lê um campo por-projeto do modelo; se vazio, cai no último valor global
-    # (write_default). Assim o dado sobrevive mesmo se o .skp não foi salvo.
-    def self.read_project_field(model, attr, global_key)
-      val = (model && model.get_attribute(SETTINGS_KEY, attr, nil) rescue nil)
-      if val.nil? || val.to_s.empty?
-        val = (Sketchup.read_default(SETTINGS_KEY, global_key, '').to_s rescue '')
+    def self.read_project_text(model, attr)
+      val = (model && model.get_attribute(SETTINGS_KEY, attr, '').to_s rescue '')
+      if val.empty?
+        f = project_text_file(model, attr)
+        val = (File.read(f, encoding: 'UTF-8').to_s rescue '') if File.file?(f)
       end
-      val.to_s
+      val
+    end
+
+    def self.write_project_text(model, attr, val)
+      return if val.nil?
+      if model
+        cur = (model.get_attribute(SETTINGS_KEY, attr, '').to_s rescue '')
+        # Só grava (e "suja" o .skp) se realmente mudou.
+        model.set_attribute(SETTINGS_KEY, attr, val.to_s) if cur != val.to_s
+      end
+      File.open(project_text_file(model, attr), 'w:UTF-8') { |f| f.write(val.to_s) } rescue nil
     end
 
     def self.send_settings
       raw = Sketchup.read_default(SETTINGS_KEY, 'settings', '')
       obj = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
       model = Sketchup.active_model
-      # Descrição e CRITICALs são por-projeto (modelo .skp), com fallback ao
-      # último valor global — não some mesmo se o usuário não salvou o .skp.
-      obj['description'] = read_project_field(model, 'description', 'last_description')
-      # CRITICALs gerais: por-projeto, no .skp + sidecar por projeto (arquivo
-      # chaveado pelo caminho do .skp). O sidecar garante que o texto NÃO some
-      # se o usuário fechar sem salvar o .skp; e não vaza entre projetos.
-      crit = (model ? (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '') : '')
-      if crit.empty?
-        f = criticals_backup_file(model)
-        crit = (File.read(f, encoding: 'UTF-8').to_s rescue '') if File.file?(f)
-      end
-      obj['criticals'] = crit
+      # Descrição e CRITICALs são POR-PROJETO: .skp + sidecar do projeto.
+      # Sem fallback global — não vazam entre projetos e não somem sem salvar o .skp.
+      obj['description'] = read_project_text(model, 'description')
+      obj['criticals']   = read_project_text(model, 'criticals')
       # API key: registro dedicado + fallback em arquivo (robusto contra reset).
       key = (Sketchup.read_default(SETTINGS_KEY, 'rbg_api_key', '').to_s rescue '')
       if key.empty? && File.file?(api_key_backup_file)
@@ -193,6 +206,7 @@ module STAND1
         Sketchup.write_default(SETTINGS_KEY, 'rbg_api_key', key) unless key.empty?
       end
       obj['rbgApiKey'] = key
+      obj['geminiApiKey'] = read_gemini_key
       # Store por cena (criticals + últimos prompts), chaveado por sid.
       obj['sceneStore'] = read_scene_store(model)
       @dialog.execute_script("window.applySettings(#{obj.to_json})")
@@ -203,36 +217,18 @@ module STAND1
       parsed = JSON.parse(json) rescue nil
       return unless parsed
       model = Sketchup.active_model
-      # Descrição e CRITICALs: gravam no modelo (.skp) E no registro global como
-      # "último valor", garantindo persistência mesmo sem salvar o .skp.
-      save_project_field(model, parsed.delete('description'), 'description', 'last_description')
-      # CRITICALs gerais: grava no .skp + sidecar por projeto (arquivo chaveado
-      # pelo caminho do .skp). Sem registro global — não vaza entre projetos —
-      # mas sobrevive mesmo se o usuário não salvar o .skp.
-      crit = parsed.delete('criticals')
-      unless crit.nil?
-        if model
-          cur = (model.get_attribute(SETTINGS_KEY, 'criticals', '').to_s rescue '')
-          model.set_attribute(SETTINGS_KEY, 'criticals', crit.to_s) if cur != crit.to_s
-        end
-        File.open(criticals_backup_file(model), 'w:UTF-8') { |f| f.write(crit.to_s) } rescue nil
-      end
-      Sketchup.write_default(SETTINGS_KEY, 'last_criticals', '') rescue nil
+      # Descrição e CRITICALs: POR-PROJETO (.skp + sidecar do projeto), sem
+      # registro global — não vazam entre projetos e não somem sem salvar o .skp.
+      write_project_text(model, 'description', parsed.delete('description'))
+      write_project_text(model, 'criticals',   parsed.delete('criticals'))
+      # Limpa resíduos globais antigos (não são mais usados).
+      Sketchup.write_default(SETTINGS_KEY, 'last_criticals', '')   rescue nil
+      Sketchup.write_default(SETTINGS_KEY, 'last_description', '') rescue nil
       # API key: NUNCA sobrescreve com vazio aqui (evita apagar a chave numa
       # gravação geral disparada por outro campo). Limpar só pelo onApiKeyInput.
       api_key = parsed.delete('rbgApiKey')
       save_api_key(api_key) unless api_key.nil? || api_key.to_s.strip.empty?
       Sketchup.write_default(SETTINGS_KEY, 'settings', parsed.to_json)
-    end
-
-    def self.save_project_field(model, val, attr, global_key)
-      return if val.nil?
-      if model
-        cur = (model.get_attribute(SETTINGS_KEY, attr, '').to_s rescue '')
-        # Só grava (e "suja" o .skp) se realmente mudou.
-        model.set_attribute(SETTINGS_KEY, attr, val.to_s) if cur != val.to_s
-      end
-      Sketchup.write_default(SETTINGS_KEY, global_key, val.to_s) rescue nil
     end
 
     # Grava a API key imediatamente em registro dedicado + backup em arquivo.
@@ -331,7 +327,8 @@ module STAND1
         description:     config[:description]   || '',
         criticals_pt:    config[:criticals_pt] || [], # gerais (todas as cenas)
         scene_criticals: scene_crit,                   # específicos por cena
-        scene_cameras:   scene_cam                     # override de ângulo por cena
+        scene_cameras:   scene_cam,                    # override de ângulo por cena
+        image_mode:      !!config[:image_mode]         # prompt p/ PNG anexado
       }
 
       results = PromptBuilder.build_all(model, scene_names, shared)
@@ -670,6 +667,190 @@ module STAND1
       @dialog.execute_script("window.setLogoFile(#{path.to_json}, #{data.to_json})")
     rescue => e
       @dialog.execute_script("window.dropError(#{e.message.to_json})")
+    end
+
+    # ── Aba Estúdio: geração de render via API Gemini (Nano Banana) ───────────
+    # Fluxo: captura a viewport da cena (PNG temp) → monta o prompt em modo
+    # imagem → POST à API (imagem base64 + texto) via PowerShell em segundo
+    # plano → resposta traz a imagem gerada em base64 → devolve ao HTML.
+
+    def self.gemini_key_backup_file
+      File.join(backup_dir, 'gemini_api_key.txt')
+    end
+
+    def self.save_gemini_key(key)
+      k = key.to_s
+      Sketchup.write_default(SETTINGS_KEY, 'gemini_api_key', k)
+      File.open(gemini_key_backup_file, 'w:UTF-8') { |f| f.write(k) } rescue nil
+    rescue
+    end
+
+    def self.read_gemini_key
+      key = (Sketchup.read_default(SETTINGS_KEY, 'gemini_api_key', '').to_s rescue '')
+      if key.empty? && File.file?(gemini_key_backup_file)
+        key = (File.read(gemini_key_backup_file).to_s.strip rescue '')
+        Sketchup.write_default(SETTINGS_KEY, 'gemini_api_key', key) unless key.empty?
+      end
+      key
+    end
+
+    # Captura a viewport de uma cena em PNG (câmera restaurada ao final).
+    # Largura máx. 1600px, mantendo a proporção da viewport atual.
+    def self.capture_scene_png(page, out_path)
+      model = Sketchup.active_model
+      view  = model.active_view
+      orig  = view.camera
+      w = 1600
+      h = (w * view.vpheight.to_f / [view.vpwidth.to_f, 1].max).round
+      begin
+        view.camera = page.camera
+        view.write_image(filename: out_path, width: w, height: h, antialias: true)
+      ensure
+        view.camera = orig
+        view.invalidate
+      end
+      File.exist?(out_path)
+    end
+
+    def self.studio_generate(msg)
+      config = JSON.parse(msg, symbolize_names: true)
+      model  = Sketchup.active_model
+      name   = config[:scene].to_s
+      page   = model.pages.find { |p| p.name == name }
+      api_key = read_gemini_key
+      raise 'Informe a API key do Gemini.'    if api_key.strip.empty?
+      raise 'Cena não encontrada.'            unless page
+
+      # 1) Captura da viewport
+      cap = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_studio_cap.png')
+      File.delete(cap) rescue nil
+      raise 'Falha ao capturar a viewport.' unless capture_scene_png(page, cap)
+      @dialog.execute_script("window.studioOrig(#{image_data_url(cap).to_json})")
+
+      # 2) Prompt em modo imagem (mesma lógica do build, uma cena)
+      store = read_scene_store(model)
+      entry = store[scene_sid(page)]
+      per_scene = (entry && entry['criticals'].to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)) || []
+      shared = {
+        lighting:     config[:lighting]    || 'frio',
+        environment:  config[:environment] || 'feira',
+        booth_type:   config[:booth_type]  || 'ilha',
+        people:       config[:people],
+        description:  config[:description] || '',
+        criticals_pt: (config[:criticals_pt] || []) + per_scene,
+        page:         page,
+        image_mode:   true
+      }
+      prompt = PromptBuilder.build(shared)
+
+      # 3) Chamada assíncrona à API
+      gem_model = config[:model].to_s.strip
+      gem_model = 'gemini-3.1-flash-image-preview' if gem_model.empty?
+      call_gemini_async(api_key, gem_model, prompt, cap)
+    rescue => e
+      @dialog.execute_script("window.studioDone(#{{ ok: false, error: e.message }.to_json})")
+    end
+
+    def self.call_gemini_async(api_key, gem_model, prompt, img_path)
+      base    = ENV['TEMP'] || Dir.tmpdir
+      # Nomes ÚNICOS por execução: um run antigo (timeout) nunca contamina o
+      # resultado do run atual, e o timer só enxerga os arquivos deste run.
+      run     = "#{Process.pid}_#{(Time.now.to_f * 1000).to_i}"
+      out     = File.join(base, "eva_studio_out_#{run}.png")
+      err     = File.join(base, "eva_studio_err_#{run}.txt")
+      ptxt    = File.join(base, "eva_studio_prompt_#{run}.txt")
+      tmp_ps  = File.join(base, "eva_studio_#{run}.ps1")
+      File.write(ptxt, prompt, encoding: 'UTF-8')
+
+      url = "https://generativelanguage.googleapis.com/v1beta/models/#{gem_model}:generateContent?key=#{api_key}"
+      safe = ->(s) { s.gsub("'", "''") }
+
+      ps = <<~PS
+        Add-Type -AssemblyName System.Net.Http
+        try {
+          $imgB64 = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes('#{safe.call(img_path)}'))
+          $ptxt   = [System.IO.File]::ReadAllText('#{safe.call(ptxt)}', [System.Text.Encoding]::UTF8)
+          # ConvertTo-Json em string escapa aspas/quebras corretamente.
+          $pjson  = $ptxt | ConvertTo-Json -Compress
+          $body   = '{"contents":[{"parts":[{"text":' + $pjson + '},{"inline_data":{"mime_type":"image/png","data":"' + $imgB64 + '"}}]}]}'
+          $client = [System.Net.Http.HttpClient]::new()
+          $client.Timeout = [System.TimeSpan]::FromSeconds(180)
+          $content = [System.Net.Http.StringContent]::new($body, [System.Text.Encoding]::UTF8, 'application/json')
+          $resp = $client.PostAsync('#{safe.call(url)}', $content).GetAwaiter().GetResult()
+          $rtxt = $resp.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+          if ($resp.StatusCode -ne [System.Net.HttpStatusCode]::OK) {
+            [System.IO.File]::WriteAllText('#{safe.call(err)}', [string]$resp.StatusCode + ': ' + $rtxt.Substring(0, [Math]::Min(800, $rtxt.Length)))
+            exit 1
+          }
+          # Extrai o maior blob base64 da resposta por regex (evita o limite de
+          # tamanho do ConvertFrom-Json no PS 5.1 com JSONs de varios MB).
+          $m = [regex]::Matches($rtxt, '"data"\\s*:\\s*"([A-Za-z0-9+/=]{500,})"')
+          if ($m.Count -eq 0) {
+            [System.IO.File]::WriteAllText('#{safe.call(err)}', 'Resposta sem imagem: ' + $rtxt.Substring(0, [Math]::Min(800, $rtxt.Length)))
+            exit 1
+          }
+          $best = ($m | Sort-Object { $_.Groups[1].Value.Length } -Descending)[0].Groups[1].Value
+          # Escreve em .tmp e renomeia: o Ruby nunca lê um PNG pela metade.
+          [System.IO.File]::WriteAllBytes('#{safe.call(out)}.tmp', [System.Convert]::FromBase64String($best))
+          [System.IO.File]::Move('#{safe.call(out)}.tmp', '#{safe.call(out)}')
+          exit 0
+        } catch {
+          [System.IO.File]::WriteAllText('#{safe.call(err)}', $_.Exception.Message)
+          exit 1
+        }
+      PS
+      File.write(tmp_ps, ps, encoding: 'UTF-8')
+      Thread.new { run_ps_hidden(tmp_ps) }
+
+      # Espera resultado por timer (sem travar a UI). Timeout ~3min.
+      UI.stop_timer(@studio_timer) if @studio_timer
+      ticks = 0
+      @studio_timer = UI.start_timer(0.5, true) do
+        ticks += 1
+        done_ok  = File.exist?(out) && File.size(out).to_i > 0
+        done_err = File.exist?(err)
+        if done_ok || done_err || ticks > 380
+          UI.stop_timer(@studio_timer) rescue nil
+          @studio_timer = nil
+          File.delete(tmp_ps) rescue nil
+          File.delete(ptxt)   rescue nil
+          if done_ok
+            data = image_data_url(out)
+            @dialog.execute_script("window.studioDone(#{{ ok: true, path: out, data: data }.to_json})")
+          else
+            detail = done_err ? (File.read(err).to_s rescue '') : 'Tempo esgotado (3min).'
+            File.delete(err) rescue nil
+            @dialog.execute_script("window.studioDone(#{{ ok: false, error: parse_gemini_error(detail) }.to_json})")
+          end
+        end
+      end
+    end
+
+    # Traduz erros comuns da API Gemini para PT.
+    def self.parse_gemini_error(detail)
+      d = detail.to_s
+      return 'Falha na API. Verifique a key e o billing.'                if d.empty?
+      return 'API key inválida. Confira em aistudio.google.com.'         if d =~ /API_KEY_INVALID|401|403|PERMISSION_DENIED/i
+      return 'Cota/crédito esgotado ou billing não configurado.'          if d =~ /RESOURCE_EXHAUSTED|429|quota|billing/i
+      return 'Modelo indisponível para esta key (tente o outro modelo).'  if d =~ /NOT_FOUND|404|not supported/i
+      return 'Bloqueado por política de conteúdo — ajuste o prompt.'      if d =~ /SAFETY|blocked/i
+      return 'Tempo de conexão esgotado. Verifique a internet.'           if d =~ /timeout|timed out|Tempo esgotado/i
+      d.length > 200 ? (d[0, 200] + '…') : d
+    end
+
+    def self.save_studio_png(msg)
+      config = JSON.parse(msg)
+      src    = config['path'].to_s
+      raise 'Nenhum render para salvar.' unless File.exist?(src)
+      name = (config['name'].to_s.strip.empty? ? 'render' : config['name'].to_s).gsub(/[^a-z0-9\-_ ]/i, '_')
+      dest = UI.savepanel('Salvar render', @last_logo_dir || '', "#{name}.png")
+      return unless dest
+      dest += '.png' unless dest.downcase.end_with?('.png')
+      @last_logo_dir = File.dirname(dest)
+      File.binwrite(dest, File.binread(src))
+      @dialog.execute_script("window.saveStudioDone(#{{ ok: true, path: dest }.to_json})")
+    rescue => e
+      @dialog.execute_script("window.saveStudioDone(#{{ ok: false, error: e.message }.to_json})")
     end
 
     # ── Aba Logos: salva o PNG resultante numa pasta escolhida ────────────────
