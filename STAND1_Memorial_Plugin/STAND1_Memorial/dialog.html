@@ -76,9 +76,16 @@
   .secao:last-child { margin-bottom: 0; }
   .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); }
   /* Multi-Espaço: título do espaço + divisória minimalista entre espaços */
-  .espaco-titulo { font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); }
+  .espaco-titulo { font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; }
+  .espaco-titulo:active { cursor: grabbing; }
+  .espaco-titulo.drag-over { background: rgba(200,79,191,.14); border-bottom-color: #C84FBF; }
+  .esp-handle { color: rgba(200,79,191,.5); font-size: 12px; margin-right: 7px; user-select: none; letter-spacing: -2px; }
+  .espaco-titulo:hover .esp-handle { color: #C84FBF; }
+  body.bloqueado .espaco-titulo { cursor: default; }
+  body.bloqueado .esp-handle { display: none; }
   .espaco-divisor { height: 1px; background: linear-gradient(90deg, transparent, rgba(200,79,191,.45), transparent); margin: 26px 0 22px; }
   body.dark .espaco-titulo { color: #e08fd8; }
+  body.dark .espaco-titulo.drag-over { background: rgba(224,143,216,.12); }
   ul.itens { list-style: none; display: flex; flex-direction: column; gap: 4px; }
   ul.itens li { font-size: 12px; color: var(--texto); line-height: 1.5; padding-left: 15px; position: relative; display: flex; align-items: flex-start; gap: 5px; }
   ul.itens li::before { content: '▪'; position: absolute; left: 0; top: 2px; font-size: 9px; color: var(--azul); }
@@ -354,7 +361,7 @@
     ul.itens li::before { content: '■' !important; color: #1A2DB8 !important; background: none !important; }
     .item-desc { color: #222 !important; display: inline !important; }
     .qtd { color: #1A2DB8 !important; background: none !important; }
-    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .btn-olho, .drag-handle, .badge-manual, .tag-oculto { display: none !important; }
+    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .btn-olho, .drag-handle, .badge-manual, .tag-oculto, .esp-handle { display: none !important; }
     li.item-oculto { display: none !important; }
     .item-qtd-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; }
     .item-desc-edit, body.bloqueado .item-desc-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; pointer-events: none !important; }
@@ -759,6 +766,8 @@ function ordenarSecoes(){
   // espaço, ordena as seções pela ordem padrão. No modo padrão (_espaco vazio),
   // comporta-se exatamente como antes.
   var ordemEspaco={}, n=0;
+  // Ordem manual (arrastar espaços) tem prioridade; espaços fora dela seguem a ordem de leitura.
+  _ordemEspacos.forEach(function(e){ if(!(e in ordemEspaco)) ordemEspaco[e]=n++; });
   dadosMemorial.forEach(function(s){ var e=s._espaco||''; if(!(e in ordemEspaco)) ordemEspaco[e]=n++; });
   dadosMemorial.sort(function(a,b){
     var ea=ordemEspaco[a._espaco||''], eb=ordemEspaco[b._espaco||''];
@@ -1304,6 +1313,7 @@ function persistirEstado(){
     dadosPadrao: _memPadrao,
     dadosMulti: _memMulti,
     modoMulti: _modoMultiEspaco,
+    ordemEspacos: _ordemEspacos,
     dados: dadosMemorial, // compatibilidade com leitura de estado antigo
     nomeProjeto: nomeProjeto,
     nomeResponsavel: nomeResponsavel,
@@ -1333,6 +1343,7 @@ function restaurarEstado(estadoJson){
       }
       _modoMultiEspaco = false; // começa no Padrão após migração
     }
+    if(e.ordemEspacos&&e.ordemEspacos.length) _ordemEspacos=e.ordemEspacos;
     dadosMemorial = (_modoMultiEspaco ? _memMulti : _memPadrao) || [];
     var btn=document.getElementById('btnMultiEspaco');
     if(btn){ btn.textContent=_modoMultiEspaco?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',_modoMultiEspaco); }
@@ -1543,7 +1554,10 @@ function renderizar(){
     var cab='';
     if(sec._espaco && sec._espaco!==_lastEsp){
       if(_lastEsp!==null) cab+='<div class="espaco-divisor"></div>';
-      cab+='<div class="espaco-titulo">'+escaparAttr(sec._espaco)+'</div>';
+      cab+='<div class="espaco-titulo" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
+        +' ondragstart="dragEspaco(event,this)" ondragover="event.preventDefault();this.classList.add(\'drag-over\')"'
+        +' ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropEspaco(event,this)">'
+        +'<span class="esp-handle">⋮⋮</span>'+escaparAttr(sec._espaco)+'</div>';
       _lastEsp=sec._espaco;
     }
     var sn=sec.secao;
@@ -1810,6 +1824,34 @@ function copiarMemorial(){
 var _modoMultiEspaco = false;
 var _gruposEspaco    = [];
 var _dadosMultiEspaco = null;
+var _ordemEspacos    = []; // ordem manual dos espaços (drag no título); persiste no .skp
+
+// ── Drag & drop de ESPAÇOS (reordenar ambientes no Multi-Espaço) ──
+function dragEspaco(ev,el){
+  if(bloqueado){ ev.preventDefault(); return; }
+  ev.dataTransfer.setData('text/plain','ESPACO||'+(el.dataset.espaco||''));
+  ev.dataTransfer.effectAllowed='move';
+}
+function dropEspaco(ev,el){
+  ev.preventDefault(); ev.stopPropagation();
+  el.classList.remove('drag-over');
+  var d=ev.dataTransfer.getData('text/plain').split('||');
+  if(d[0]!=='ESPACO'||d.length<2) return; // ignora drags de item/seção
+  moverEspaco(d[1], el.dataset.espaco||'');
+}
+function moverEspaco(de,para){
+  if(!de||!para||de===para) return;
+  // ordem atual dos espaços como aparecem no memorial
+  var atual=[];
+  dadosMemorial.forEach(function(s){ var e=s._espaco||''; if(e&&atual.indexOf(e)<0) atual.push(e); });
+  var iDe=atual.indexOf(de), iPara=atual.indexOf(para);
+  if(iDe<0||iPara<0) return;
+  atual.splice(iDe,1);
+  // arrastou para baixo → entra DEPOIS do alvo; para cima → entra ANTES dele
+  atual.splice(atual.indexOf(para)+(iDe<iPara?1:0),0,de);
+  _ordemEspacos=atual;
+  ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
+}
 
 // Memórias INDEPENDENTES por modo: alternar só troca qual está ativa, nunca
 // destrói a outra. dadosMemorial sempre aponta para o store do modo ativo.
@@ -1908,13 +1950,15 @@ function carregarDadosMultiEspaco(payload){
   _dadosMultiEspaco = payload.espacos || [];
   // Diagramação por espaço: seções mantêm o NOME LIMPO (ex.: "MOBILIÁRIO") e o
   // espaço fica no campo _espaco. O render desenha um título por espaço + linha
-  // minimalista entre espaços. A ordem dos espaços é a ordem de leitura.
+  // minimalista entre espaços. A ordem é a de leitura, salvo reordenação manual
+  // (_ordemEspacos), que sobrevive à releitura; espaços novos entram no fim.
   dadosMemorial = [];
   _dadosMultiEspaco.forEach(function(esp){
     (esp.secoes||[]).forEach(function(sec){
       dadosMemorial.push({ secao: sec.secao, itens: sec.itens, _espaco: esp.espaco });
     });
   });
+  ordenarSecoes();
   if(payload.nome_arquivo) nomeArquivo = payload.nome_arquivo;
   atualizarStatus();
   renderizar();
@@ -2368,17 +2412,36 @@ function exportarRelatorioKVATXT(){
   else navigator.clipboard.writeText(buildTXTRelatorioKVA(res)).then(function(){mostrarToast('Copiado!');});
 }
 
+function _linhasSecaoRelKVA(sec){
+  var linhas='<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(sec.secao)+'</td></tr>';
+  sec.itens.forEach(function(it){
+    if(it.sem_cadastro){ linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>'; }
+    else { var qtd=it.por==='metro'?it.qtd+'m':(it.por==='m2'&&it.area_m2!=null?it.area_m2.toFixed(2)+'m² ×'+fmtQtd(it.qtd):fmtQtd(it.qtd)+' un'); linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>'; }
+  });
+  linhas+='<tr style="font-weight:bold;background:#f5f5f5"><td colspan="2">Subtotal</td><td>'+sec.subtotal.toFixed(3)+' kva</td></tr>';
+  return linhas;
+}
+
 function buildHTMLRelatorioKVA(res){
   var proj=nomeProjeto||nomeArquivo, linhas='';
-  res.secoes.forEach(function(sec){
-    var tituloSec=(sec.espaco?'['+sec.espaco+'] ':'')+sec.secao;
-    linhas+='<tr><td colspan="3" style="background:#eef;font-weight:bold">'+escaparAttr(tituloSec)+'</td></tr>';
-    sec.itens.forEach(function(it){
-      if(it.sem_cadastro){ linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>—</td><td style="color:#aaa">sem cadastro</td></tr>'; }
-      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; linhas+='<tr><td>'+escaparAttr(it.desc)+'</td><td>'+qtd+'</td><td>'+it.kva_total.toFixed(3)+' kva</td></tr>'; }
+  var temEsp=res.secoes.some(function(s){ return s.espaco; });
+  if(temEsp){
+    // Agrupa por espaço, com cabeçalho e subtotal por espaço (quantitativo por ambiente).
+    var ordem=[], grupos={};
+    res.secoes.forEach(function(sec){
+      var e=sec.espaco||'(sem espaço)';
+      if(!grupos[e]){ grupos[e]=[]; ordem.push(e); }
+      grupos[e].push(sec);
     });
-    linhas+='<tr style="font-weight:bold;background:#f5f5f5"><td colspan="2">Subtotal</td><td>'+sec.subtotal.toFixed(3)+' kva</td></tr>';
-  });
+    ordem.forEach(function(e){
+      var subEsp=0;
+      linhas+='<tr><td colspan="3" style="background:#C84FBF;color:#fff;font-weight:bold;letter-spacing:.5px">⊞ '+escaparAttr(e)+'</td></tr>';
+      grupos[e].forEach(function(sec){ linhas+=_linhasSecaoRelKVA(sec); subEsp+=sec.subtotal; });
+      linhas+='<tr style="font-weight:bold;background:#fbe2ec"><td colspan="2">Subtotal do espaço — '+escaparAttr(e)+'</td><td>'+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva</td></tr>';
+    });
+  } else {
+    res.secoes.forEach(function(sec){ linhas+=_linhasSecaoRelKVA(sec); });
+  }
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Relatório KVA</title>'
     +'<style>body{font-family:Arial,sans-serif;padding:24px;font-size:12px}h2{color:#1A2DB8}table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border:1px solid #ddd}th{background:#1A2DB8;color:#fff}.total{font-size:15px;font-weight:bold;text-align:center;margin-top:16px;color:#1A2DB8}</style></head>'
     +'<body><h2>Relatório de Carga Elétrica</h2><p>Projeto: <strong>'+escaparAttr(proj)+'</strong> · Revisão: '+revisao+' · '+dataGeracao+'</p>'
@@ -2391,14 +2454,33 @@ function buildTXTRelatorioKVA(res){
   var proj=nomeProjeto||nomeArquivo;
   var t='RELATÓRIO DE CARGA ELÉTRICA\nProjeto: '+proj+'\nRevisão: '+revisao+'\n'+dataGeracao+'\n';
   t+='============================================================\n\n';
-  res.secoes.forEach(function(sec){
-    t+=(sec.espaco?'['+sec.espaco+'] ':'')+sec.secao+'\n';
+  function secTXT(sec){
+    var s=sec.secao+'\n';
     sec.itens.forEach(function(it){
-      if(it.sem_cadastro) t+='  '+it.desc+' - sem KVA cadastrado\n';
-      else { var qtd=it.por==='metro'?it.qtd+'m':fmtQtd(it.qtd)+' un'; t+='  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
+      if(it.sem_cadastro) s+='  '+it.desc+' - sem KVA cadastrado\n';
+      else { var qtd=it.por==='metro'?it.qtd+'m':(it.por==='m2'&&it.area_m2!=null?it.area_m2.toFixed(2)+'m² x'+fmtQtd(it.qtd):fmtQtd(it.qtd)+' un'); s+='  '+it.desc+' | '+qtd+' | '+it.kva_total.toFixed(3)+' kva\n'; }
     });
-    t+='  Subtotal: '+sec.subtotal.toFixed(3)+' kva\n\n';
-  });
+    s+='  Subtotal: '+sec.subtotal.toFixed(3)+' kva\n\n';
+    return s;
+  }
+  var temEsp=res.secoes.some(function(s){ return s.espaco; });
+  if(temEsp){
+    var ordem=[], grupos={};
+    res.secoes.forEach(function(sec){
+      var e=sec.espaco||'(sem espaço)';
+      if(!grupos[e]){ grupos[e]=[]; ordem.push(e); }
+      grupos[e].push(sec);
+    });
+    ordem.forEach(function(e){
+      var subEsp=0;
+      t+='### '+e.toUpperCase()+' ###\n';
+      grupos[e].forEach(function(sec){ t+=secTXT(sec); subEsp+=sec.subtotal; });
+      t+='  SUBTOTAL DO ESPAÇO ('+e+'): '+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva\n';
+      t+='────────────────────────────────────────\n\n';
+    });
+  } else {
+    res.secoes.forEach(function(sec){ t+=secTXT(sec); });
+  }
   t+='============================================================\nTOTAL GERAL: '+res.total.toFixed(3)+' KVA\n';
   return t;
 }
