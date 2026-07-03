@@ -1,5 +1,5 @@
 {
-    "versao":  "7.2.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.2.1.rbz",
-    "notas":  "v7.2.1: novo botao de olho por item para ocultar itens na exportacao - item oculto continua no memorial (esmaecido) mas sai do PDF, TXT, Copiar e do calculo de KVA; contador de ocultos na barra de status; flag persiste no arquivo e sobrevive ao Atualizar."
+    "versao":  "7.3.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.3.0.rbz",
+    "notas":  "v7.3.0: Multi-Espaco - arraste o titulo de um ambiente para reordenar os espacos manualmente (ordem persiste no arquivo e sobrevive a releitura; vale para PDF, TXT e painel KVA); relatorios de KVA (PDF e TXT) agora agrupam por espaco com subtotal de cada ambiente."
 }
