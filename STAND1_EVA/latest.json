@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.3",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.3.rbz",
-    "notas":  "v1.4.3: correcao do erro ao checar atualizacao dentro do SketchUp (falha de encoding no leitor do manifesto); inclui a v1.4.2 (prompt sempre ancorado na imagem da cena, sem modo Texto puro)."
+    "versao":  "1.4.4",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.4.rbz",
+    "notas":  "v1.4.4: fundos neutros (claro, cinza e escuro) aprimorados com atmosfera de estudio de design minimalista e bem iluminado (cyclorama sem emendas, clima de showroom/galeria, reflexo suave no piso)."
 }
