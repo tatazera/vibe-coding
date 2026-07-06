@@ -104,24 +104,37 @@ module STAND1
         },
         'neutro_claro' => {
           people: false,
-          env: 'The booth is presented in isolation against a clean, seamless light off-white ' \
-               'neutral studio background, with soft, even, diffuse lighting and a smooth subtle ' \
-               'gradient. No surrounding structures, no other booths and no environmental context ' \
-               '— only the booth on a neutral backdrop, emphasizing its form and materials.'
+          env: 'The booth is presented in isolation inside a bright, sophisticated minimalist design ' \
+               'studio with a clean, seamless light off-white cyclorama backdrop (infinity cove) ' \
+               'that curves smoothly from floor to wall with no visible edges or horizon line. ' \
+               'Elegant, refined, high-end showroom and art-gallery atmosphere. Bright, soft, even ' \
+               'and beautifully diffused studio lighting with gentle highlights, a smooth subtle ' \
+               'gradient and a delicate soft reflection on the floor. No surrounding structures, no ' \
+               'other booths and no environmental context — only the booth on a pristine minimalist ' \
+               'backdrop, emphasizing its form, proportions and materials.'
         },
         'neutro_cinza' => {
           people: false,
-          env: 'The booth is presented in isolation against a clean, seamless medium neutral grey ' \
-               'studio background, with soft, even, diffuse lighting and a smooth subtle gradient. ' \
-               'No surrounding structures, no other booths and no environmental context — only the ' \
-               'booth on a neutral backdrop, emphasizing its form and materials.'
+          env: 'The booth is presented in isolation inside a bright, sophisticated minimalist design ' \
+               'studio with a clean, seamless medium neutral grey cyclorama backdrop (infinity cove) ' \
+               'that curves smoothly from floor to wall with no visible edges or horizon line. ' \
+               'Elegant, refined, high-end showroom and art-gallery atmosphere. Bright, soft, even ' \
+               'and beautifully diffused studio lighting with gentle highlights, a smooth subtle ' \
+               'gradient and a delicate soft reflection on the floor. No surrounding structures, no ' \
+               'other booths and no environmental context — only the booth on a pristine minimalist ' \
+               'backdrop, emphasizing its form, proportions and materials.'
         },
         'neutro_escuro' => {
           people: false,
-          env: 'The booth is presented in isolation against a clean, seamless dark charcoal ' \
-               'neutral studio background, with soft, even, diffuse lighting and a smooth subtle ' \
-               'gradient. No surrounding structures, no other booths and no environmental context ' \
-               '— only the booth on a neutral backdrop, emphasizing its form and materials.'
+          env: 'The booth is presented in isolation inside a sophisticated minimalist design studio ' \
+               'with a clean, seamless dark charcoal cyclorama backdrop (infinity cove) that curves ' \
+               'smoothly from floor to wall with no visible edges or horizon line. Elegant, refined, ' \
+               'high-end showroom and art-gallery atmosphere. The booth itself is brightly and ' \
+               'beautifully lit with soft, even, well-diffused studio lighting and gentle highlights, ' \
+               'standing out against the dark backdrop, with a smooth subtle gradient and a delicate ' \
+               'soft reflection on the floor. No surrounding structures, no other booths and no ' \
+               'environmental context — only the booth on a pristine minimalist backdrop, ' \
+               'emphasizing its form, proportions and materials.'
         }
       }.freeze
 
