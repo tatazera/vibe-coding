@@ -1,5 +1,5 @@
 {
-    "versao":  "7.3.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.3.0.rbz",
-    "notas":  "v7.3.0: Multi-Espaco - arraste o titulo de um ambiente para reordenar os espacos manualmente (ordem persiste no arquivo e sobrevive a releitura; vale para PDF, TXT e painel KVA); relatorios de KVA (PDF e TXT) agora agrupam por espaco com subtotal de cada ambiente."
+    "versao":  "7.4.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.4.0.rbz",
+    "notas":  "v7.4.0: Multi-Espaco - botao de recolher/expandir cada ambiente (e todos de uma vez) para otimizar a visualizacao. Correcao importante do botao Ligar do KVA: agora respeita EXATAMENTE o item de referencia escolhido (antes trocava pela variante generica ou pela mais proxima); ligacoes manuais tambem deixaram de se perder ao sincronizar com o GitHub."
 }
