@@ -81,6 +81,13 @@
   .espaco-titulo.drag-over { background: rgba(200,79,191,.14); border-bottom-color: #C84FBF; }
   .esp-handle { color: rgba(200,79,191,.5); font-size: 12px; margin-right: 7px; user-select: none; letter-spacing: -2px; }
   .espaco-titulo:hover .esp-handle { color: #C84FBF; }
+  .esp-colapso { background: transparent; border: none; color: #C84FBF; cursor: pointer; font-size: 12px; padding: 0 6px 0 0; line-height: 1; flex-shrink: 0; }
+  .esp-colapso:hover { opacity: .7; }
+  .espaco-titulo.colapsado { margin-bottom: 8px; opacity: .82; }
+  .esp-resumo { font-weight: 500; font-size: 11px; text-transform: none; letter-spacing: 0; color: #999; margin-left: 9px; }
+  body.dark .esp-colapso { color: #e08fd8; }
+  .btn-colapso-esp { display: none; }
+  body.modo-multi .btn-colapso-esp { display: inline-flex; }
   body.bloqueado .espaco-titulo { cursor: default; }
   body.bloqueado .esp-handle { display: none; }
   .espaco-divisor { height: 1px; background: linear-gradient(90deg, transparent, rgba(200,79,191,.45), transparent); margin: 26px 0 22px; }
@@ -417,6 +424,7 @@
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
+  <button class="btn-modo btn-colapso-esp" onclick="toggleTodosEspacos()" title="Recolher ou expandir todos os ambientes (só visualização)">⊟ Recolher ambientes</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
 </div>
 
@@ -1314,6 +1322,7 @@ function persistirEstado(){
     dadosMulti: _memMulti,
     modoMulti: _modoMultiEspaco,
     ordemEspacos: _ordemEspacos,
+    espacosColapsados: Object.keys(_espacosColapsados),
     dados: dadosMemorial, // compatibilidade com leitura de estado antigo
     nomeProjeto: nomeProjeto,
     nomeResponsavel: nomeResponsavel,
@@ -1344,9 +1353,12 @@ function restaurarEstado(estadoJson){
       _modoMultiEspaco = false; // começa no Padrão após migração
     }
     if(e.ordemEspacos&&e.ordemEspacos.length) _ordemEspacos=e.ordemEspacos;
+    _espacosColapsados={};
+    if(Array.isArray(e.espacosColapsados)) e.espacosColapsados.forEach(function(n){ _espacosColapsados[n]=true; });
     dadosMemorial = (_modoMultiEspaco ? _memMulti : _memPadrao) || [];
     var btn=document.getElementById('btnMultiEspaco');
     if(btn){ btn.textContent=_modoMultiEspaco?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',_modoMultiEspaco); }
+    document.body.classList.toggle('modo-multi',_modoMultiEspaco);
     if(e.nomeProjeto){ nomeProjeto=e.nomeProjeto; document.getElementById('nomeProjeto').value=nomeProjeto; }
     if(e.nomeResponsavel){ nomeResponsavel=e.nomeResponsavel; document.getElementById('nomeResponsavel').value=nomeResponsavel; }
     if(e.revisao){ revisao=e.revisao; document.getElementById('revisao').value=revisao; }
@@ -1549,17 +1561,25 @@ function renderizar(){
   var logo=(typeof LOGO_B64!=='undefined')?LOGO_B64:'';
   var proj=nomeProjeto||nomeArquivo;
 
+  // Contagem de itens por espaço (para o resumo do ambiente recolhido).
+  var _contEsp={};
+  dadosMemorial.forEach(function(s){ if(s._espaco){ _contEsp[s._espaco]=(_contEsp[s._espaco]||0)+s.itens.length; } });
+
   var _lastEsp=null;
   var secoesHtml=dadosMemorial.map(function(sec){
     var cab='';
+    var colapsado = sec._espaco && _espacosColapsados[sec._espaco];
     if(sec._espaco && sec._espaco!==_lastEsp){
       if(_lastEsp!==null) cab+='<div class="espaco-divisor"></div>';
-      cab+='<div class="espaco-titulo" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
+      var chev='<button class="esp-colapso" title="'+(colapsado?'Expandir ambiente':'Recolher ambiente')+'" onclick="event.stopPropagation();toggleColapsoEspaco(\''+escaparChave(sec._espaco)+'\')">'+(colapsado?'▸':'▾')+'</button>';
+      var resumo=colapsado?'<span class="esp-resumo">'+(_contEsp[sec._espaco]||0)+' item(ns)</span>':'';
+      cab+='<div class="espaco-titulo'+(colapsado?' colapsado':'')+'" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
         +' ondragstart="dragEspaco(event,this)" ondragover="event.preventDefault();this.classList.add(\'drag-over\')"'
         +' ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropEspaco(event,this)">'
-        +'<span class="esp-handle">⋮⋮</span>'+escaparAttr(sec._espaco)+'</div>';
+        +chev+'<span class="esp-handle">⋮⋮</span>'+escaparAttr(sec._espaco)+resumo+'</div>';
       _lastEsp=sec._espaco;
     }
+    if(colapsado) return cab; // ambiente recolhido: emite só o título (uma vez), pula as seções
     var sn=sec.secao;
     var esp=sec._espaco||'';
     var ih=sec.itens.map(function(item,idx){
@@ -1825,6 +1845,27 @@ var _modoMultiEspaco = false;
 var _gruposEspaco    = [];
 var _dadosMultiEspaco = null;
 var _ordemEspacos    = []; // ordem manual dos espaços (drag no título); persiste no .skp
+var _espacosColapsados = {}; // {nomeEspaco:true} recolhidos no preview; persiste no .skp
+
+// Recolhe/expande um ambiente no preview (só visualização — não afeta exportação).
+function toggleColapsoEspaco(nome){
+  if(!nome) return;
+  if(_espacosColapsados[nome]) delete _espacosColapsados[nome];
+  else _espacosColapsados[nome]=true;
+  renderizar(); persistirEstado();
+}
+// Botão global: se algum ambiente está expandido, recolhe todos; senão expande todos.
+function toggleTodosEspacos(){
+  var espacos={}; dadosMemorial.forEach(function(s){ if(s._espaco) espacos[s._espaco]=true; });
+  var nomes=Object.keys(espacos);
+  if(!nomes.length){ mostrarToast('Disponível no modo Multi-Espaço.'); return; }
+  var algumAberto=nomes.some(function(n){ return !_espacosColapsados[n]; });
+  _espacosColapsados={};
+  if(algumAberto) nomes.forEach(function(n){ _espacosColapsados[n]=true; });
+  renderizar(); persistirEstado();
+  var btn=document.querySelector('.btn-colapso-esp');
+  if(btn) btn.textContent=algumAberto?'⊞ Expandir ambientes':'⊟ Recolher ambientes';
+}
 
 // ── Drag & drop de ESPAÇOS (reordenar ambientes no Multi-Espaço) ──
 function dragEspaco(ev,el){
@@ -1869,6 +1910,7 @@ function _ativarModo(multi){
   dadosMemorial = (multi ? _memMulti : _memPadrao) || [];
   var btn=document.getElementById('btnMultiEspaco');
   if(btn){ btn.textContent=multi?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',multi); }
+  document.body.classList.toggle('modo-multi',multi);
   if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco) sketchup.toggle_multi_espaco(multi.toString());
   // o diff é por modo: zera o indicador ao trocar (recalcula na próxima leitura)
   _diffAtual=[];
@@ -2177,9 +2219,13 @@ function _matchKVA(desc, entradas){
   if(ex){ baseCore=_stripNumKVA(ex.nome); }
   else {
     for(var i=0;i<_sinonimosKVA.length;i++){
-      var s=_sinonimosKVA[i], aps=s.apelidos||[], oficial=s.oficial||'';
+      var s=_sinonimosKVA[i], aps=s.apelidos||[], oficial=(s.oficial||'').trim();
       if(oficial && aps.some(function(a){ a=(a||'').trim(); return a && nd.indexOf(_normKVA(a))>=0; })){
-        baseCore=_stripNumKVA(oficial); break;
+        // Ligação MANUAL do usuário: honra a entrada EXATA escolhida (não re-deriva
+        // por grupo/proximidade — a decisão do usuário tem prioridade absoluta).
+        var exata=entradas.find(function(e){ return _normKVA(e.nome)===_normKVA(oficial); });
+        if(exata) return {entrada:exata, aprox:true};
+        baseCore=_stripNumKVA(oficial); break; // oficial não existe mais na tabela: fallback por grupo
       }
     }
   }
