@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.3.0"
+  VERSAO        = "7.4.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1789,10 +1789,29 @@ module STAND1_Memorial
     Array(remoto) + extras
   end
 
-  # Mescla sinônimos: remoto base + sinônimos só-locais (por nome oficial).
+  # Mescla sinônimos por nome oficial: quando o mesmo oficial existe nos dois lados,
+  # UNE os apelidos (não descarta os locais) — senão a ligação manual do usuário se
+  # perderia no sync sempre que já houvesse um sinônimo com aquele oficial no remoto.
   def self.mesclar_sinonimos_kva(remoto, local)
-    ofic = Array(remoto).map { |s| s["oficial"].to_s.downcase.strip }
-    Array(remoto) + Array(local).reject { |s| ofic.include?(s["oficial"].to_s.downcase.strip) }
+    idx = {} # oficial(normalizado) => { "oficial"=>..., "apelidos"=>[...] }
+    ordem = []
+    add = lambda do |s|
+      of = s["oficial"].to_s.strip
+      next if of.empty?
+      k = of.downcase
+      unless idx[k]
+        idx[k] = { "oficial" => of, "apelidos" => [] }
+        ordem << k
+      end
+      Array(s["apelidos"]).each do |a|
+        a = a.to_s.strip
+        next if a.empty?
+        idx[k]["apelidos"] << a unless idx[k]["apelidos"].any? { |x| x.downcase == a.downcase }
+      end
+    end
+    Array(remoto).each { |s| add.call(s) }
+    Array(local).each  { |s| add.call(s) }
+    ordem.map { |k| idx[k] }
   end
 
   # Tabela embutida no plugin (ships no .rbz) — baseline sempre disponível, sem rede.
