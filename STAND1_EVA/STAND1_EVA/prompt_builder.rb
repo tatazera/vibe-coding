@@ -311,7 +311,14 @@ module STAND1
         image_mode   = !!opts[:image_mode]             # prompt p/ uso com PNG anexado
 
         light_en   = LIGHTING[lighting_key] || 'cold white'
-        env        = ENVIRONMENTS[env_key]  || ENVIRONMENTS['feira']
+        # 'generico' = background manual: usa SÓ o texto que o usuário digitou
+        # (sem descrição automática). Se vazio, o bloco [ENVIRONMENT] é omitido.
+        env =
+          if env_key == 'generico'
+            { people: false, env: opts[:env_custom].to_s.strip }
+          else
+            ENVIRONMENTS[env_key] || ENVIRONMENTS['feira']
+          end
         booth_line = BOOTH_TYPES[booth_key] || BOOTH_TYPES['ilha']
 
         # Pessoas: toggle explícito; se não vier (nil), segue o padrão do ambiente.
@@ -364,7 +371,7 @@ module STAND1
         blocks << "[SCENE]\n#{angle}" if angle
         blocks << "[SUBJECT]\n#{subject}"
         blocks << "[BOOTH TYPE]\n#{booth_line}"
-        blocks << "[ENVIRONMENT]\n#{env[:env]}"
+        blocks << "[ENVIRONMENT]\n#{env[:env]}" unless env[:env].to_s.strip.empty?
         blocks << "[PEOPLE]\n#{PEOPLE}" if people
         blocks << "[LIGHTING]\n#{lighting_block}"
         blocks << "[PHOTOGRAPHY]\n#{CAMERA_TECH}"
