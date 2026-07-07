@@ -76,7 +76,15 @@
   .secao:last-child { margin-bottom: 0; }
   .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); }
   /* Multi-Espaço: título do espaço + divisória minimalista entre espaços */
-  .espaco-titulo { font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; }
+  .espaco-titulo { display: flex; align-items: center; font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; }
+  .esp-nome { flex: 1; }
+  .esp-acoes { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .esp-acao { background: transparent; border: 1px solid rgba(200,79,191,.35); border-radius: 4px; width: 20px; height: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #C84FBF; padding: 0; transition: all .15s; }
+  .esp-acao:hover { background: #C84FBF; color: #fff; border-color: transparent; }
+  .esp-apelido-tag { font-weight: 500; font-size: 9px; text-transform: none; letter-spacing: 0; color: #999; margin-left: 8px; font-style: italic; }
+  body.bloqueado .esp-acoes { display: none; }
+  body.dark .esp-acao { border-color: rgba(224,143,216,.4); color: #e08fd8; }
+  body.dark .esp-acao:hover { background: #e08fd8; color: #1a1b22; }
   .espaco-titulo:active { cursor: grabbing; }
   .espaco-titulo.drag-over { background: rgba(200,79,191,.14); border-bottom-color: #C84FBF; }
   .esp-handle { color: rgba(200,79,191,.5); font-size: 12px; margin-right: 7px; user-select: none; letter-spacing: -2px; }
@@ -537,11 +545,12 @@
         <button class="mrev-btn mrev-btn-sec" onclick="fecharModalRevAuto()">✕</button>
       </div>
     </div>
-    <div class="linear-desc">Materiais do modelo cujo nome contém estas palavras entram <b>automaticamente</b> na seção <b>REVESTIMENTOS</b> ao clicar em "Adicionar Tudo". O fluxo manual via Gerenciar Revestimentos continua funcionando normalmente.</div>
+    <div class="linear-desc">Materiais do modelo cujo nome contém estas palavras entram <b>automaticamente</b> na seção <b>REVESTIMENTOS</b> ao clicar em "Adicionar Tudo". ⚠ A palavra precisa aparecer no <b>nome do material</b> aplicado no SketchUp (ex.: um material chamado "Adesivo Vinil Fosco" casa com "adesivo" ou "vinil"). O fluxo manual via Gerenciar Revestimentos continua funcionando normalmente.</div>
     <div class="kw-list" id="listaKwRevAuto"></div>
     <div class="linear-add">
       <input type="text" id="inputKwRevAuto" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarKeywordRevAuto()">
       <button class="mrev-btn mrev-btn-primary" onclick="adicionarKeywordRevAuto()">+ Adicionar</button>
+      <button class="mrev-btn mrev-btn-sec" onclick="adicionarSugeridosRevAuto()" title="Adiciona palavras comuns (adesivo, forração, lona, vinil, tecido, carpete…) sem remover as suas">+ Sugeridos</button>
     </div>
   </div>
 </div>
@@ -868,6 +877,70 @@ function mesclarInteligente(novos){
     });
   });
   ordenarSecoes();
+}
+
+// ── ATUALIZAR UM AMBIENTE (Multi-Espaço) ─────────────────────────────────────
+// Pede ao Ruby a releitura só daquele grupo; o merge (receberAtualizacaoEspaco)
+// preserva edições manuais, itens ocultos, apelido e ordem.
+function atualizarUmEspaco(nome){
+  if(_bloqueioImpedeReleitura()) return;
+  if(!nome) return;
+  if(typeof sketchup!=='undefined'&&sketchup.atualizar_um_espaco) sketchup.atualizar_um_espaco(nome);
+  else mostrarToast('Disponível apenas dentro do SketchUp.');
+}
+function alertaEspacoNaoEncontrado(nome){
+  mostrarToast('Ambiente "'+nome+'" não encontrado no modelo (o grupo foi renomeado, apagado ou desmarcado?).');
+}
+// Merge inteligente restrito às seções de UM espaço: adiciona novos, remove os que
+// sumiram (só origem 'modelo'), preserva manuais/editados e campos de UI (oculto/obs).
+function receberAtualizacaoEspaco(payload){
+  var esp=payload && payload.espaco;
+  if(!esp){ return; }
+  var novos=(payload.secoes||[]);
+  // mapa chave→item dos dados frescos daquele espaço
+  var mapaFresco={};
+  novos.forEach(function(ns){ ns.itens.forEach(function(ni){ mapaFresco[ni.chave]=ni; }); });
+  // remove itens do modelo que sumiram, SÓ nas seções deste espaço
+  var removidos=0;
+  dadosMemorial.forEach(function(se){
+    if((se._espaco||'')!==esp) return;
+    se.itens=se.itens.filter(function(it){
+      if(it.origem==='manual') return true;
+      var existe=!!mapaFresco[it.chave];
+      if(!existe) removidos++;
+      return existe;
+    });
+  });
+  // índice chave→item existente DENTRO deste espaço
+  var existentes={};
+  dadosMemorial.forEach(function(se){
+    if((se._espaco||'')!==esp) return;
+    se.itens.forEach(function(it){ if(it.chave) existentes[it.chave]=it; });
+  });
+  // adiciona novos / atualiza os do modelo (preserva descrição/qtd editadas e movidos)
+  var adicionados=0;
+  novos.forEach(function(ns){
+    ns.itens.forEach(function(ni){
+      ni.origem='modelo';
+      var ex=existentes[ni.chave];
+      if(ex){
+        if(ex.origem!=='manual' && !ex.editado){ ex.descricao=ni.descricao; ex.quantidade=ni.quantidade; }
+        if(typeof ni.dim_l!=='undefined'){ ex.nome_base=ni.nome_base; ex.dim_l=ni.dim_l; ex.dim_p=ni.dim_p; ex.dim_a=ni.dim_a; }
+      } else {
+        var se=null;
+        for(var i=0;i<dadosMemorial.length;i++){ if(dadosMemorial[i].secao===ns.secao && (dadosMemorial[i]._espaco||'')===esp){ se=dadosMemorial[i]; break; } }
+        if(!se){ se={secao:ns.secao, itens:[], _espaco:esp}; dadosMemorial.push(se); }
+        se.itens.push(ni); existentes[ni.chave]=ni; adicionados++;
+      }
+    });
+  });
+  // remove seções vazias deste espaço
+  dadosMemorial=dadosMemorial.filter(function(se){ return se.itens.length>0; });
+  // mantém o store multi coerente (dadosMemorial é o ativo no modo multi)
+  if(_modoMultiEspaco) _memMulti=dadosMemorial;
+  ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
+  var label=_labelEspaco(esp);
+  mostrarToast('⟳ "'+label+'" atualizado'+(adicionados?' · +'+adicionados+' novo(s)':'')+(removidos?' · -'+removidos+' removido(s)':''));
 }
 
 function carregarDados(p){
@@ -1206,6 +1279,15 @@ function removerKeywordRevAuto(idx){
   renderizarChipsRevAuto(); salvarKeywordsRevAuto();
 }
 
+// Mescla um conjunto de palavras-chave comuns sem remover as que o usuário já tem.
+var KW_REV_SUGERIDAS=['lona impressa','napa','pintura','ripado','adesivo','forração','forracao','lona','vinil','tecido','carpete'];
+function adicionarSugeridosRevAuto(){
+  var add=0;
+  KW_REV_SUGERIDAS.forEach(function(kw){ if(palavrasRevAuto.indexOf(kw)<0){ palavrasRevAuto.push(kw); add++; } });
+  renderizarChipsRevAuto(); salvarKeywordsRevAuto();
+  mostrarToast(add?('+'+add+' palavra(s) adicionada(s).'):'Todas as sugeridas já estavam na lista.');
+}
+
 function salvarKeywordsRevAuto(){
   if(typeof sketchup!=='undefined'&&sketchup.salvar_palavras_revestimento)
     sketchup.salvar_palavras_revestimento(JSON.stringify(palavrasRevAuto));
@@ -1323,6 +1405,7 @@ function persistirEstado(){
     modoMulti: _modoMultiEspaco,
     ordemEspacos: _ordemEspacos,
     espacosColapsados: Object.keys(_espacosColapsados),
+    apelidosEspaco: _apelidosEspaco,
     dados: dadosMemorial, // compatibilidade com leitura de estado antigo
     nomeProjeto: nomeProjeto,
     nomeResponsavel: nomeResponsavel,
@@ -1355,6 +1438,7 @@ function restaurarEstado(estadoJson){
     if(e.ordemEspacos&&e.ordemEspacos.length) _ordemEspacos=e.ordemEspacos;
     _espacosColapsados={};
     if(Array.isArray(e.espacosColapsados)) e.espacosColapsados.forEach(function(n){ _espacosColapsados[n]=true; });
+    _apelidosEspaco = (e.apelidosEspaco && typeof e.apelidosEspaco==='object') ? e.apelidosEspaco : {};
     dadosMemorial = (_modoMultiEspaco ? _memMulti : _memPadrao) || [];
     var btn=document.getElementById('btnMultiEspaco');
     if(btn){ btn.textContent=_modoMultiEspaco?'⊞ Multi-Espaço':'⊞ Padrão'; btn.classList.toggle('ativo',_modoMultiEspaco); }
@@ -1571,12 +1655,18 @@ function renderizar(){
     var colapsado = sec._espaco && _espacosColapsados[sec._espaco];
     if(sec._espaco && sec._espaco!==_lastEsp){
       if(_lastEsp!==null) cab+='<div class="espaco-divisor"></div>';
-      var chev='<button class="esp-colapso" title="'+(colapsado?'Expandir ambiente':'Recolher ambiente')+'" onclick="event.stopPropagation();toggleColapsoEspaco(\''+escaparChave(sec._espaco)+'\')">'+(colapsado?'▸':'▾')+'</button>';
+      var ek=escaparChave(sec._espaco);
+      var chev='<button class="esp-colapso" title="'+(colapsado?'Expandir ambiente':'Recolher ambiente')+'" onclick="event.stopPropagation();toggleColapsoEspaco(\''+ek+'\')">'+(colapsado?'▸':'▾')+'</button>';
       var resumo=colapsado?'<span class="esp-resumo">'+(_contEsp[sec._espaco]||0)+' item(ns)</span>':'';
+      var apelidoTag=(_apelidosEspaco[sec._espaco]&&_apelidosEspaco[sec._espaco].trim())?'<span class="esp-apelido-tag" title="Nome original: '+escaparAttr(sec._espaco)+'">('+escaparAttr(sec._espaco)+')</span>':'';
+      var acoes='<span class="esp-acoes">'
+        +'<button class="esp-acao" title="Renomear ambiente no memorial" onclick="event.stopPropagation();renomearEspaco(\''+ek+'\')">✎</button>'
+        +'<button class="esp-acao" title="Atualizar só este ambiente (preserva edições manuais)" onclick="event.stopPropagation();atualizarUmEspaco(\''+ek+'\')">⟳</button>'
+        +'</span>';
       cab+='<div class="espaco-titulo'+(colapsado?' colapsado':'')+'" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
         +' ondragstart="dragEspaco(event,this)" ondragover="event.preventDefault();this.classList.add(\'drag-over\')"'
         +' ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropEspaco(event,this)">'
-        +chev+'<span class="esp-handle">⋮⋮</span>'+escaparAttr(sec._espaco)+resumo+'</div>';
+        +chev+'<span class="esp-handle">⋮⋮</span><span class="esp-nome">'+escaparAttr(_labelEspaco(sec._espaco))+apelidoTag+resumo+'</span>'+acoes+'</div>';
       _lastEsp=sec._espaco;
     }
     if(colapsado) return cab; // ambiente recolhido: emite só o título (uma vez), pula as seções
@@ -1650,7 +1740,7 @@ function buildHTMLStandalone(){
     var cab='';
     if(sec._espaco && sec._espaco!==_lastEspP){
       if(_lastEspP!==null) cab+='<div class="pespaco-divisor"></div>';
-      cab+='<div class="pespaco-titulo">'+escaparHtml(sec._espaco)+'</div>';
+      cab+='<div class="pespaco-titulo">'+escaparHtml(_labelEspaco(sec._espaco))+'</div>';
       _lastEspP=sec._espaco;
     }
     var itens=visiveis.map(function(it){
@@ -1792,7 +1882,7 @@ function buildTextoMemorial(ocultarMedidas, comDecoracao){
     if(!visiveis.length) return;
     if(sec._espaco && sec._espaco!==_lastEspT){
       if(_lastEspT!==null) t+='\n────────────────────────────────────────\n\n';
-      t+='### '+sec._espaco.toUpperCase()+' ###\n\n';
+      t+='### '+_labelEspaco(sec._espaco).toUpperCase()+' ###\n\n';
       _lastEspT=sec._espaco;
     }
     t+=_secaoBase(sec.secao)+'\n';
@@ -1846,6 +1936,24 @@ var _gruposEspaco    = [];
 var _dadosMultiEspaco = null;
 var _ordemEspacos    = []; // ordem manual dos espaços (drag no título); persiste no .skp
 var _espacosColapsados = {}; // {nomeEspaco:true} recolhidos no preview; persiste no .skp
+var _apelidosEspaco    = {}; // {nomeOriginal:apelidoExibicao} — renomear só no memorial; persiste
+
+// Rótulo de exibição do ambiente: apelido (renomeado) ou o nome original do grupo.
+// A IDENTIDADE (casamento/diff/atualização) usa sempre o nome original.
+function _labelEspaco(nome){ var a=_apelidosEspaco[nome]; return (a&&a.trim())?a:nome; }
+
+// Renomeia um ambiente só na exibição do memorial (não toca no modelo). Sobrevive à
+// releitura porque a identidade continua sendo o nome original do grupo.
+function renomearEspaco(nome){
+  if(!nome) return;
+  var atual=_apelidosEspaco[nome]||'';
+  var novo=prompt('Nome do ambiente no memorial (deixe vazio para voltar ao original "'+nome+'"):', atual||nome);
+  if(novo===null) return; // cancelou
+  novo=novo.trim();
+  if(!novo || novo===nome) delete _apelidosEspaco[nome];
+  else _apelidosEspaco[nome]=novo;
+  renderizar(); persistirEstado();
+}
 
 // Recolhe/expande um ambiente no preview (só visualização — não afeta exportação).
 function toggleColapsoEspaco(nome){
@@ -2077,7 +2185,7 @@ function buildHTMLRevisaoCompleta(){
     var cab='';
     if(sec._espaco && sec._espaco!==_lastEspR){
       if(_lastEspR!==null) cab+='<div class="pespaco-divisor"></div>';
-      cab+='<div class="pespaco-titulo">'+escaparHtml(sec._espaco)+'</div>';
+      cab+='<div class="pespaco-titulo">'+escaparHtml(_labelEspaco(sec._espaco))+'</div>';
       _lastEspR=sec._espaco;
     }
     var ksec=(sec._espaco?sec._espaco+'::':'')+_secaoBase(sec.secao);
@@ -2354,7 +2462,7 @@ function renderizarKVA(res){
     ordem.forEach(function(e){
       var inner='', subEsp=0;
       grupos[e].forEach(function(sec){ inner+=_renderSecaoKVA(sec); subEsp+=sec.subtotal; });
-      html+='<div class="kva-espaco"><div class="kva-espaco-titulo">⊞ '+escaparAttr(e)+'</div>'+inner
+      html+='<div class="kva-espaco"><div class="kva-espaco-titulo">⊞ '+escaparAttr(_labelEspaco(e))+'</div>'+inner
         +'<div class="kva-espaco-sub"><span>subtotal do espaço:</span><span>'+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva</span></div></div>';
     });
   } else {
@@ -2481,9 +2589,9 @@ function buildHTMLRelatorioKVA(res){
     });
     ordem.forEach(function(e){
       var subEsp=0;
-      linhas+='<tr><td colspan="3" style="background:#C84FBF;color:#fff;font-weight:bold;letter-spacing:.5px">⊞ '+escaparAttr(e)+'</td></tr>';
+      linhas+='<tr><td colspan="3" style="background:#C84FBF;color:#fff;font-weight:bold;letter-spacing:.5px">⊞ '+escaparAttr(_labelEspaco(e))+'</td></tr>';
       grupos[e].forEach(function(sec){ linhas+=_linhasSecaoRelKVA(sec); subEsp+=sec.subtotal; });
-      linhas+='<tr style="font-weight:bold;background:#fbe2ec"><td colspan="2">Subtotal do espaço — '+escaparAttr(e)+'</td><td>'+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva</td></tr>';
+      linhas+='<tr style="font-weight:bold;background:#fbe2ec"><td colspan="2">Subtotal do espaço — '+escaparAttr(_labelEspaco(e))+'</td><td>'+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva</td></tr>';
     });
   } else {
     res.secoes.forEach(function(sec){ linhas+=_linhasSecaoRelKVA(sec); });
@@ -2519,9 +2627,9 @@ function buildTXTRelatorioKVA(res){
     });
     ordem.forEach(function(e){
       var subEsp=0;
-      t+='### '+e.toUpperCase()+' ###\n';
+      t+='### '+_labelEspaco(e).toUpperCase()+' ###\n';
       grupos[e].forEach(function(sec){ t+=secTXT(sec); subEsp+=sec.subtotal; });
-      t+='  SUBTOTAL DO ESPAÇO ('+e+'): '+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva\n';
+      t+='  SUBTOTAL DO ESPAÇO ('+_labelEspaco(e)+'): '+(Math.round(subEsp*1000)/1000).toFixed(3)+' kva\n';
       t+='────────────────────────────────────────\n\n';
     });
   } else {
