@@ -645,6 +645,13 @@
         <button class="toggle-btn" id="env-neutro_claro" onclick="setEnv('neutro_claro')">Neutro claro</button>
         <button class="toggle-btn" id="env-neutro_cinza" onclick="setEnv('neutro_cinza')">Neutro cinza</button>
         <button class="toggle-btn" id="env-neutro_escuro" onclick="setEnv('neutro_escuro')">Neutro escuro</button>
+        <button class="toggle-btn" id="env-generico" onclick="setEnv('generico')">Genérico ✎</button>
+      </div>
+      <div id="envCustomWrap" style="display:none;margin-top:8px">
+        <textarea id="envCustom" rows="3" onchange="saveSettings()" oninput="envCustomDebounce()"
+          placeholder="Descreva o background manualmente. Este texto vai no bloco [ENVIRONMENT] do prompt — nenhuma descrição automática é usada.&#10;Ex.: Ambiente noturno de rooftop com skyline da cidade ao fundo e luzes bokeh."
+          style="width:100%;padding:9px;border:1.5px solid var(--borda);border-radius:8px;font-size:12px;font-family:var(--font);background:#fafafa;color:#333;resize:vertical;min-height:66px"></textarea>
+        <div style="font-size:10px;color:#999;margin-top:4px">Genérico: só o seu texto entra como background. Deixe vazio para não incluir nenhum background no prompt.</div>
       </div>
     </div>
 
@@ -1026,7 +1033,7 @@
   var sceneThumbs = {};          // sid => dataURL
   var curSid      = '';          // cena selecionada para CRITICALs por cena
 
-  var ENV_BTNS   = ['env-feira','env-feira_externa','env-neutro_claro','env-neutro_cinza','env-neutro_escuro'];
+  var ENV_BTNS   = ['env-feira','env-feira_externa','env-neutro_claro','env-neutro_cinza','env-neutro_escuro','env-generico'];
   var BOOTH_BTNS = ['booth-ilha','booth-ponta','booth-esquina','booth-corredor'];
 
   // estado por aba: r = Render IA (cenas), p = Apresentação (cenas + export)
@@ -1059,6 +1066,7 @@
     try {
       if (s.pBg)                         setBg('p', s.pBg);
       if (s.lighting)                    setLight(s.lighting);
+      if (typeof s.envCustom === 'string') document.getElementById('envCustom').value = s.envCustom;
       if (s.environment)                 setEnv(s.environment);
       if (s.boothType)                   setBooth(s.boothType);
       if (typeof s.people === 'boolean') setPeople(s.people);
@@ -1117,6 +1125,7 @@
     var pRes = readRes('p');
     var s = {
       pBg: st.p.bg, lighting: lighting, environment: environment,
+      envCustom: document.getElementById('envCustom').value,
       boothType: boothType, people: people,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
@@ -1336,10 +1345,14 @@
     ENV_BTNS.forEach(function(id) {
       document.getElementById(id).classList.toggle('active', id === 'env-' + e);
     });
+    // Campo de background manual só aparece no modo Genérico.
+    document.getElementById('envCustomWrap').style.display = (e === 'generico') ? 'block' : 'none';
     // Padrão inteligente: feira (interna/externa) tem público, fundo neutro não (só em clique do usuário).
     if (!_applying) setPeople(e === 'feira' || e === 'feira_externa');
     saveSettings();
   }
+  var _envCustomT = null;
+  function envCustomDebounce() { clearTimeout(_envCustomT); _envCustomT = setTimeout(saveSettings, 800); }
 
   function setBooth(b) {
     boothType = b;
@@ -1419,6 +1432,7 @@
 
     var config = {
       scenes: sel, lighting: lighting, environment: environment,
+      env_custom: document.getElementById('envCustom').value.trim(),
       booth_type: boothType, people: people,
       image_mode: true, // o prompt do EVA é sempre ancorado na imagem exportada
       description: document.getElementById('boothDesc').value.trim(),
@@ -2118,6 +2132,7 @@
       scene: scene,
       model: document.getElementById('studioModel').value,
       lighting: lighting, environment: environment,
+      env_custom: document.getElementById('envCustom').value.trim(),
       booth_type: boothType, people: people,
       description: document.getElementById('boothDesc').value.trim(),
       criticals_pt: criticals,
