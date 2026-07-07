@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.4",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.4.rbz",
-    "notas":  "v1.4.4: fundos neutros (claro, cinza e escuro) aprimorados com atmosfera de estudio de design minimalista e bem iluminado (cyclorama sem emendas, clima de showroom/galeria, reflexo suave no piso)."
+    "versao":  "1.4.5",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.5.rbz",
+    "notas":  "v1.4.5: novo ambiente Generico - permite digitar o background manualmente. So o seu texto entra no bloco de background do prompt, sem descricao automatica (deixe vazio para nenhum background)."
 }
