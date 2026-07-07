@@ -323,6 +323,7 @@ module STAND1
       shared = {
         lighting:        config[:lighting]     || 'frio',
         environment:     config[:environment]  || 'feira',
+        env_custom:      config[:env_custom]   || '',
         booth_type:      config[:booth_type]   || 'ilha',
         people:          config[:people],
         description:     config[:description]   || '',
@@ -738,6 +739,7 @@ module STAND1
       shared = {
         lighting:     config[:lighting]    || 'frio',
         environment:  config[:environment] || 'feira',
+        env_custom:   config[:env_custom]  || '',
         booth_type:   config[:booth_type]  || 'ilha',
         people:       config[:people],
         description:  config[:description] || '',
