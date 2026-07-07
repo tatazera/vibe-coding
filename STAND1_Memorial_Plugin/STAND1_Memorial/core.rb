@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.4.0"
+  VERSAO        = "7.5.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -360,7 +360,8 @@ module STAND1_Memorial
   # Materiais do modelo cujo nome contém estas palavras entram automaticamente
   # na seção REVESTIMENTOS ao usar "Adicionar Tudo".
   PALAVRAS_REVESTIMENTO_DEFAULT = [
-    "lona impressa", "napa", "pintura", "ripado"
+    "lona impressa", "napa", "pintura", "ripado",
+    "adesivo", "forração", "forracao", "lona", "vinil", "tecido", "carpete"
   ]
 
   def self.palavras_revestimento
@@ -679,6 +680,23 @@ module STAND1_Memorial
         end
       rescue => e
         @dialog.execute_script("UI.messagebox('Erro Multi-Espaço: #{e.message}')")
+      end
+    end
+
+    # Atualizar SOMENTE um ambiente (Multi-Espaço) — relê só aquele grupo e devolve
+    # ao JS, que faz o merge inteligente restrito ao espaço (preserva edições manuais).
+    @dialog.add_action_callback("atualizar_um_espaco") do |_ctx, nome_espaco|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        dados = coletar_dados_um_espaco(model_atual, nome_espaco.to_s)
+        if dados
+          @dialog.execute_script("receberAtualizacaoEspaco(#{dados.to_json})")
+        else
+          @dialog.execute_script("alertaEspacoNaoEncontrado(#{nome_espaco.to_s.to_json})")
+        end
+      rescue => e
+        @dialog.execute_script("UI.messagebox('Erro ao atualizar ambiente: #{e.message}')")
       end
     end
 
@@ -1669,6 +1687,35 @@ module STAND1_Memorial
       resultado << { "espaco" => gs[:nome], "secoes" => secoes } unless secoes.empty?
     end
     resultado
+  end
+
+  # Relê UM único ambiente (por nome de exibição do grupo) e devolve {espaco, secoes}.
+  # Mesma lógica de coletar_dados_multi_espaco, restrita ao primeiro grupo marcado
+  # cujo nome casa — usado pelo botão ⟳ de atualizar só aquele ambiente.
+  def self.coletar_dados_um_espaco(model, nome_espaco)
+    limpar_cache
+    alvo = nil; idx = 0
+    model.entities.each do |ent|
+      next unless ent.is_a?(Sketchup::Group)
+      marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
+      next unless marcado == true || marcado == "true"
+      idx += 1
+      nome = nome_container_espaco(ent)
+      nome = "Espaço #{idx}" if nome.empty?
+      if nome == nome_espaco
+        alvo = { grupo: ent, nome: nome }
+        break
+      end
+    end
+    return nil unless alvo
+    secoes_raw = {}
+    SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
+    processar_conteudo_espaco(alvo[:grupo], secoes_raw)
+    materiais = listar_materiais_revestimentos_grupo(alvo[:grupo])
+    adicionar_revestimentos_auto(secoes_raw, materiais)
+    adicionar_fita_led_auto(secoes_raw, materiais)
+    secoes = montar_resultado(secoes_raw)
+    { "espaco" => alvo[:nome], "secoes" => secoes }
   end
 
   # Materiais de revestimento dentro de um espaço — varre as faces imediatas do
