@@ -76,7 +76,7 @@
   .secao:last-child { margin-bottom: 0; }
   .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); }
   /* Multi-Espaço: título do espaço + divisória minimalista entre espaços */
-  .espaco-titulo { display: flex; align-items: center; font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; }
+  .espaco-titulo { display: flex; align-items: center; font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; -webkit-user-select: none; user-select: none; }
   .esp-nome { flex: 1; }
   .esp-acoes { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .esp-acao { background: transparent; border: 1px solid rgba(200,79,191,.35); border-radius: 4px; width: 20px; height: 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; color: #C84FBF; padding: 0; transition: all .15s; }
@@ -433,6 +433,7 @@
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
   <button class="btn-modo btn-colapso-esp" onclick="toggleTodosEspacos()" title="Recolher ou expandir todos os ambientes (só visualização)">⊟ Recolher ambientes</button>
+  <button class="btn-modo btn-limpar" onclick="limparTudo()" title="Remover TODOS os itens do memorial (não afeta o modelo)">🗑 Limpar Tudo</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
 </div>
 
@@ -1303,12 +1304,14 @@ function dropItem(ev,li){
   ev.preventDefault(); ev.stopPropagation();
   var d=ev.dataTransfer.getData('text/plain').split('||');
   if(d.length<2) return;
+  if(d[0]==='ESPACO'){ moverEspaco(d[1], li.dataset.esp||''); return; } // soltar ambiente sobre um item → reordena ambientes
   moverItem(d[0], parseInt(d[1],10), li.dataset.sn, parseInt(li.dataset.idx,10), d[2]||'', li.dataset.esp||'');
 }
 function dropSecao(ev,div){
   ev.preventDefault();
   var d=ev.dataTransfer.getData('text/plain').split('||');
   if(d.length<2) return;
+  if(d[0]==='ESPACO'){ moverEspaco(d[1], div.dataset.esp||''); return; } // soltar ambiente sobre uma seção → reordena ambientes
   moverItem(d[0], parseInt(d[1],10), div.dataset.sn, -1, d[2]||'', div.dataset.esp||''); // -1 = fim da seção
 }
 function moverItem(snFrom, from, snTo, to, espFrom, espTo){
@@ -1660,6 +1663,8 @@ function renderizar(){
       var resumo=colapsado?'<span class="esp-resumo">'+(_contEsp[sec._espaco]||0)+' item(ns)</span>':'';
       var apelidoTag=(_apelidosEspaco[sec._espaco]&&_apelidosEspaco[sec._espaco].trim())?'<span class="esp-apelido-tag" title="Nome original: '+escaparAttr(sec._espaco)+'">('+escaparAttr(sec._espaco)+')</span>':'';
       var acoes='<span class="esp-acoes">'
+        +'<button class="esp-acao" title="Mover ambiente para cima" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',-1)">▲</button>'
+        +'<button class="esp-acao" title="Mover ambiente para baixo" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',1)">▼</button>'
         +'<button class="esp-acao" title="Renomear ambiente no memorial" onclick="event.stopPropagation();renomearEspaco(\''+ek+'\')">✎</button>'
         +'<button class="esp-acao" title="Atualizar só este ambiente (preserva edições manuais)" onclick="event.stopPropagation();atualizarUmEspaco(\''+ek+'\')">⟳</button>'
         +'</span>';
@@ -2000,6 +2005,31 @@ function moverEspaco(de,para){
   atual.splice(atual.indexOf(para)+(iDe<iPara?1:0),0,de);
   _ordemEspacos=atual;
   ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
+}
+// Fallback por botões ▲/▼ (o drag & drop do CEF é instável): troca o ambiente com o vizinho.
+function moverEspacoVizinho(esp,dir){
+  if(bloqueado) return;
+  var atual=[];
+  dadosMemorial.forEach(function(s){ var e=s._espaco||''; if(e&&atual.indexOf(e)<0) atual.push(e); });
+  var i=atual.indexOf(esp), j=i+dir;
+  if(i<0||j<0||j>=atual.length) return;
+  moverEspaco(esp, atual[j]);
+}
+// Remove TODOS os itens do memorial do modo ativo (padrão OU multi — não mexe no outro store,
+// nem no modelo do SketchUp). Preferências visuais dos ambientes (apelidos/ordem/colapso) são
+// mantidas de propósito, para que uma nova leitura reaproveite a organização.
+function limparTudo(){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para limpar o memorial.'); return; }
+  if(!dadosMemorial.length){ mostrarToast('O memorial já está vazio.'); return; }
+  var modo=_modoMultiEspaco?'Multi-Espaço':'Padrão';
+  if(!confirm('Remover TODOS os itens do memorial ('+modo+')?\n\nIsto não afeta o modelo no SketchUp e não altera o outro modo.')) return;
+  dadosMemorial.length=0; // esvazia o store ativo (mesma referência de _memMulti/_memPadrao)
+  _diffAtual=[];
+  var lDiff=document.getElementById('listaDiff'); if(lDiff) lDiff.innerHTML='';
+  var cDiff=document.getElementById('diffContador'); if(cDiff) cDiff.textContent='0';
+  var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
+  ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
+  mostrarToast('🗑 Memorial ('+modo+') limpo.');
 }
 
 // Memórias INDEPENDENTES por modo: alternar só troca qual está ativa, nunca
