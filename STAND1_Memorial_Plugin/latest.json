@@ -1,5 +1,5 @@
 {
-    "versao":  "7.5.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.5.0.rbz",
-    "notas":  "v7.5.0: Multi-Espaco - cada ambiente agora tem icones proprios no titulo: recolher, renomear (so no memorial, nao mexe no modelo) e ATUALIZAR so aquele ambiente (releitura preservando itens manuais e edicoes). Revestimentos: lista padrao ampliada (adesivo, forracao, lona, vinil, tecido, carpete...) e botao + Sugeridos no painel; adesivos e forracoes passam a entrar automaticamente (desde que a palavra esteja no nome do material)."
+    "versao":  "7.6.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.6.0.rbz",
+    "notas":  "v7.6.0: Multi-Espaco - a reordenacao de ambientes agora funciona de verdade: alem de arrastar o titulo (que agora aceita soltar em qualquer ponto do ambiente alvo), cada ambiente tem botoes de subir/descer no titulo, sem depender do arrastar. Novo botao Limpar Tudo remove todos os itens do memorial do modo ativo (nao afeta o modelo nem o outro modo)."
 }
