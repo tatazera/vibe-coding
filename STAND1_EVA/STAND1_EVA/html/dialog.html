@@ -549,9 +549,142 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #d4d4e0; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #c0c0d0; }
+
+    /* ════════════ DARK MODE (aditivo — ativado por body.dark) ════════════ */
+    body.dark {
+      --bg:     #16171f;
+      --borda:  #34363f;
+      --texto:  #c7c9d4;
+      background: #16171f;
+      color: #e7e8ef;
+    }
+
+    /* Superfícies */
+    body.dark .panel-scenes,
+    body.dark footer,
+    body.dark .mat-box,
+    body.dark .prompt-card { background: #1e1f29; }
+    body.dark .panel-config { background: #16171f; }
+    body.dark .panel-scenes,
+    body.dark .panel-title,
+    body.dark .scenes-actions,
+    body.dark .section,
+    body.dark footer { border-color: #2c2e38; }
+    body.dark .mat-item { border-color: #2a2c35; }
+
+    /* Texto / títulos */
+    body.dark .scene-item label { color: #d3d5e0; }
+    body.dark .section-label,
+    body.dark .panel-title { color: #7ea9e6; }
+    body.dark .status { color: #9a9cab; }
+    body.dark .empty-scenes { color: #6d6f7c; }
+    body.dark ::placeholder { color: #6d6f7c; }
+
+    /* Botões pequenos / toggles / presets / folder / inputs de res e materiais */
+    body.dark .btn-small,
+    body.dark .toggle-btn,
+    body.dark .res-preset,
+    body.dark .btn-folder,
+    body.dark .folder-path,
+    body.dark .res-row input,
+    body.dark .mat-row input,
+    body.dark .mat-del {
+      background: #24262f; border-color: #3a3c47; color: #c7c9d4;
+    }
+    body.dark .btn-small,
+    body.dark .toggle-btn { color: #b9bbc7; }
+    body.dark .res-preset { color: #a9abb8; }
+    body.dark .folder-path { color: #8b8d9a; }
+    body.dark .folder-path.set { color: #d3d5e0; }
+    body.dark .mat-del { color: #7a7c88; }
+
+    /* Estados ativos (azul vivo em vez do azul escuro) */
+    body.dark .toggle-btn.active,
+    body.dark .res-preset.active {
+      background: #2f5fd6; border-color: #2f5fd6; color: #fff;
+      box-shadow: 0 2px 8px rgba(47,95,214,.30);
+    }
+
+    /* Botão secundário */
+    body.dark .btn-ghost { background: #24262f; color: #8fb4ee; border-color: #3a3c47; }
+    body.dark .btn-ghost:hover:not(:disabled) { background: #2a2d38; }
+    body.dark .btn-export:disabled { background: #2a2c35; color: #66687a; }
+
+    /* Cenas */
+    body.dark .scene-item:hover { background: #23252f; }
+    body.dark .scene-item.checked { background: #33222c; }
+    body.dark .scene-thumb { border-color: #3a3c47; background: #24262f; }
+
+    /* Prompt cards */
+    body.dark .prompt-card { border-color: #34363f; box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+    body.dark .prompt-text { background: #1a1b24; color: #cdd0da; }
+
+    /* Update banner */
+    body.dark .update-banner { background: #17293b; border-color: #2f6ea8; color: #bcd8f2; }
+    body.dark .upd-no { background: #2a2f38; color: #b9bbc7; }
+
+    /* Logos / Estúdio */
+    body.dark #content-logos input[type="password"],
+    body.dark #content-logos input[type="text"],
+    body.dark #content-studio input[type="password"],
+    body.dark #content-studio input[type="text"],
+    body.dark #content-studio select,
+    body.dark #content-studio textarea {
+      background: #24262f !important; border-color: #3a3c47 !important; color: #d3d5e0 !important;
+    }
+    body.dark #logoDropZone,
+    body.dark .ref-add { background: #1e1f29; border-color: #3a3c47; color: #8b8d9a; }
+    body.dark .logo-img-box.orig { background: #23252f; border-color: #3a3c47; }
+    body.dark .logo-preview-label,
+    body.dark #content-studio .studio-field label { color: #8b8d9a; }
+    body.dark .ref-thumb { border-color: #3a3c47; background: #23252f; }
+
+    /* Crop modal */
+    body.dark #cropFooter { background: #1e1f29; border-color: #34363f; }
+    body.dark #cropReadout { color: #a9abb8; }
+
+    /* Overrides de estilos inline hardcoded (textareas/selects) */
+    body.dark #boothDesc,
+    body.dark #criticals,
+    body.dark #sceneCriticals,
+    body.dark #sceneSelect,
+    body.dark #sceneCamera,
+    body.dark #envCustom {
+      background: #24262f !important; border-color: #3a3c47 !important; color: #d3d5e0 !important;
+    }
+    /* Caixa "prompt ancorado na imagem" (estilo inline) */
+    body.dark .section[style*="f4f6ff"] { background: #1b2436 !important; border-color: #2c3a5a !important; }
+    /* Textos auxiliares inline claros demais no escuro */
+    body.dark [style*="color:#666"],
+    body.dark [style*="color:#555"],
+    body.dark [style*="color:#557"] { color: #a2a4b1 !important; }
+
+    /* Scrollbar */
+    body.dark ::-webkit-scrollbar-thumb { background: #3a3c47; }
+    body.dark ::-webkit-scrollbar-thumb:hover { background: #4a4c58; }
   </style>
 </head>
 <body>
+
+<script>
+  /* ── Tema claro/escuro (isolado, persiste em localStorage) ── */
+  function applyTheme(t) {
+    document.body.classList.toggle('dark', t === 'dark');
+    var b = document.getElementById('themeToggle');
+    if (b) b.textContent = (t === 'dark') ? '☀️' : '🌙';
+  }
+  function toggleTheme() {
+    var t = document.body.classList.contains('dark') ? 'light' : 'dark';
+    try { localStorage.setItem('eva_theme', t); } catch (e) {}
+    applyTheme(t);
+  }
+  (function () {
+    var t = 'light';
+    try { t = localStorage.getItem('eva_theme') || 'light'; } catch (e) {}
+    document.body.classList.toggle('dark', t === 'dark');   // aplica cedo, evita flash
+    window.addEventListener('load', function () { applyTheme(t); });
+  })();
+</script>
 
 <header>
   <div class="h-logo"><img id="headerLogo" alt="Stand1"></div>
@@ -563,6 +696,8 @@
     <button class="tab" id="tab-studio" onclick="switchTab('studio')">Estúdio</button>
   </div>
   <span class="version" id="verLabel" title="Verificar atualização" style="cursor:pointer;margin-left:auto" onclick="su('check_update')">⟳</span>
+  <button id="themeToggle" onclick="toggleTheme()" title="Alternar tema claro/escuro"
+    style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:7px;padding:5px 9px;margin-left:10px;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0">🌙</button>
 </header>
 
 <div class="update-banner" id="updateBanner">
