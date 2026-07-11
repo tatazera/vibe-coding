@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.6.0"
+  VERSAO        = "7.7.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -176,6 +176,10 @@ module STAND1_Memorial
   def self.salvar_palavras_mobiliario(lista)
     salvar_lista("palavras_mobiliario", lista)
   end
+
+  # Equipamentos que exibem largura × altura na descrição (fixo no código, sem UI).
+  # Itens em EQUIPAMENTOS cujo nome contém uma destas palavras mostram (L x A).
+  PALAVRAS_EQUIP_MEDIDA = ["painel led", "painel de led"]
 
   # Palavras-chave para identificar fitas LED na seção Elétrica
   PALAVRAS_FITA_LED = ["fita led", "fita_led", "led cob", "led fita"]
@@ -1408,8 +1412,10 @@ module STAND1_Memorial
     # EQUIPAMENTOS: nome + quantidade. Carrega a área unitária da face frontal
     # (2 maiores dimensões) para o cálculo de KVA "/ m²" (painéis de LED etc.).
     when "EQUIPAMENTOS"
-      it = build_item(nome, qtd, "und.")
       d1, d2, _esp = [l, p, a].sort.reverse
+      tem_medida = PALAVRAS_EQUIP_MEDIDA.any? { |kw| nome_lower.include?(kw) }
+      desc = tem_medida ? "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m)" : nome
+      it = build_item(desc, qtd, "und.")
       it["area_m2"] = (d1 * d2).round(2)
       it
 

@@ -1,5 +1,5 @@
 {
-    "versao":  "7.6.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.6.0.rbz",
-    "notas":  "v7.6.0: Multi-Espaco - a reordenacao de ambientes agora funciona de verdade: alem de arrastar o titulo (que agora aceita soltar em qualquer ponto do ambiente alvo), cada ambiente tem botoes de subir/descer no titulo, sem depender do arrastar. Novo botao Limpar Tudo remove todos os itens do memorial do modo ativo (nao afeta o modelo nem o outro modo)."
+    "versao":  "7.7.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.7.0.rbz",
+    "notas":  "v7.7.0: Painel LED agora exibe as medidas (largura x altura) automaticamente na descricao do item, na secao EQUIPAMENTOS. O reconhecimento e automatico pelo nome do componente (Painel LED)."
 }
