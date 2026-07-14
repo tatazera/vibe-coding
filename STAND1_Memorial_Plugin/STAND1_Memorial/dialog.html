@@ -2167,12 +2167,57 @@ function carregarDadosMultiEspaco(payload){
   // espaço fica no campo _espaco. O render desenha um título por espaço + linha
   // minimalista entre espaços. A ordem é a de leitura, salvo reordenação manual
   // (_ordemEspacos), que sobrevive à releitura; espaços novos entram no fim.
-  dadosMemorial = [];
+  //
+  // MERGE (não recria do zero): preserva itens MANUAIS e edições (descrição/qtd
+  // editadas, oculto, obs) — mesma lógica do ⟳ por-ambiente, aplicada a todos os
+  // espaços. Itens do modelo que sumiram são removidos; ambientes que não existem
+  // mais no modelo (grupo apagado/desmarcado/renomeado) são descartados.
+  var espacosFresh = {};
+  _dadosMultiEspaco.forEach(function(esp){ espacosFresh[esp.espaco]=1; });
+
   _dadosMultiEspaco.forEach(function(esp){
-    (esp.secoes||[]).forEach(function(sec){
-      dadosMemorial.push({ secao: sec.secao, itens: sec.itens, _espaco: esp.espaco });
+    var espNome = esp.espaco;
+    var novos = esp.secoes || [];
+    var mapaFresco = {};
+    novos.forEach(function(ns){ ns.itens.forEach(function(ni){ mapaFresco[ni.chave]=ni; }); });
+    // remove itens de modelo que sumiram, SÓ nas seções deste espaço (mantém manuais)
+    dadosMemorial.forEach(function(se){
+      if((se._espaco||'')!==espNome) return;
+      se.itens = se.itens.filter(function(it){
+        if(it.origem==='manual') return true;
+        return !!mapaFresco[it.chave];
+      });
+    });
+    // índice chave→item existente DENTRO deste espaço
+    var existentes = {};
+    dadosMemorial.forEach(function(se){
+      if((se._espaco||'')!==espNome) return;
+      se.itens.forEach(function(it){ if(it.chave) existentes[it.chave]=it; });
+    });
+    // adiciona novos / atualiza os do modelo (preserva descrição/qtd editadas, oculto, obs)
+    novos.forEach(function(ns){
+      ns.itens.forEach(function(ni){
+        ni.origem='modelo';
+        var ex = existentes[ni.chave];
+        if(ex){
+          if(ex.origem!=='manual' && !ex.editado){ ex.descricao=ni.descricao; ex.quantidade=ni.quantidade; }
+          if(typeof ni.dim_l!=='undefined'){ ex.nome_base=ni.nome_base; ex.dim_l=ni.dim_l; ex.dim_p=ni.dim_p; ex.dim_a=ni.dim_a; }
+        } else {
+          var se=null;
+          for(var i=0;i<dadosMemorial.length;i++){ if(dadosMemorial[i].secao===ns.secao && (dadosMemorial[i]._espaco||'')===espNome){ se=dadosMemorial[i]; break; } }
+          if(!se){ se={secao:ns.secao, itens:[], _espaco:espNome}; dadosMemorial.push(se); }
+          se.itens.push(ni); existentes[ni.chave]=ni;
+        }
+      });
     });
   });
+  // Descarta ambientes que não existem mais no modelo (mantém só os do payload fresco).
+  dadosMemorial = dadosMemorial.filter(function(se){ return espacosFresh[se._espaco]; });
+  // Remove seções que ficaram vazias.
+  dadosMemorial = dadosMemorial.filter(function(se){ return se.itens.length>0; });
+  // Mantém o store multi coerente (dadosMemorial é o ativo no modo multi).
+  if(_modoMultiEspaco) _memMulti = dadosMemorial;
+
   ordenarSecoes();
   if(payload.nome_arquivo) nomeArquivo = payload.nome_arquivo;
   atualizarStatus();

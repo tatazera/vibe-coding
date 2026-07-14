@@ -1,5 +1,5 @@
 {
-    "versao":  "7.8.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.8.0.rbz",
-    "notas":  "v7.8.0: Barra de pesquisa dentro do modal Regras de Medicao (busca a regra por palavra-chave). No modo Multi-Espaco, o Adicionar Item Manual agora tem um seletor de ambiente: o item vai para o espaco escolhido."
+    "versao":  "7.8.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.8.1.rbz",
+    "notas":  "v7.8.1: Correcao Multi-Espaco - itens manuais e edicoes (descricao/qtd, oculto, obs) agora sobrevivem tambem a releitura completa do Multi (Adicionar Tudo), nao so ao atualizar por ambiente. O Adicionar Tudo passou a mesclar em vez de recriar do zero."
 }
