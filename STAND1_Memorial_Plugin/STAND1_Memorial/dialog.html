@@ -461,6 +461,7 @@
     </div>
     <div class="linear-desc">Itens que não estão no modelo (ex.: tomadas). Ficam marcados como <b>manuais</b> e <b>não somem</b> no Adicionar Tudo.</div>
     <div style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+      <select id="manualEspaco" class="manual-input" style="display:none"></select>
       <select id="manualSecao" class="manual-input">
         <option value="ESTRUTURAS">ESTRUTURAS</option>
         <option value="REVESTIMENTOS">REVESTIMENTOS</option>
@@ -495,6 +496,10 @@
       </div>
     </div>
     <div class="linear-desc">Cada regra liga uma <b>palavra-chave</b> (contida no nome do item) a uma <b>fórmula</b> de medição. A 1ª regra de cima p/ baixo que casar vence (use ▲▼ p/ ordenar). Itens sem regra usam <b>Face (larg × alt)</b>. Recinto/Faixa só valem se a menor dimensão horizontal ≥ 0,30m. Tudo salva automaticamente.</div>
+    <div class="mrev-search" style="margin:0 16px 10px">
+      <span class="mrev-search-icon">🔍</span>
+      <input type="text" id="buscaRegra" placeholder="Buscar palavra-chave..." oninput="renderizarRegras()">
+    </div>
     <div class="regras-list" id="listaRegras"></div>
     <div class="linear-add">
       <input type="text" id="inputRegraPalavra" placeholder="Nova palavra-chave..." onkeydown="if(event.key==='Enter') adicionarRegra()">
@@ -1034,6 +1039,7 @@ var FORMULAS_OPC = [
 function definirRegrasMedicao(lista){ regrasMedicao = (lista||[]).map(function(r){ return [r[0], r[1]]; }); }
 
 function abrirModalRegras(){
+  var b=document.getElementById('buscaRegra'); if(b) b.value='';
   renderizarRegras();
   document.getElementById('modalRegras').style.display='flex';
   document.getElementById('inputRegraPalavra').value='';
@@ -1050,7 +1056,10 @@ function opcoesFormula(sel){
 function renderizarRegras(){
   var el=document.getElementById('listaRegras');
   if(!regrasMedicao.length){ el.innerHTML='<span class="kw-vazio">Nenhuma regra. Itens usarão Face (larg × alt).</span>'; return; }
-  el.innerHTML=regrasMedicao.map(function(r,i){
+  var filtro=((document.getElementById('buscaRegra')||{}).value||'').trim().toLowerCase();
+  // Mantém o índice real (i) mesmo filtrando — ▲▼/editar/remover operam no array real.
+  var linhas=regrasMedicao.map(function(r,i){
+    if(filtro && String(r[0]).toLowerCase().indexOf(filtro)<0) return '';
     return '<div class="regra-row">'
       +'<input class="regra-pal" type="text" value="'+String(r[0]).replace(/"/g,'&quot;')+'" onchange="editarRegraPalavra('+i+',this.value)">'
       +'<select class="regra-frm" onchange="editarRegraFormula('+i+',this.value)">'+opcoesFormula(r[1])+'</select>'
@@ -1061,6 +1070,7 @@ function renderizarRegras(){
       +'<button class="regra-btn regra-del" onclick="removerRegra('+i+')" title="Remover">×</button>'
     +'</div>';
   }).join('');
+  el.innerHTML = linhas.trim() ? linhas : '<span class="kw-vazio">Nenhuma regra corresponde à busca.</span>';
 }
 
 function adicionarRegra(){
@@ -1070,6 +1080,7 @@ function adicionarRegra(){
   if(regrasMedicao.some(function(r){return r[0]===val;})){ inp.value=''; return; }
   regrasMedicao.push([val,'face']);
   inp.value='';
+  var b=document.getElementById('buscaRegra'); if(b) b.value='';
   renderizarRegras();
   salvarRegras();
 }
@@ -1220,11 +1231,30 @@ function salvarLarguraFita(){
 }
 
 // ── ITEM MANUAL (ex.: tomadas, itens não modelados) ──
+// Lista os ambientes (valores distintos de _espaco) na ordem em que aparecem no memorial.
+function _espacosDoMemorial(){
+  var vistos={}, ordem=[];
+  dadosMemorial.forEach(function(sec){
+    if(sec._espaco && !vistos[sec._espaco]){ vistos[sec._espaco]=1; ordem.push(sec._espaco); }
+  });
+  return ordem;
+}
 function abrirModalManual(){
   document.getElementById('manualDesc').value='';
   document.getElementById('manualQtd').value='1';
   document.getElementById('manualUnidade').value='und.';
   document.getElementById('manualSecao').value='ELÉTRICA';
+  // Modo Multi: mostra o seletor de ambiente (para qual espaço o item vai).
+  var selEsp=document.getElementById('manualEspaco');
+  var esps=_modoMultiEspaco?_espacosDoMemorial():[];
+  if(selEsp){
+    if(esps.length){
+      selEsp.innerHTML=esps.map(function(e){ return '<option value="'+escaparAttr(e)+'">🏛 '+escaparAttr(_labelEspaco(e))+'</option>'; }).join('');
+      selEsp.style.display='';
+    } else {
+      selEsp.innerHTML=''; selEsp.style.display='none';
+    }
+  }
   document.getElementById('modalManual').style.display='flex';
   setTimeout(function(){ var d=document.getElementById('manualDesc'); if(d) d.focus(); },50);
 }
@@ -1238,13 +1268,18 @@ function adicionarItemManual(){
   if(isNaN(qtd)||qtd<1) qtd=1;
   var item={ descricao:desc, quantidade:qtd, unidade:und, origem:'manual',
              chave:'manual_'+Date.now()+'_'+Math.floor(Math.random()*10000) };
+  // Modo Multi: o item entra na seção do AMBIENTE escolhido (casa secao + _espaco).
+  var esp=null;
+  if(_modoMultiEspaco){ var s=document.getElementById('manualEspaco'); if(s && s.style.display!=='none') esp=s.value||null; }
   var se=null;
-  for(var i=0;i<dadosMemorial.length;i++){ if(dadosMemorial[i].secao===secao){ se=dadosMemorial[i]; break; } }
-  if(!se){ se={secao:secao, itens:[]}; dadosMemorial.push(se); }
+  for(var i=0;i<dadosMemorial.length;i++){
+    if(dadosMemorial[i].secao===secao && (dadosMemorial[i]._espaco||null)===(esp||null)){ se=dadosMemorial[i]; break; }
+  }
+  if(!se){ se={secao:secao, itens:[]}; if(esp) se._espaco=esp; dadosMemorial.push(se); }
   se.itens.push(item);
   ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
   fecharModalManual();
-  mostrarToast('Item manual adicionado.');
+  mostrarToast(esp?('Item adicionado a "'+_labelEspaco(esp)+'".'):'Item manual adicionado.');
 }
 
 // ── REVESTIMENTOS AUTO — PALAVRAS-CHAVE ──

@@ -1,5 +1,5 @@
 {
-    "versao":  "7.7.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.7.0.rbz",
-    "notas":  "v7.7.0: Painel LED agora exibe as medidas (largura x altura) automaticamente na descricao do item, na secao EQUIPAMENTOS. O reconhecimento e automatico pelo nome do componente (Painel LED)."
+    "versao":  "7.8.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.8.0.rbz",
+    "notas":  "v7.8.0: Barra de pesquisa dentro do modal Regras de Medicao (busca a regra por palavra-chave). No modo Multi-Espaco, o Adicionar Item Manual agora tem um seletor de ambiente: o item vai para o espaco escolhido."
 }
