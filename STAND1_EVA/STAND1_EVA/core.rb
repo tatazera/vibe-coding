@@ -42,6 +42,8 @@ module STAND1
       @dialog.set_file(DIALOG_HTML)
       @dialog.add_action_callback('get_scenes')     { |_, _|   send_scenes      }
       @dialog.add_action_callback('choose_folder')  { |_, tgt| choose_folder(tgt) }
+      @dialog.add_action_callback('list_folder_images')   { |_, path| list_folder_images(path)   }
+      @dialog.add_action_callback('replace_folder_image') { |_, path| replace_folder_image(path) }
       @dialog.add_action_callback('export_scenes')  { |_, msg| handle_export(msg) }
       @dialog.add_action_callback('get_materials')  { |_, msg| send_materials(msg) }
       @dialog.add_action_callback('build_prompts')  { |_, msg| handle_build(msg) }
@@ -266,6 +268,44 @@ module STAND1
       return unless folder
       tgt = (target.nil? || target.to_s.empty?) ? 'render' : target.to_s
       @dialog.execute_script("window.setFolder(#{tgt.to_json}, #{folder.to_json})")
+    end
+
+    # ── Aba Apresentação: lista PNG/JPG da pasta p/ grid clicável ──────────────
+    # Aditivo/isolado — não altera o fluxo de export.
+    def self.list_folder_images(folder)
+      unless folder && !folder.to_s.empty? && File.directory?(folder)
+        @dialog.execute_script("window.setFolderImages([])")
+        return
+      end
+      exts = %w[png jpg jpeg]
+      files = Dir.entries(folder).select do |f|
+        File.file?(File.join(folder, f)) && exts.include?(f.split('.').last.to_s.downcase)
+      end.sort_by { |f| f.downcase }
+      data = files.map do |f|
+        full = File.join(folder, f)
+        {
+          name:  f,
+          path:  full.tr('\\', '/'),
+          size:  (File.size(full)  rescue 0),
+          mtime: (File.mtime(full).to_i rescue 0)
+        }
+      end
+      @dialog.execute_script("window.setFolderImages(#{data.to_json})")
+    rescue => e
+      @dialog.execute_script("window.setFolderImages([])")
+    end
+
+    # Substitui um arquivo da pasta por outro escolhido no PC (mantém o nome do alvo).
+    def self.replace_folder_image(target)
+      return if target.nil? || target.to_s.empty?
+      src = UI.openpanel('Escolher imagem para substituir', '', 'Imagens|*.png;*.jpg;*.jpeg||')
+      return unless src
+      # Sobrescreve o alvo com os bytes do arquivo escolhido (preserva nome/extensão do alvo).
+      File.open(target, 'wb') { |o| File.open(src, 'rb') { |i| o.write(i.read) } }
+      list_folder_images(File.dirname(target))
+      @dialog.execute_script("window.folderImageReplaced(#{File.basename(target).to_json})")
+    rescue => e
+      @dialog.execute_script("window.folderImageError(#{e.message.to_json})")
     end
 
     # ── Recebe configuração do HTML e dispara export ───────────────────────────

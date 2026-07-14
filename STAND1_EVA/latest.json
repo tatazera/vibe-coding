@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.6",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.6.rbz",
-    "notas":  "v1.4.6: modo escuro (dark mode) - botao de alternancia no cabecalho, tema salvo automaticamente. Nenhuma mudanca no fluxo de export/prompt."
+    "versao":  "1.4.7",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.7.rbz",
+    "notas":  "v1.4.7: na aba Apresentacao, a pasta de destino agora mostra as imagens PNG/JPG em miniaturas. Clique numa imagem para substitui-la por um arquivo do seu PC (mantem o nome). O grid atualiza sozinho apos exportar."
 }
