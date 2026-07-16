@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.9.0"
+  VERSAO        = "7.10.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -180,6 +180,21 @@ module STAND1_Memorial
   # Equipamentos que exibem largura × altura na descrição (fixo no código, sem UI).
   # Itens em EQUIPAMENTOS cujo nome contém uma destas palavras mostram (L x A).
   PALAVRAS_EQUIP_MEDIDA = ["painel led", "painel de led"]
+
+  # Itens de comunicação visual "espalhados" (fixo no código, sem UI): componentes
+  # cujo nome contém uma destas palavras exibem (L x A) - m² na descrição, em
+  # QUALQUER seção que normalmente não mostra medida (MOBILIÁRIO/EQUIPAMENTOS/
+  # ELÉTRICA/fallback). COMUNICAÇÃO VISUAL já mostra por padrão; ESTRUTURAS segue
+  # as Regras de Medição; REVESTIMENTOS agrupa por material (sem dims individuais).
+  PALAVRAS_MEDIDA_LXA = ["adesivo", "placa", "logomarca", "logo", "lona"]
+
+  # Descrição estilo CV "Nome (L x A) - m²" com as 2 maiores dimensões, ou nil se
+  # o nome não casa com PALAVRAS_MEDIDA_LXA.
+  def self.descricao_lxa(nome, nome_lower, l, p, a)
+    return nil unless PALAVRAS_MEDIDA_LXA.any? { |kw| nome_lower.include?(kw) }
+    d1, d2, _esp = [l, p, a].sort.reverse
+    "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m) - #{fmt((d1 * d2).round(2))}m²"
+  end
 
   # Palavras-chave para identificar fitas LED na seção Elétrica
   PALAVRAS_FITA_LED = ["fita led", "fita_led", "led cob", "led fita"]
@@ -556,11 +571,14 @@ module STAND1_Memorial
       end
       # Checagem de atualização adiada (não bloqueia a abertura do diálogo).
       UI.start_timer(1.5, false) { verificar_atualizacao(false) } rescue nil
-      # Enviar tabela KVA local (sem bloquear) + buscar versão mais nova no GitHub
+      # Enviar tabela KVA local (sem bloquear) + buscar versão mais nova no GitHub.
+      # IMPORTANTE: enviar também os SINÔNIMOS locais (3º arg) — sem isso os links
+      # criados pelo usuário (🔗 ligar) só voltavam se o fetch do GitHub funcionasse.
       begin
         tabela_local = kva_table_local
-        unless tabela_local.empty?
-          @dialog.execute_script("receberTabelaKVA(#{tabela_local.to_json},#{token_github.to_json})") rescue nil
+        sin_local    = kva_sinonimos_local
+        unless tabela_local.empty? && sin_local.empty?
+          @dialog.execute_script("receberTabelaKVA(#{tabela_local.to_json},#{token_github.to_json},#{sin_local.to_json})") rescue nil
         end
         UI.start_timer(3.0, false) { buscar_kva_github } rescue nil
       rescue; end
@@ -1402,8 +1420,9 @@ module STAND1_Memorial
     # MOBILIÁRIO: mostra dimensões apenas para itens com palavras-chave configuradas.
     # Carrega nome_base + dims crus p/ a interface reformatar sem reler o modelo.
     when "MOBILIÁRIO"
+      lxa = descricao_lxa(nome, nome_lower, l, p, a)
       tem = palavras_mobiliario.any? { |kw| nome_lower.include?(kw) }
-      desc = tem ? "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)" : nome
+      desc = lxa || (tem ? "#{nome} (#{fmt(l)}m x #{fmt(p)}m x #{fmt(a)}m)" : nome)
       it = build_item(desc, qtd, "und.")
       it["nome_base"] = nome
       it["dim_l"] = l; it["dim_p"] = p; it["dim_a"] = a
@@ -1413,8 +1432,9 @@ module STAND1_Memorial
     # (2 maiores dimensões) para o cálculo de KVA "/ m²" (painéis de LED etc.).
     when "EQUIPAMENTOS"
       d1, d2, _esp = [l, p, a].sort.reverse
+      lxa = descricao_lxa(nome, nome_lower, l, p, a)
       tem_medida = PALAVRAS_EQUIP_MEDIDA.any? { |kw| nome_lower.include?(kw) }
-      desc = tem_medida ? "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m)" : nome
+      desc = lxa || (tem_medida ? "#{nome} (#{fmt(d1)}m x #{fmt(d2)}m)" : nome)
       it = build_item(desc, qtd, "und.")
       it["area_m2"] = (d1 * d2).round(2)
       it
@@ -1428,11 +1448,13 @@ module STAND1_Memorial
         desc = "#{nome} (#{fmt(total_m)}m)"
         build_item(desc, 1, "und.")
       else
-        build_item(nome, qtd, "und.")
+        lxa = descricao_lxa(nome, nome_lower, l, p, a)
+        build_item(lxa || nome, qtd, "und.")
       end
 
     else
-      build_item(nome, qtd, "und.")
+      lxa = descricao_lxa(nome, nome_lower, l, p, a)
+      build_item(lxa || nome, qtd, "und.")
     end
   end
 
