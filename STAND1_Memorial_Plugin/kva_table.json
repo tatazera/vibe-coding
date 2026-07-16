@@ -383,6 +383,7 @@
   ],
   "_sinonimos": [
     {
+      "oficial": "TV LED",
       "apelidos": [
         "smart tv",
         "smarttv",
@@ -390,23 +391,28 @@
         "televisao",
         "televisão",
         "tv"
-      ],
-      "oficial": "TV LED"
+      ]
     },
     {
+      "oficial": "Ar Condicionado",
       "apelidos": [
         "climatizador",
         "ar cond",
         "split"
-      ],
-      "oficial": "Ar Condicionado"
+      ]
     },
     {
+      "oficial": "Refletor LED",
       "apelidos": [
         "spot",
         "spot led"
-      ],
-      "oficial": "Refletor LED"
+      ]
+    },
+    {
+      "oficial": "Smart TV 50",
+      "apelidos": [
+        "TV LED 43 Smart Touch"
+      ]
     }
   ]
 }
