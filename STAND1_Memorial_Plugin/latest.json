@@ -1,5 +1,5 @@
 {
-    "versao":  "7.8.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.8.1.rbz",
-    "notas":  "v7.8.1: Correcao Multi-Espaco - itens manuais e edicoes (descricao/qtd, oculto, obs) agora sobrevivem tambem a releitura completa do Multi (Adicionar Tudo), nao so ao atualizar por ambiente. O Adicionar Tudo passou a mesclar em vez de recriar do zero."
+    "versao":  "7.9.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.9.0.rbz",
+    "notas":  "v7.9.0: Multi-Espaco - agora da para OCULTAR um ambiente das exportacoes. Um botao de olho no titulo de cada ambiente tira ele do memorial PDF, do TXT, do relatorio de KVA e do PDF de revisao. No preview ele continua visivel e editavel, marcado como oculto. O estado e salvo por projeto."
 }

@@ -93,6 +93,9 @@
   .esp-colapso:hover { opacity: .7; }
   .espaco-titulo.colapsado { margin-bottom: 8px; opacity: .82; }
   .esp-resumo { font-weight: 500; font-size: 11px; text-transform: none; letter-spacing: 0; color: #999; margin-left: 9px; }
+  .esp-acao.esp-acao-oculto { background: #C84FBF; color: #fff; border-color: transparent; }
+  .espaco-titulo.espaco-oculto { opacity: .6; border-bottom-style: dashed; }
+  .secao.secao-espaco-oculto { opacity: .55; }
   body.dark .esp-colapso { color: #e08fd8; }
   .btn-colapso-esp { display: none; }
   body.modo-multi .btn-colapso-esp { display: inline-flex; }
@@ -1015,7 +1018,7 @@ function toggleOcultarItem(sn,ch,esp){
 }
 
 // Itens que entram nas exportações e no cálculo de KVA (exclui os ocultos).
-function _itensExport(sec){ return (sec.itens||[]).filter(function(it){ return !it.oculto; }); }
+function _itensExport(sec){ if(sec._espaco && _espacosOcultos[sec._espaco]) return []; return (sec.itens||[]).filter(function(it){ return !it.oculto; }); }
 function atualizarProjeto(v){ nomeProjeto=v; document.querySelectorAll('.fpn').forEach(function(e){e.textContent=v||nomeArquivo;}); document.querySelectorAll('.meta-proj').forEach(function(e){e.textContent=v?'Projeto: '+v:'';}); persistirEstado(); }
 function atualizarResponsavel(v){ nomeResponsavel=v; document.querySelectorAll('.meta-resp').forEach(function(e){e.textContent=v?'Resp.: '+v:'';}); persistirEstado(); }
 function atualizarRevisao(v){ revisao=v||'00'; document.querySelectorAll('.meta-rev').forEach(function(e){e.textContent='Revisão: '+revisao;}); persistirEstado(); }
@@ -1443,6 +1446,7 @@ function persistirEstado(){
     modoMulti: _modoMultiEspaco,
     ordemEspacos: _ordemEspacos,
     espacosColapsados: Object.keys(_espacosColapsados),
+    espacosOcultos: Object.keys(_espacosOcultos),
     apelidosEspaco: _apelidosEspaco,
     dados: dadosMemorial, // compatibilidade com leitura de estado antigo
     nomeProjeto: nomeProjeto,
@@ -1476,6 +1480,8 @@ function restaurarEstado(estadoJson){
     if(e.ordemEspacos&&e.ordemEspacos.length) _ordemEspacos=e.ordemEspacos;
     _espacosColapsados={};
     if(Array.isArray(e.espacosColapsados)) e.espacosColapsados.forEach(function(n){ _espacosColapsados[n]=true; });
+    _espacosOcultos={};
+    if(Array.isArray(e.espacosOcultos)) e.espacosOcultos.forEach(function(n){ _espacosOcultos[n]=true; });
     _apelidosEspaco = (e.apelidosEspaco && typeof e.apelidosEspaco==='object') ? e.apelidosEspaco : {};
     dadosMemorial = (_modoMultiEspaco ? _memMulti : _memPadrao) || [];
     var btn=document.getElementById('btnMultiEspaco');
@@ -1694,19 +1700,25 @@ function renderizar(){
     if(sec._espaco && sec._espaco!==_lastEsp){
       if(_lastEsp!==null) cab+='<div class="espaco-divisor"></div>';
       var ek=escaparChave(sec._espaco);
+      var oculto=_espacoOculto(sec._espaco);
       var chev='<button class="esp-colapso" title="'+(colapsado?'Expandir ambiente':'Recolher ambiente')+'" onclick="event.stopPropagation();toggleColapsoEspaco(\''+ek+'\')">'+(colapsado?'▸':'▾')+'</button>';
       var resumo=colapsado?'<span class="esp-resumo">'+(_contEsp[sec._espaco]||0)+' item(ns)</span>':'';
       var apelidoTag=(_apelidosEspaco[sec._espaco]&&_apelidosEspaco[sec._espaco].trim())?'<span class="esp-apelido-tag" title="Nome original: '+escaparAttr(sec._espaco)+'">('+escaparAttr(sec._espaco)+')</span>':'';
+      var ocultoTag=oculto?'<span class="tag-oculto">oculto no export</span>':'';
+      var eyeEspSvg=oculto
+        ?'<svg viewBox="0 0 16 16" fill="none"><path d="M2 10c1.5 1.6 3.5 2.6 6 2.6s4.5-1 6-2.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 12.8v1.6M4 11.9l-.9 1.4M12 11.9l.9 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
+        :'<svg viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.9" stroke="currentColor" stroke-width="1.4"/></svg>';
       var acoes='<span class="esp-acoes">'
+        +'<button class="esp-acao'+(oculto?' esp-acao-oculto':'')+'" title="'+(oculto?'Mostrar este ambiente nas exportações':'Ocultar este ambiente das exportações (PDF/TXT/KVA)')+'" onclick="event.stopPropagation();toggleOcultarEspaco(\''+ek+'\')">'+eyeEspSvg+'</button>'
         +'<button class="esp-acao" title="Mover ambiente para cima" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',-1)">▲</button>'
         +'<button class="esp-acao" title="Mover ambiente para baixo" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',1)">▼</button>'
         +'<button class="esp-acao" title="Renomear ambiente no memorial" onclick="event.stopPropagation();renomearEspaco(\''+ek+'\')">✎</button>'
         +'<button class="esp-acao" title="Atualizar só este ambiente (preserva edições manuais)" onclick="event.stopPropagation();atualizarUmEspaco(\''+ek+'\')">⟳</button>'
         +'</span>';
-      cab+='<div class="espaco-titulo'+(colapsado?' colapsado':'')+'" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
+      cab+='<div class="espaco-titulo'+(colapsado?' colapsado':'')+(oculto?' espaco-oculto':'')+'" draggable="true" data-espaco="'+escaparAttr(sec._espaco)+'" title="Arrastar para reordenar os espaços"'
         +' ondragstart="dragEspaco(event,this)" ondragover="event.preventDefault();this.classList.add(\'drag-over\')"'
         +' ondragleave="this.classList.remove(\'drag-over\')" ondrop="dropEspaco(event,this)">'
-        +chev+'<span class="esp-handle">⋮⋮</span><span class="esp-nome">'+escaparAttr(_labelEspaco(sec._espaco))+apelidoTag+resumo+'</span>'+acoes+'</div>';
+        +chev+'<span class="esp-handle">⋮⋮</span><span class="esp-nome">'+escaparAttr(_labelEspaco(sec._espaco))+apelidoTag+ocultoTag+resumo+'</span>'+acoes+'</div>';
       _lastEsp=sec._espaco;
     }
     if(colapsado) return cab; // ambiente recolhido: emite só o título (uma vez), pula as seções
@@ -1734,7 +1746,7 @@ function renderizar(){
       var tagOculto=item.oculto?'<span class="tag-oculto">oculto no export</span>':'';
       return '<li'+(item.oculto?' class="item-oculto"':'')+' data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+tagOculto+lupa+btnObs+olho+exc+obsWrap+obsPrint+'</li>';
     }).join('');
-    return cab+'<div class="secao" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+escaparAttr(_secaoBase(sn))+'</div><ul class="itens">'+ih+'</ul></div>';
+    return cab+'<div class="secao'+(_espacoOculto(esp)?' secao-espaco-oculto':'')+'" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+escaparAttr(_secaoBase(sn))+'</div><ul class="itens">'+ih+'</ul></div>';
   }).join('');
 
   preview.innerHTML=
@@ -1977,6 +1989,10 @@ var _dadosMultiEspaco = null;
 var _ordemEspacos    = []; // ordem manual dos espaços (drag no título); persiste no .skp
 var _espacosColapsados = {}; // {nomeEspaco:true} recolhidos no preview; persiste no .skp
 var _apelidosEspaco    = {}; // {nomeOriginal:apelidoExibicao} — renomear só no memorial; persiste
+var _espacosOcultos    = {}; // {nomeEspaco:true} ocultos em TODAS as exportações (PDF/TXT/KVA/revisão); persiste
+
+// Ambiente oculto no export? (só afeta exportações; no preview continua visível/editável, marcado.)
+function _espacoOculto(nome){ return !!(nome && _espacosOcultos[nome]); }
 
 // Rótulo de exibição do ambiente: apelido (renomeado) ou o nome original do grupo.
 // A IDENTIDADE (casamento/diff/atualização) usa sempre o nome original.
@@ -2001,6 +2017,15 @@ function toggleColapsoEspaco(nome){
   if(_espacosColapsados[nome]) delete _espacosColapsados[nome];
   else _espacosColapsados[nome]=true;
   renderizar(); persistirEstado();
+}
+// Oculta/mostra um ambiente em TODAS as exportações (PDF/TXT/KVA/revisão). No preview
+// ele continua visível e editável, apenas marcado como "oculto no export".
+function toggleOcultarEspaco(nome){
+  if(!nome) return;
+  if(_espacosOcultos[nome]) delete _espacosOcultos[nome];
+  else _espacosOcultos[nome]=true;
+  renderizar(); persistirEstado(); atualizarBadgeKVA();
+  mostrarToast(_espacosOcultos[nome]?('🙈 "'+_labelEspaco(nome)+'" oculto nas exportações.'):('👁 "'+_labelEspaco(nome)+'" voltou às exportações.'));
 }
 // Botão global: se algum ambiente está expandido, recolhe todos; senão expande todos.
 function toggleTodosEspacos(){
@@ -2292,6 +2317,7 @@ function buildHTMLRevisaoCompleta(){
 
   var _lastEspR=null;
   var corpo=dadosMemorial.map(function(sec){
+    if(_espacoOculto(sec._espaco)) return ''; // ambiente oculto: fora da revisão também
     var cab='';
     if(sec._espaco && sec._espaco!==_lastEspR){
       if(_lastEspR!==null) cab+='<div class="pespaco-divisor"></div>';
