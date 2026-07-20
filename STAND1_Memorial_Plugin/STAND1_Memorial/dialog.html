@@ -133,10 +133,32 @@
   .kva-espaco-titulo { font-size:12.5px; font-weight:800; letter-spacing:.04em; color:#C84FBF; margin-bottom:10px; }
   .kva-espaco .kva-sec:last-of-type { margin-bottom:8px; }
   .kva-espaco-sub { display:flex; justify-content:space-between; gap:8px; font-size:12px; font-weight:800; padding-top:8px; border-top:1.5px solid rgba(200,79,191,.3); }
-  .diff-item { display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; align-items:flex-start; }
-  .diff-novo { color: #7FD97F; }
-  .diff-removido { color: #FF8080; }
-  .diff-alterado { color: #FFD070; }
+  /* ── Alterações da Revisão (lista do modal) ── */
+  .diff-chips { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+  .diff-chip { border:1.5px solid var(--borda); background:transparent; border-radius:20px; padding:3px 11px; font-size:11px; font-weight:700; cursor:pointer; transition:all .15s; color:#777; }
+  .diff-chip:hover { border-color:#C84FBF; color:#C84FBF; }
+  .diff-chip.c-novo.ativo { background:#e3f4e3; border-color:#2f9e44; color:#2a7a2a; }
+  .diff-chip.c-alt.ativo  { background:#fbeecf; border-color:#e8930c; color:#7a5a00; }
+  .diff-chip.c-rem.ativo  { background:#fbe0e0; border-color:#e03131; color:#aa0000; }
+  .diff-grupo-esp { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#C84FBF; margin:10px 0 2px; border-bottom:1px solid rgba(200,79,191,.25); padding-bottom:3px; }
+  .diff-grupo-sec { font-size:10px; font-weight:700; letter-spacing:.05em; color:#999; margin:7px 0 2px; text-transform:uppercase; }
+  .diff-item { display:flex; gap:8px; padding:5px 2px; border-bottom:1px solid rgba(120,120,140,.12); font-size:12px; align-items:flex-start; color:#444; }
+  .diff-ico { width:16px; text-align:center; flex-shrink:0; font-weight:800; }
+  .diff-desc { flex:1; min-width:0; }
+  .diff-delta { white-space:nowrap; font-weight:700; flex-shrink:0; }
+  .diff-antes { display:block; font-size:10.5px; opacity:.62; margin-top:1px; font-style:italic; }
+  .diff-novo .diff-ico, .diff-novo .diff-delta { color:#2f9e44; }
+  .diff-removido .diff-ico, .diff-removido .diff-delta { color:#e03131; }
+  .diff-removido .diff-desc { text-decoration:line-through; opacity:.7; }
+  .diff-alterado .diff-ico, .diff-alterado .diff-delta { color:#e8930c; }
+  body.dark .diff-item { color:#c9cad6; border-bottom-color:rgba(255,255,255,.07); }
+  body.dark .diff-chip { color:#a8a9b6; }
+  body.dark .diff-chip.c-novo.ativo { background:rgba(47,158,68,.18); color:#7FD97F; }
+  body.dark .diff-chip.c-alt.ativo  { background:rgba(232,147,12,.16); color:#FFD070; }
+  body.dark .diff-chip.c-rem.ativo  { background:rgba(224,49,49,.16); color:#FF8080; }
+  body.dark .diff-novo .diff-ico, body.dark .diff-novo .diff-delta { color:#7FD97F; }
+  body.dark .diff-removido .diff-ico, body.dark .diff-removido .diff-delta { color:#FF8080; }
+  body.dark .diff-alterado .diff-ico, body.dark .diff-alterado .diff-delta { color:#FFD070; }
   .grupo-espaco-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(0,0,0,.15); border-radius:6px; margin-bottom:6px; cursor:pointer; }
   .grupo-espaco-item input[type=checkbox] { cursor:pointer; width:15px; height:15px; flex-shrink:0; }
   .grupo-espaco-item label { cursor:pointer; font-size:13px; flex:1; }
@@ -587,17 +609,19 @@
 
 <!-- PDF ALT (revisão interna com alterações destacadas) — independente do PDF Padrão -->
 <div id="modalPDFAlt" class="modal-overlay" style="display:none">
-  <div class="modal-rev" style="max-width:420px">
+  <div class="modal-rev" style="max-width:480px">
     <div class="mrev-header">
-      <span class="mrev-title">🔄 Exportar PDF Alt</span>
+      <span class="mrev-title">🔄 Alterações da Revisão</span>
       <div class="mrev-actions">
         <button class="mrev-btn mrev-btn-sec" onclick="fecharPDFAlt()">✕</button>
       </div>
     </div>
-    <div class="linear-desc" style="margin-bottom:12px">Memorial completo com as <b>alterações</b> destacadas (★ novo · ▲▼ alterado · ✕ removido). Documento interno.</div>
-    <div style="font-size:12px;font-weight:700;letter-spacing:.06em;opacity:.7;margin-bottom:10px">🔄 REVISÃO — <span id="diffContador">0</span> ALTERAÇÃO(ÕES)</div>
-    <div id="listaDiff" style="max-height:200px;overflow-y:auto;font-size:12px;margin-bottom:14px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
+    <div class="linear-desc" style="margin-bottom:10px">O que mudou no modelo desde a <b>leitura anterior</b>. Clique num contador para filtrar. O <b>PDF Alt</b> exporta o memorial completo com essas alterações destacadas (documento interno).</div>
+    <div style="padding:0 16px">
+      <div class="diff-chips" id="chipsDiff"></div>
+      <div id="listaDiff" style="max-height:280px;overflow-y:auto;font-size:12px;margin-bottom:14px"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 16px 14px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharPDFAlt()">Cancelar</button>
       <button class="mrev-btn mrev-btn-primary" onclick="exportarPDFRevisao()">📄 PDF Alt</button>
     </div>
@@ -1900,6 +1924,8 @@ function fecharModalExportar(){
 // PDF Alt (revisão com alterações) — mini-menu próprio, independente do PDF Padrão.
 function abrirPDFAlt(){
   if(!_diffAtual||!_diffAtual.length){ mostrarToast('Sem alterações registradas nesta leitura.'); return; }
+  _filtroDiff=null;
+  renderizarListaDiff();
   document.getElementById('modalPDFAlt').style.display='flex';
 }
 function fecharPDFAlt(){ document.getElementById('modalPDFAlt').style.display='none'; }
@@ -2113,10 +2139,7 @@ function limparTudo(){
   var modo=_modoMultiEspaco?'Multi-Espaço':'Padrão';
   if(!confirm('Remover TODOS os itens do memorial ('+modo+')?\n\nIsto não afeta o modelo no SketchUp e não altera o outro modo.')) return;
   dadosMemorial.length=0; // esvazia o store ativo (mesma referência de _memMulti/_memPadrao)
-  _diffAtual=[];
-  var lDiff=document.getElementById('listaDiff'); if(lDiff) lDiff.innerHTML='';
-  var cDiff=document.getElementById('diffContador'); if(cDiff) cDiff.textContent='0';
-  var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
+  _zerarDiffUI();
   ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
   mostrarToast('🗑 Memorial ('+modo+') limpo.');
 }
@@ -2140,10 +2163,7 @@ function _ativarModo(multi){
   document.body.classList.toggle('modo-multi',multi);
   if(typeof sketchup!=='undefined'&&sketchup.toggle_multi_espaco) sketchup.toggle_multi_espaco(multi.toString());
   // o diff é por modo: zera o indicador ao trocar (recalcula na próxima leitura)
-  _diffAtual=[];
-  var lDiff=document.getElementById('listaDiff'); if(lDiff) lDiff.innerHTML='';
-  var cDiff=document.getElementById('diffContador'); if(cDiff) cDiff.textContent='0';
-  var bDiff=document.getElementById('btnDiff'); if(bDiff) bDiff.textContent='🔄 0 alt.';
+  _zerarDiffUI();
   atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
 }
 
@@ -2282,30 +2302,93 @@ function carregarDadosMultiEspaco(payload){
 // ── DIFF DE REVISÃO ──────────────────────────────────────────────────────────
 
 var _diffAtual = [];
+var _filtroDiff = null; // null = todos | 'novo' | 'alterado' | 'removido'
+
+// Zera o diff e TODA a sua UI (badge, contador, chips e lista) — usado ao trocar
+// de modo e ao limpar o memorial, onde o diff anterior deixa de fazer sentido.
+function _zerarDiffUI(){
+  _diffAtual=[]; _filtroDiff=null;
+  var l=document.getElementById('listaDiff'); if(l) l.innerHTML='';
+  var ch=document.getElementById('chipsDiff'); if(ch) ch.innerHTML='';
+  var c=document.getElementById('diffContador'); if(c) c.textContent='0';
+  var b=document.getElementById('btnDiff');
+  if(b){ b.textContent='🔄 0 alt.'; b.title='PDF Alt — alterações em relação à leitura anterior'; }
+}
 
 function receberDiffRevisao(diff){
   _diffAtual = diff || [];
+  _filtroDiff = null;
   var btn = document.getElementById('btnDiff');
-  if(!btn) return;
-  // Botão "🔄 N alt." sempre visível; abre o mini-menu PDF Alt (independente do PDF Padrão).
-  btn.textContent = '🔄 ' + _diffAtual.length + ' alt.';
+  if(btn){
+    // Botão "🔄 N alt." sempre visível; abre o painel de alterações (PDF Alt).
+    btn.textContent = '🔄 ' + _diffAtual.length + ' alt.';
+    var c=_contarDiff();
+    btn.title = _diffAtual.length
+      ? 'Alterações desde a leitura anterior: '+c.novo+' novo(s) · '+c.alterado+' alterado(s) · '+c.removido+' removido(s)'
+      : 'PDF Alt — alterações em relação à leitura anterior';
+  }
   var cont=document.getElementById('diffContador'); if(cont) cont.textContent = _diffAtual.length;
-  var lista = document.getElementById('listaDiff');
+  renderizarListaDiff();
+}
+
+function _contarDiff(){
+  var c={novo:0, alterado:0, removido:0};
+  _diffAtual.forEach(function(d){ if(c[d.tipo]!==undefined) c[d.tipo]++; });
+  return c;
+}
+
+function filtrarDiff(tipo){
+  _filtroDiff = (_filtroDiff===tipo) ? null : tipo;
+  renderizarListaDiff();
+}
+
+// Lista agrupada por AMBIENTE → SEÇÃO, com o que mudou explícito em cada linha:
+// ★ novo (+qtd) · ▲▼ qtd alterada (01 → 03) · ✎ medida/descrição alterada
+// (mostra "antes: ...") · ✕ removido (riscado).
+function renderizarListaDiff(){
+  var chips=document.getElementById('chipsDiff');
+  var lista=document.getElementById('listaDiff');
   if(!lista) return;
-  if(!_diffAtual.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhuma alteração desde a leitura anterior.</div>'; return; }
-  lista.innerHTML = _diffAtual.map(function(d){
-    if(d.tipo==='novo')
-      return '<div class="diff-item diff-novo"><span>★</span><span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_nov||d.desc)+'</span><span style="white-space:nowrap">+'+fmtQtd(d.qtd_nov||0)+'</span></div>';
-    if(d.tipo==='removido')
-      return '<div class="diff-item diff-removido"><span>✕</span><span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_ant||d.desc)+'</span><span style="white-space:nowrap">-'+fmtQtd(d.qtd_ant||0)+'</span></div>';
-    // alterado
-    var mudou = '';
-    if(d.qtd_ant !== d.qtd_nov) mudou += fmtQtd(d.qtd_ant)+'→'+fmtQtd(d.qtd_nov);
-    var arrow = (d.qtd_nov||0) > (d.qtd_ant||0) ? '▲' : '▼';
-    return '<div class="diff-item diff-alterado"><span>'+arrow+'</span>'
-      +'<span>['+escaparAttr(d.secao)+'] '+escaparAttr(d.desc_nov||d.desc_ant)+'</span>'
-      +(mudou?'<span style="white-space:nowrap">'+mudou+'</span>':'')+'</div>';
-  }).join('');
+  var c=_contarDiff();
+  if(chips){
+    chips.innerHTML = !_diffAtual.length ? '' :
+      '<button class="diff-chip c-novo'+(_filtroDiff==='novo'?' ativo':'')+'" onclick="filtrarDiff(\'novo\')" title="Só os itens novos">★ '+c.novo+' novo(s)</button>'
+      +'<button class="diff-chip c-alt'+(_filtroDiff==='alterado'?' ativo':'')+'" onclick="filtrarDiff(\'alterado\')" title="Só os alterados">▲▼ '+c.alterado+' alterado(s)</button>'
+      +'<button class="diff-chip c-rem'+(_filtroDiff==='removido'?' ativo':'')+'" onclick="filtrarDiff(\'removido\')" title="Só os removidos">✕ '+c.removido+' removido(s)</button>';
+  }
+  if(!_diffAtual.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px;padding:6px 0">Nenhuma alteração desde a leitura anterior. Releia o modelo (Adicionar Tudo / Atualizar) após mexer no projeto para registrar as diferenças.</div>'; return; }
+  var itens=_diffAtual.filter(function(d){ return !_filtroDiff || d.tipo===_filtroDiff; });
+  if(!itens.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px;padding:6px 0">Nenhuma alteração deste tipo.</div>'; return; }
+  // agrupa por ambiente (ordem de aparição) e, dentro dele, por seção
+  var html='', ultEsp=null, ultSec=null;
+  itens.slice().sort(function(a,b){
+    var ea=a.espaco||'', eb=b.espaco||'';
+    if(ea!==eb) return ea<eb?-1:1;
+    var sa=_secaoBase(a.secao||''), sb=_secaoBase(b.secao||'');
+    if(sa!==sb) return sa<sb?-1:1;
+    return 0;
+  }).forEach(function(d){
+    var esp=d.espaco||'';
+    if(esp!==ultEsp){
+      if(esp) html+='<div class="diff-grupo-esp">⊞ '+escaparAttr(_labelEspaco(esp))+'</div>';
+      ultEsp=esp; ultSec=null;
+    }
+    var sec=_secaoBase(d.secao||'');
+    if(sec!==ultSec){ html+='<div class="diff-grupo-sec">'+escaparAttr(sec)+'</div>'; ultSec=sec; }
+    if(d.tipo==='novo'){
+      html+='<div class="diff-item diff-novo"><span class="diff-ico">★</span><span class="diff-desc">'+escaparAttr(fmtMedidas(d.desc_nov||d.desc||''))+'</span><span class="diff-delta">+'+fmtQtd(d.qtd_nov||0)+'</span></div>';
+    } else if(d.tipo==='removido'){
+      html+='<div class="diff-item diff-removido"><span class="diff-ico">✕</span><span class="diff-desc">'+escaparAttr(fmtMedidas(d.desc_ant||d.desc||''))+'</span><span class="diff-delta">−'+fmtQtd(d.qtd_ant||0)+'</span></div>';
+    } else {
+      var qtdMudou = d.qtd_ant!==d.qtd_nov;
+      var descMudou = (d.desc_ant||'')!==(d.desc_nov||'') && d.desc_ant && d.desc_nov;
+      var ico = qtdMudou ? ((d.qtd_nov||0)>(d.qtd_ant||0)?'▲':'▼') : '✎';
+      var delta = qtdMudou ? (fmtQtd(d.qtd_ant)+' → '+fmtQtd(d.qtd_nov)) : 'medida';
+      var antes = descMudou ? '<span class="diff-antes">antes: '+escaparAttr(fmtMedidas(d.desc_ant))+'</span>' : '';
+      html+='<div class="diff-item diff-alterado"><span class="diff-ico">'+ico+'</span><span class="diff-desc">'+escaparAttr(fmtMedidas(d.desc_nov||d.desc_ant||''))+antes+'</span><span class="diff-delta">'+delta+'</span></div>';
+    }
+  });
+  lista.innerHTML=html;
 }
 
 function exportarPDFRevisao(){
@@ -2340,9 +2423,45 @@ function buildHTMLRevisaoCompleta(){
       var ks=(d.espaco?d.espaco+'::':'')+_secaoBase(d.secao);
       (removidosPorSecao[ks]=removidosPorSecao[ks]||[]).push(d);
     } else {
-      alterados[chaveDiff(d.espaco,d.secao,d.desc_nov||d.desc)]={tipo:d.tipo,qa:d.qtd_ant,qn:d.qtd_nov};
+      alterados[chaveDiff(d.espaco,d.secao,d.desc_nov||d.desc)]={tipo:d.tipo,qa:d.qtd_ant,qn:d.qtd_nov,da:d.desc_ant,dn:d.desc_nov};
     }
   });
+
+  // ── RESUMO DA REVISÃO (bloco no topo do PDF): tudo que mudou, agrupado por
+  // ambiente → seção — o leitor vê as alterações de cara, sem caçar marcas.
+  var _cRes={novo:0,alterado:0,removido:0};
+  (_diffAtual||[]).forEach(function(d){ if(_cRes[d.tipo]!==undefined) _cRes[d.tipo]++; });
+  var resumoHtml='';
+  if(_diffAtual&&_diffAtual.length){
+    var rLinhas='', rUltEsp=null, rUltSec=null;
+    _diffAtual.slice().sort(function(a,b){
+      var ea=a.espaco||'', eb=b.espaco||'';
+      if(ea!==eb) return ea<eb?-1:1;
+      var sa=_secaoBase(a.secao||''), sb=_secaoBase(b.secao||'');
+      return sa<sb?-1:(sa>sb?1:0);
+    }).forEach(function(d){
+      var esp=d.espaco||'';
+      if(esp!==rUltEsp){ if(esp) rLinhas+='<div class="rsm-esp">⊞ '+escaparHtml(_labelEspaco(esp))+'</div>'; rUltEsp=esp; rUltSec=null; }
+      var sec=_secaoBase(d.secao||'');
+      if(sec!==rUltSec){ rLinhas+='<div class="rsm-sec">'+escaparHtml(sec)+'</div>'; rUltSec=sec; }
+      if(d.tipo==='novo'){
+        rLinhas+='<div class="rsm-li rsm-novo">★ '+escaparHtml(fmtMedidas(d.desc_nov||d.desc||''))+' <b>+'+fmtQtd(d.qtd_nov||0)+'</b></div>';
+      } else if(d.tipo==='removido'){
+        rLinhas+='<div class="rsm-li rsm-rem">✕ <del>'+escaparHtml(fmtMedidas(d.desc_ant||d.desc||''))+'</del> <b>−'+fmtQtd(d.qtd_ant||0)+'</b></div>';
+      } else {
+        var qm=d.qtd_ant!==d.qtd_nov, dm=(d.desc_ant||'')!==(d.desc_nov||'')&&d.desc_ant&&d.desc_nov;
+        var det=qm?(fmtQtd(d.qtd_ant)+' → '+fmtQtd(d.qtd_nov)):'medida';
+        rLinhas+='<div class="rsm-li rsm-alt">'+(qm?((d.qtd_nov||0)>(d.qtd_ant||0)?'▲':'▼'):'✎')+' '+escaparHtml(fmtMedidas(d.desc_nov||d.desc_ant||''))+' <b>'+det+'</b>'
+          +(dm?'<div class="rsm-antes">antes: '+escaparHtml(fmtMedidas(d.desc_ant))+'</div>':'')+'</div>';
+      }
+    });
+    resumoHtml='<div class="rsm">'
+      +'<div class="rsm-tit">RESUMO DA REVISÃO — '+_diffAtual.length+' alteração(ões): '
+      +'<span class="rsm-c-novo">★ '+_cRes.novo+' novo(s)</span> · '
+      +'<span class="rsm-c-alt">▲▼ '+_cRes.alterado+' alterado(s)</span> · '
+      +'<span class="rsm-c-rem">✕ '+_cRes.removido+' removido(s)</span></div>'
+      +rLinhas+'</div>';
+  }
 
   var _lastEspR=null;
   var corpo=dadosMemorial.map(function(sec){
@@ -2358,12 +2477,18 @@ function buildHTMLRevisaoCompleta(){
       var d=escaparHtml(fmtMedidas(_descItemView(it))); // exibição respeita 📏; a chave do diff usa a desc crua
       var obs=(it.obs&&it.obs.trim())?'<div class="pi-obs">'+escaparHtml(it.obs.trim())+'</div>':'';
       var info=alterados[chaveDiff(sec._espaco,sec.secao,it.descricao)];
-      var marca='', cls='';
+      var marca='', cls='', antes='';
       if(info){
         if(info.tipo==='novo'){ marca='<span class="rev-mk rev-novo">★ novo</span> '; cls='rev-li-novo'; }
-        else { var ar=(info.qn||0)>(info.qa||0)?'▲':'▼'; marca='<span class="rev-mk rev-alt">'+ar+' '+fmtQtd(info.qa)+'→'+fmtQtd(info.qn)+'</span> '; cls='rev-li-alt'; }
+        else {
+          var qm=info.qa!==info.qn, dm=(info.da||'')!==(info.dn||'')&&info.da&&info.dn;
+          if(qm){ var ar=(info.qn||0)>(info.qa||0)?'▲':'▼'; marca='<span class="rev-mk rev-alt">'+ar+' '+fmtQtd(info.qa)+' → '+fmtQtd(info.qn)+'</span> '; }
+          else { marca='<span class="rev-mk rev-alt">✎ medida alterada</span> '; }
+          if(dm) antes='<div class="rev-antes">antes: '+escaparHtml(fmtMedidas(info.da))+'</div>';
+          cls='rev-li-alt';
+        }
       }
-      return '<li class="'+cls+'">'+marca+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+'</li>';
+      return '<li class="'+cls+'">'+marca+d+' - <b>'+fmtQtd(it.quantidade)+' '+escaparHtml(it.unidade)+'</b>'+obs+antes+'</li>';
     }).join('');
     var rem=(removidosPorSecao[ksec]||[]).map(function(d){
       return '<li class="rev-li-rem"><span class="rev-mk rev-rem">✕ removido</span> <del>'+escaparHtml(d.desc_ant||d.desc||'')+' - '+fmtQtd(d.qtd_ant||0)+'</del></li>';
@@ -2406,6 +2531,16 @@ function buildHTMLRevisaoCompleta(){
     '.rev-legend{margin:0 34px 10px;font-size:11px;color:#777;display:flex;gap:14px;flex-wrap:wrap}'+
     '.rev-legend b{font-weight:700}'+
     '.rev-interno{margin:6px 34px 0;font-size:10px;color:#aa0000;font-weight:700}'+
+    '.rev-antes{font-size:10.5px;color:#7a5a00;font-style:italic;padding-left:2px}'+
+    '.rsm{margin:12px 34px 6px;border:1.5px solid #e6c9dd;border-radius:10px;padding:12px 18px;page-break-inside:avoid;background:#fdf7fb}'+
+    '.rsm-tit{font-size:12px;font-weight:800;color:#4a4a52;letter-spacing:.04em;margin-bottom:8px}'+
+    '.rsm-c-novo{color:#2a7a2a}.rsm-c-alt{color:#7a5a00}.rsm-c-rem{color:#aa0000}'+
+    '.rsm-esp{font-size:11px;font-weight:800;text-transform:uppercase;color:#C84FBF;margin:8px 0 2px}'+
+    '.rsm-sec{font-size:10px;font-weight:700;text-transform:uppercase;color:#999;margin:5px 0 1px}'+
+    '.rsm-li{font-size:11.5px;color:#4d6585;line-height:1.5;margin-bottom:2px}'+
+    '.rsm-li b{font-weight:700;white-space:nowrap}'+
+    '.rsm-novo{color:#2a7a2a}.rsm-rem{color:#aa0000}.rsm-alt{color:#7a5a00}'+
+    '.rsm-antes{font-size:10px;font-style:italic;opacity:.75;padding-left:16px}'+
     '.pespaco-titulo{font-size:16px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#C84FBF;margin:6px 0 14px;padding-bottom:7px;border-bottom:2px solid rgba(200,79,191,.4)}'+
     '.pespaco-divisor{height:1px;background:linear-gradient(90deg,transparent,rgba(200,79,191,.5),transparent);margin:30px 0 26px}';
 
@@ -2422,8 +2557,9 @@ function buildHTMLRevisaoCompleta(){
       '<div><span class="pml">Revisão</span><span class="pmv">'+escaparHtml(revisao)+'</span></div>'+
       '<div><span class="pml">Data</span><span class="pmv">'+escaparHtml(dataGeracao)+'</span></div>'+
     '</div>'+
-    '<div class="rev-legend"><span><b style="color:#2a7a2a">★ novo</b></span><span><b style="color:#7a5a00">▲▼ alterado</b></span><span><b style="color:#aa0000">✕ removido</b></span><span>itens sem marca = inalterados</span></div>'+
+    '<div class="rev-legend"><span><b style="color:#2a7a2a">★ novo</b></span><span><b style="color:#7a5a00">▲▼ quantidade alterada</b></span><span><b style="color:#7a5a00">✎ medida alterada</b></span><span><b style="color:#aa0000">✕ removido</b></span><span>itens sem marca = inalterados</span></div>'+
     '<div class="rev-interno">Documento interno de revisão · Não enviar ao cliente</div>'+
+    resumoHtml+
     '<div class="pcorpo"><div class="pct">Memorial Descritivo (Revisão):</div>'+corpo+'</div>';
 
   return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">'+

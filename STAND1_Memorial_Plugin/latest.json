@@ -1,5 +1,5 @@
 {
-    "versao":  "7.10.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.10.0.rbz",
-    "notas":  "v7.10.0: Corrigido o Ligar (link) do KVA - os vinculos criados agora persistem ao reabrir o plugin, mesmo offline. Adesivos, placas, logomarcas e lonas exibem medidas (L x A) - m2 em qualquer secao. Novo botao de regua em cada item para ocultar as medidas (L x A) mantendo so o m2, no memorial, PDF e TXT."
+    "versao":  "7.11.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.11.0.rbz",
+    "notas":  "v7.11.0: Painel de Alteracoes da Revisao repaginado - agora agrupa por ambiente e secao, mostra o que mudou de forma explicita (quantidade 02 para 05, ou medida alterada com o valor anterior) e tem filtros por tipo (novo/alterado/removido). O PDF Alt ganhou um RESUMO DA REVISAO no topo, listando todas as alteracoes de uma vez."
 }
