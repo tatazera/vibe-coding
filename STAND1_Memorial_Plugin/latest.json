@@ -1,5 +1,5 @@
 {
-    "versao":  "7.11.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.11.0.rbz",
-    "notas":  "v7.11.0: Painel de Alteracoes da Revisao repaginado - agora agrupa por ambiente e secao, mostra o que mudou de forma explicita (quantidade 02 para 05, ou medida alterada com o valor anterior) e tem filtros por tipo (novo/alterado/removido). O PDF Alt ganhou um RESUMO DA REVISAO no topo, listando todas as alteracoes de uma vez."
+    "versao":  "7.11.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.11.1.rbz",
+    "notas":  "v7.11.1: Corrigido o Ligar do KVA. Um sinonimo antigo apontando para um nome que nao existe mais na tabela (ex: TV LED) bloqueava o reconhecimento e fazia o item continuar como sem KVA cadastrado mesmo depois de ligado. Agora o apelido mais especifico vence o generico e sinonimos quebrados nao atrapalham mais. Eles aparecem marcados com um alerta na lista de sinonimos."
 }

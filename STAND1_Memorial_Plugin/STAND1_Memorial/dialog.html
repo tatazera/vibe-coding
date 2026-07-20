@@ -2627,15 +2627,34 @@ function _matchKVA(desc, entradas){
   var baseCore=null, porSimilaridade=false;
   if(ex){ baseCore=_stripNumKVA(ex.nome); }
   else {
-    for(var i=0;i<_sinonimosKVA.length;i++){
-      var s=_sinonimosKVA[i], aps=s.apelidos||[], oficial=(s.oficial||'').trim();
-      if(oficial && aps.some(function(a){ a=(a||'').trim(); return a && nd.indexOf(_normKVA(a))>=0; })){
-        // Ligação MANUAL do usuário: honra a entrada EXATA escolhida (não re-deriva
-        // por grupo/proximidade — a decisão do usuário tem prioridade absoluta).
-        var exata=entradas.find(function(e){ return _normKVA(e.nome)===_normKVA(oficial); });
-        if(exata) return {entrada:exata, aprox:true};
-        baseCore=_stripNumKVA(oficial); break; // oficial não existe mais na tabela: fallback por grupo
-      }
+    // Candidatos de sinônimo, pontuados pelo apelido MAIS ESPECÍFICO (mais longo)
+    // que casa. Sem isso, um apelido genérico ("tv") vencia uma ligação manual
+    // ("Smart TV 43") só por vir antes na lista.
+    var cands=[];
+    _sinonimosKVA.forEach(function(s){
+      var oficial=(s.oficial||'').trim();
+      if(!oficial) return;
+      var peso=0;
+      (s.apelidos||[]).forEach(function(a){
+        a=(a||'').trim();
+        if(a && nd.indexOf(_normKVA(a))>=0 && a.length>peso) peso=a.length;
+      });
+      if(peso) cands.push({oficial:oficial, peso:peso});
+    });
+    cands.sort(function(a,b){ return b.peso-a.peso; });
+    // 1ª passada — sinônimo cujo oficial EXISTE na tabela: é a decisão manual do
+    // usuário, tem prioridade absoluta (não re-deriva por grupo/proximidade).
+    for(var i=0;i<cands.length;i++){
+      var of=cands[i].oficial;
+      var exata=entradas.find(function(e){ return _normKVA(e.nome)===_normKVA(of); });
+      if(exata) return {entrada:exata, aprox:true};
+    }
+    // 2ª passada — oficial não existe mais (sinônimo ÓRFÃO). Só aceita o núcleo se
+    // ele realmente tem grupo na tabela; senão segue adiante. Antes o 1º órfão dava
+    // break e zerava o match, ofuscando a similaridade e as ligações manuais.
+    for(var j=0;j<cands.length;j++){
+      var core=_stripNumKVA(cands[j].oficial);
+      if(core && entradas.some(function(e){ return _stripNumKVA(e.nome)===core; })){ baseCore=core; break; }
     }
   }
   // Camada 2b — similaridade por palavras (SMART TV -> TV LED): o token-núcleo
@@ -3048,10 +3067,16 @@ function renderizarListaSinonimosKVA(){
   }
   lista.innerHTML=_sinonimosKVA.map(function(s,i){
     var aps=(s.apelidos||[]).join(', ');
+    // Órfão = o "oficial" não existe (mais) na tabela: o sinônimo nunca resolve.
+    // Sinalizado porque era causa silenciosa de "sem KVA cadastrado".
+    var of=(s.oficial||'').trim();
+    var orfao = of && !_listaKVA.some(function(e){ return _normKVA(e.nome)===_normKVA(of); });
+    var aviso = orfao?'<span title="Este nome oficial não existe na tabela KVA — corrija ou remova" style="color:#e8930c;font-weight:700;flex-shrink:0">⚠</span>':'';
     return '<div class="kva-row">'
       +'<input class="kva-nome" type="text" value="'+escaparAttr(aps)+'" title="apelidos (vírgula)" onchange="_sinonimosKVA['+i+'].apelidos=this.value.split(\',\').map(function(a){return a.trim();}).filter(function(a){return a;})">'
       +'<span style="opacity:.5">→</span>'
-      +'<input class="kva-nome" type="text" value="'+escaparAttr(s.oficial||'')+'" title="nome oficial" onchange="_sinonimosKVA['+i+'].oficial=this.value.trim()">'
+      +'<input class="kva-nome" type="text" value="'+escaparAttr(s.oficial||'')+'"'+(orfao?' style="border-color:#e8930c"':'')+' title="nome oficial" onchange="_sinonimosKVA['+i+'].oficial=this.value.trim();renderizarListaSinonimosKVA()">'
+      +aviso
       +'<button class="regra-btn regra-del" onclick="_sinonimosKVA.splice('+i+',1);renderizarListaSinonimosKVA()" title="Remover">✕</button>'
     +'</div>';
   }).join('');
