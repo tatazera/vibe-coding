@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.8",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.8.rbz",
-    "notas":  "v1.4.8: nova aba Mapa de Artes (+ botao na toolbar). Selecione faces da comunicacao visual e clique Diagramar KV: cada face e copiada (modelo intacto), orientada de frente, arranjada (pecas a esquerda, paredes em fileiras) e cotada com cotas nativas na cena KV AUTO. Botao girar 90. Aditivo, nao altera export/prompt."
+    "versao":  "1.4.9",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.9.rbz",
+    "notas":  "v1.4.9: fix das miniaturas da pasta (aba Apresentacao). O CEF bloqueia file://, entao agora as miniaturas sao geradas reduzidas (~260px) e exibidas em dataURL - aparecem corretamente e leves. Clicar para substituir segue igual."
 }

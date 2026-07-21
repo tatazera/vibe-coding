@@ -4,6 +4,7 @@
 require 'sketchup'
 require 'json'
 require 'tmpdir'
+require 'fileutils'
 
 require_relative 'dictionary'
 require_relative 'exporter'
@@ -275,27 +276,91 @@ module STAND1
 
     # ── Aba Apresentação: lista PNG/JPG da pasta p/ grid clicável ──────────────
     # Aditivo/isolado — não altera o fluxo de export.
+    # O CEF do HtmlDialog bloqueia file:///, então as miniaturas vão por dataURL.
+    # Para não estourar o diálogo com PNGs 4K, geramos thumbs reduzidos (~260px)
+    # via System.Drawing (PowerShell oculto) e só esses thumbs viram base64.
     def self.list_folder_images(folder)
       unless folder && !folder.to_s.empty? && File.directory?(folder)
         @dialog.execute_script("window.setFolderImages([])")
         return
       end
-      exts = %w[png jpg jpeg]
+      exts  = %w[png jpg jpeg]
       files = Dir.entries(folder).select do |f|
         File.file?(File.join(folder, f)) && exts.include?(f.split('.').last.to_s.downcase)
       end.sort_by { |f| f.downcase }
-      data = files.map do |f|
+
+      thumbs = build_folder_thumbs(folder, files)   # index => caminho do thumb
+
+      data = files.each_with_index.map do |f, i|
         full = File.join(folder, f)
         {
           name:  f,
           path:  full.tr('\\', '/'),
-          size:  (File.size(full)  rescue 0),
-          mtime: (File.mtime(full).to_i rescue 0)
+          size:  (File.size(full) rescue 0),
+          mtime: (File.mtime(full).to_i rescue 0),
+          thumb: (thumbs[i] ? image_data_url(thumbs[i]) : '')
         }
       end
       @dialog.execute_script("window.setFolderImages(#{data.to_json})")
     rescue => e
       @dialog.execute_script("window.setFolderImages([])")
+    end
+
+    # Gera miniaturas reduzidas dos arquivos da pasta num diretório temporário.
+    # Retorna um hash { indice_do_arquivo => caminho_do_thumb }. Robusto: se o
+    # PowerShell/System.Drawing falhar, retorna {} e o grid degrada (só o nome).
+    def self.build_folder_thumbs(folder, files)
+      return {} if files.empty?
+      dir = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_folderthumbs')
+      FileUtils.rm_rf(dir) rescue (Dir.glob(File.join(dir, '*')).each { |x| File.delete(x) rescue nil })
+      Dir.mkdir(dir) unless File.directory?(dir)
+
+      items = files.each_with_index.map do |f, i|
+        full = File.join(folder, f).tr('/', '\\')
+        "'#{i}|#{full.gsub("'", "''")}'"
+      end.join(",\n")
+      safe_dir = dir.tr('/', '\\').gsub("'", "''")
+
+      ps = <<~PS
+        Add-Type -AssemblyName System.Drawing
+        $dst = '#{safe_dir}'
+        $items = @(
+        #{items}
+        )
+        foreach ($it in $items) {
+          $p = $it -split '\\|', 2
+          $idx = $p[0]; $src = $p[1]
+          try {
+            $img = [System.Drawing.Image]::FromFile($src)
+            $max = 260.0
+            $w = [double]$img.Width; $h = [double]$img.Height
+            $s = [Math]::Min($max / $w, $max / $h)
+            if ($s -gt 1) { $s = 1 }
+            $nw = [int][Math]::Max(1, [Math]::Round($w * $s))
+            $nh = [int][Math]::Max(1, [Math]::Round($h * $s))
+            $bmp = New-Object System.Drawing.Bitmap $nw, $nh
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $g.DrawImage($img, 0, 0, $nw, $nh)
+            $bmp.Save((Join-Path $dst ("t" + $idx + ".png")), [System.Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bmp.Dispose(); $img.Dispose()
+          } catch {}
+        }
+      PS
+
+      tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_thumbs_#{Process.pid}.ps1")
+      File.write(tmp_ps, ps)
+      run_ps_hidden(tmp_ps)
+      File.delete(tmp_ps) rescue nil
+
+      out = {}
+      files.each_index do |i|
+        t = File.join(dir, "t#{i}.png")
+        out[i] = t if File.exist?(t)
+      end
+      out
+    rescue => e
+      {}
     end
 
     # Substitui um arquivo da pasta por outro escolhido no PC (mantém o nome do alvo).

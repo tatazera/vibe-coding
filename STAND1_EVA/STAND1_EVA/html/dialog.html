@@ -1586,11 +1586,11 @@
       return;
     }
     grid.innerHTML = list.map(function(f) {
-      // src file:// (o diálogo é carregado via set_file, mesma origem). ?t= força reload após substituir.
-      var src = 'file:///' + encodeURI(f.path) + '?t=' + (f.mtime || 0);
+      // Miniatura em dataURL (o CEF bloqueia file:///). Thumb reduzido gerado no Ruby.
       var nm  = (f.name || '').replace(/"/g, '&quot;');
+      var img = f.thumb ? '<img src="' + f.thumb + '" alt="" onerror="this.style.display=\'none\'">' : '';
       return '<div class="folder-img" title="' + nm + ' — clique para substituir" onclick="replaceFolderImage(' + JSON.stringify(f.path) + ')">' +
-               '<img src="' + src + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' +
+               img +
                '<div class="fi-swap">Substituir</div>' +
                '<div class="fi-name">' + nm + '</div>' +
              '</div>';
