@@ -9,6 +9,7 @@ require_relative 'dictionary'
 require_relative 'exporter'
 require_relative 'prompt_builder'
 require_relative 'autoupdate'
+require_relative 'mapa_artes'
 
 module STAND1
   module EVA
@@ -68,6 +69,8 @@ module STAND1
       @dialog.add_action_callback('save_scene_camera')    { |_, msg| save_scene_camera(msg)    }
       @dialog.add_action_callback('get_scene_thumbs')     { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
+      @dialog.add_action_callback('mapa_diagramar') { |_, thr| MapaArtes.diagramar_from_dialog(thr, @dialog) }
+      @dialog.add_action_callback('mapa_girar')     { |_, _|   MapaArtes.girar_90(@dialog) }
       @dialog.show
 
       # Checagem silenciosa de atualização ao abrir (não bloqueia a UI).
@@ -948,14 +951,23 @@ module STAND1
       cmd.small_icon = icon_small if File.exist?(icon_small)
       cmd.large_icon = icon_large if File.exist?(icon_large)
 
+      # Comando: Diagramar KV (Mapa de Artes) — age sobre a seleção do modelo.
+      cmd_kv = UI::Command.new('Diagramar KV (Mapa de Artes)') { STAND1::EVA::MapaArtes.diagramar_selecao }
+      cmd_kv.tooltip         = 'Diagramar KV — Mapa de Artes'
+      cmd_kv.status_bar_text = 'Copia + cota as faces selecionadas numa cena KV (comunicação visual)'
+      cmd_kv.small_icon = icon_small if File.exist?(icon_small)
+      cmd_kv.large_icon = icon_large if File.exist?(icon_large)
+
       # Menu
       menu = UI.menu('Plugins')
       sub  = menu.add_submenu('STAND1')
       sub.add_item(cmd)
+      sub.add_item(cmd_kv)
 
       # Toolbar (barra de ícones)
       toolbar = UI::Toolbar.new('EVA Stand1')
       toolbar.add_item(cmd)
+      toolbar.add_item(cmd_kv)
       toolbar.restore
 
       file_loaded(__FILE__)

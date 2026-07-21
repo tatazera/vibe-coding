@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.7",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.7.rbz",
-    "notas":  "v1.4.7: na aba Apresentacao, a pasta de destino agora mostra as imagens PNG/JPG em miniaturas. Clique numa imagem para substitui-la por um arquivo do seu PC (mantem o nome). O grid atualiza sozinho apos exportar."
+    "versao":  "1.4.8",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.8.rbz",
+    "notas":  "v1.4.8: nova aba Mapa de Artes (+ botao na toolbar). Selecione faces da comunicacao visual e clique Diagramar KV: cada face e copiada (modelo intacto), orientada de frente, arranjada (pecas a esquerda, paredes em fileiras) e cotada com cotas nativas na cena KV AUTO. Botao girar 90. Aditivo, nao altera export/prompt."
 }
