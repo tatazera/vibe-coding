@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.11.1"
+  VERSAO        = "7.12.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -722,6 +722,27 @@ module STAND1_Memorial
       end
     end
 
+    # Atualizar SOMENTE um item (modo padrão / multi) — relê o modelo, extrai APENAS
+    # o item que casa com a chave+seção (no ambiente informado) e devolve ao JS, que
+    # faz o merge restrito àquele item (preserva obs/edição/ordem do resto). Aditivo,
+    # isolado em begin/rescue — não toca no fluxo principal nem no snapshot de revisão.
+    @dialog.add_action_callback("atualizar_um_item") do |_ctx, chave_item, secao_alvo, espaco_alvo|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        item = extrair_item_atualizado(model_atual, chave_item.to_s, secao_alvo.to_s, espaco_alvo.to_s)
+        if item
+          payload = { "chave" => chave_item.to_s, "secao" => secao_alvo.to_s,
+                      "espaco" => espaco_alvo.to_s, "item" => item }.to_json
+          @dialog.execute_script("receberAtualizacaoItem(#{payload})")
+        else
+          @dialog.execute_script("alertaItemNaoEncontrado(#{chave_item.to_s.to_json})")
+        end
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao atualizar item: #{e.message}".to_json})")
+      end
+    end
+
     # Carregar somente a SELEÇÃO atual do modelo (ACUMULA com dados existentes)
     @dialog.add_action_callback("carregar_selecao") do |_ctx|
       model_atual = Sketchup.active_model
@@ -736,6 +757,16 @@ module STAND1_Memorial
           @dialog.execute_script("adicionarDados(#{payload})")
           reenviar_listas
         end
+      end
+    end
+
+    # Expandir/recolher a largura da janela (melhor visualização lateral). Aditivo,
+    # isolado — só redimensiona o HtmlDialog, não toca no fluxo de dados.
+    @dialog.add_action_callback("redimensionar_dialogo") do |_ctx, largo|
+      begin
+        @dialog.set_size((largo == true || largo == "true") ? 1360 : 940, 760)
+      rescue => e
+        # set_size indisponível em algumas versões — ignora silenciosamente
       end
     end
 
@@ -1744,6 +1775,31 @@ module STAND1_Memorial
     adicionar_fita_led_auto(secoes_raw, materiais)
     secoes = montar_resultado(secoes_raw)
     { "espaco" => alvo[:nome], "secoes" => secoes }
+  end
+
+  # Relê o modelo e devolve APENAS o item (hash formatado) cuja chave+seção casam,
+  # dentro do ambiente informado (vazio = modo padrão, leitura completa). Reaproveita
+  # os mesmos coletores do fluxo principal (quantidade/medidas saem idênticas ao
+  # "Atualizar tudo"). Retorna nil quando nada casa — normalmente porque a MEDIDA
+  # mudou e a chave (nome+larg+prof+alt) já não existe. Preserva @ultimo_modo para
+  # não interferir no próximo "Atualizar".
+  def self.extrair_item_atualizado(model, chave_item, secao_alvo, espaco_alvo)
+    modo_salvo = @ultimo_modo
+    begin
+      if espaco_alvo.nil? || espaco_alvo.strip.empty?
+        dados = coletar_dados(model)                       # [{"secao","itens"}]
+        secoes = dados
+      else
+        dados = coletar_dados_um_espaco(model, espaco_alvo) # {"espaco","secoes"}
+        secoes = dados ? dados["secoes"] : nil
+      end
+      return nil unless secoes
+      sec = secoes.find { |s| s["secao"].to_s == secao_alvo }
+      return nil unless sec
+      (sec["itens"] || []).find { |it| it["chave"].to_s == chave_item }
+    ensure
+      @ultimo_modo = modo_salvo
+    end
   end
 
   # Materiais de revestimento dentro de um espaço — varre as faces imediatas do
