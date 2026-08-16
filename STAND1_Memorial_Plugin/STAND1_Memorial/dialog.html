@@ -1645,9 +1645,9 @@ function toggleBloqueio(){
 }
 
 function buildNomeExport(ext){
-  var proj=(nomeProjeto||nomeArquivo||'Memorial').trim().replace(/\s+/g,'_');
-  var rev=revisao?revisao.trim().replace(/\s+/g,'_'):'00';
-  return 'Memorial_'+proj+'_Rev'+rev+'.'+ext;
+  var proj=(nomeProjeto||nomeArquivo||'Memorial').trim().replace(/[\\\/:*?"<>|]/g,'');
+  var rev=revisao?revisao.trim().replace(/[\\\/:*?"<>|]/g,''):'00';
+  return proj+' Memorial r'+rev+'.'+ext;
 }
 
 function toggleObs(id){

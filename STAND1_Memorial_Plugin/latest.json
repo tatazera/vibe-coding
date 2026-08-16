@@ -1,5 +1,5 @@
 {
-    "versao":  "7.12.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.12.0.rbz",
-    "notas":  "v7.12.0: Tres melhorias. (1) Botao de atualizar item individual: um pequeno botao ao lado de cada item rele so a quantidade/medidas daquele item no modelo, sem precisar reler o modelo inteiro. Preserva observacoes e ajustes. Se a medida mudou, ele avisa para usar o Atualizar tudo. (2) Botao de expandir a tela para as laterais, para melhor visualizacao (fica salvo por projeto). (3) Painel de Alteracoes repaginado: agora um historico por data, uma tabela por leitura, mostrando lado a lado o que SAIU e o que ENTROU, separado por secao. O historico fica salvo no projeto."
+    "versao":  "7.12.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.12.1.rbz",
+    "notas":  "v7.12.1: Duas melhorias. (1) Materiais/componentes marcados com a tag KV ou OCULTO deixam de ser contabilizados no memorial (nenhuma secao) - evita duplicacao de quantitativo quando uma peca e copiada pra fora so pra servir de referencia de cotagem no mapa de artes. (2) Nome de exportacao do PDF/TXT agora sai pre-setado com o nome do modelo SketchUp seguido de \"Memorial r<revisao>\" (ex: \"VR Software SB 2026 Memorial r00.pdf\"), pra facilitar a identificacao e o vinculo com o nome do arquivo do projeto."
 }

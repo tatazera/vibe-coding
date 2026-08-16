@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.12.0"
+  VERSAO        = "7.12.1"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -914,8 +914,8 @@ module STAND1_Memorial
   def self.exportar_pdf_headless(html_conteudo, nome_sug = nil)
     unless nome_sug && !nome_sug.strip.empty?
       model     = Sketchup.active_model
-      nome_base = model ? nome_do_arquivo(model).gsub(/\s+/, '_') : "Memorial"
-      nome_sug  = "Memorial_#{nome_base}_Stand1.pdf"
+      nome_base = model ? nome_do_arquivo(model) : "Memorial"
+      nome_sug  = "#{nome_base} Memorial r00.pdf"
     end
 
     destino = UI.savepanel("Salvar PDF", "", nome_sug)
@@ -1216,6 +1216,11 @@ module STAND1_Memorial
     tag_nome    = (tag_propria != "" && tag_propria != "Untagged" && tag_propria != "Layer0") \
                   ? tag_propria : (tag_herdada || "")
     tag_upper   = tag_nome.upcase
+
+    # Cópias de referência (ex.: parede duplicada pra cotagem no mapa de artes)
+    # ficam marcadas com tag KV ou OCULTO e nunca entram no memorial —
+    # nem processadas, nem descidas, pra não duplicar quantitativo.
+    return if tag_upper == "KV" || tag_upper == "OCULTO"
 
     secao_match = SECOES_PERMITIDAS.find { |s| tag_upper == s.upcase }
 
