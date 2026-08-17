@@ -1,5 +1,5 @@
 {
-    "versao":  "7.12.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.12.1.rbz",
-    "notas":  "v7.12.1: Duas melhorias. (1) Materiais/componentes marcados com a tag KV ou OCULTO deixam de ser contabilizados no memorial (nenhuma secao) - evita duplicacao de quantitativo quando uma peca e copiada pra fora so pra servir de referencia de cotagem no mapa de artes. (2) Nome de exportacao do PDF/TXT agora sai pre-setado com o nome do modelo SketchUp seguido de \"Memorial r<revisao>\" (ex: \"VR Software SB 2026 Memorial r00.pdf\"), pra facilitar a identificacao e o vinculo com o nome do arquivo do projeto."
+    "versao":  "7.12.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.12.2.rbz",
+    "notas":  "v7.12.2: Hotfix da v7.12.1. O filtro de tags auxiliares (KV/OCULTAR) comparava o nome da tag sem considerar o prefixo numerico que essas tags realmente tem (ex: \"4. KV\", \"0. OCULTAR\"), entao nunca casava e o filtro nao funcionava. Corrigido em processar_entidade para ignorar o prefixo \"N. \" antes de comparar. Continua contabilizando normalmente todo o resto; so materiais/componentes nas tags auxiliares KV ou OCULTAR (ou OCULTO) deixam de entrar no memorial."
 }

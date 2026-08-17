@@ -16,7 +16,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.12.1"
+  VERSAO        = "7.12.2"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1216,11 +1216,13 @@ module STAND1_Memorial
     tag_nome    = (tag_propria != "" && tag_propria != "Untagged" && tag_propria != "Layer0") \
                   ? tag_propria : (tag_herdada || "")
     tag_upper   = tag_nome.upcase
+    # tags auxiliares levam prefixo numérico ("4. KV", "0. OCULTAR") — compara só o nome
+    tag_base    = tag_upper.sub(/\A\d+\.\s*/, '')
 
     # Cópias de referência (ex.: parede duplicada pra cotagem no mapa de artes)
-    # ficam marcadas com tag KV ou OCULTO e nunca entram no memorial —
+    # ficam marcadas com a tag auxiliar KV ou OCULTAR e nunca entram no memorial —
     # nem processadas, nem descidas, pra não duplicar quantitativo.
-    return if tag_upper == "KV" || tag_upper == "OCULTO"
+    return if tag_base == "KV" || tag_base == "OCULTAR" || tag_base == "OCULTO"
 
     secao_match = SECOES_PERMITIDAS.find { |s| tag_upper == s.upcase }
 
