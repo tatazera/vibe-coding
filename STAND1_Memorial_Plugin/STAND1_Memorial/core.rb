@@ -1,6 +1,7 @@
 # =============================================================================
-# Stand1 Memorial Descritivo — core.rb v7.0.3
-# Novidades: Multi-Espaço · Diff de Revisão · Cálculo de KVA
+# Stand1 Memorial Descritivo — core.rb v7.13.0
+# Novidades: Multi-Espaço (gestão de ambientes, adicionar ambiente individual,
+#            ocultar medidas/seções em lote) · Diff de Revisão · Cálculo de KVA
 # =============================================================================
 
 require 'sketchup.rb'
@@ -16,7 +17,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.12.2"
+  VERSAO        = "7.13.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -677,6 +678,52 @@ module STAND1_Memorial
       marcar_grupo_espaco(pid, ativo == true || ativo == "true", model_atual) if model_atual
     end
 
+    # [MS-1] Marcar/desmarcar em lote. `ids` (JSON de array) restringe aos grupos que o
+    # usuário está vendo na lista filtrada; vazio/nil = todos os grupos do modelo.
+    @dialog.add_action_callback("marcar_todos_grupos_espaco") do |_ctx, ativo, ids_json|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        ids = begin
+          lista = JSON.parse(ids_json.to_s) rescue nil
+          (lista.is_a?(Array) && !lista.empty?) ? lista : nil
+        end
+        marcar_todos_grupos_espaco(ativo == true || ativo == "true", model_atual, ids)
+        grupos = listar_grupos_raiz(model_atual)
+        @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{modo_multi_espaco?.to_json})")
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao marcar espaços: #{e.message}".to_json})")
+      end
+    end
+
+    # [MS-1] Selecionar + dar zoom no grupo dentro do SketchUp (identificação visual).
+    @dialog.add_action_callback("focar_grupo_espaco") do |_ctx, pid|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        focar_grupo_espaco(pid, model_atual)
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao focar grupo: #{e.message}".to_json})")
+      end
+    end
+
+    # [MS-1] Renomear o grupo NO MODELO e devolver a lista atualizada.
+    @dialog.add_action_callback("renomear_grupo_espaco") do |_ctx, pid, novo_nome|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        if renomear_grupo_espaco(pid, novo_nome, model_atual)
+          grupos = listar_grupos_raiz(model_atual)
+          @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{modo_multi_espaco?.to_json})")
+          @dialog.execute_script("mostrarToast(#{"Grupo renomeado para \"#{novo_nome}\".".to_json})")
+        else
+          @dialog.execute_script("mostrarToast('Grupo não encontrado — recarregue a lista.')")
+        end
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao renomear: #{e.message}".to_json})")
+      end
+    end
+
     @dialog.add_action_callback("carregar_multi_espaco") do |_ctx|
       model_atual = Sketchup.active_model
       next unless model_atual
@@ -719,6 +766,48 @@ module STAND1_Memorial
         end
       rescue => e
         @dialog.execute_script("UI.messagebox('Erro ao atualizar ambiente: #{e.message}')")
+      end
+    end
+
+    # [MS-2] ADICIONAR SOMENTE um ambiente (Multi-Espaço) — lê só aquele grupo pelo pid e
+    # devolve ao JS, que insere no memorial sem tocar nos demais ambientes. Evita a
+    # releitura completa ("Carregar Espaços") quando o usuário só quer somar um
+    # ambiente novo. Não mexe no snapshot de revisão.
+    @dialog.add_action_callback("adicionar_um_espaco") do |_ctx, pid|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        dados = coletar_dados_um_espaco_por_pid(model_atual, pid)
+        if dados
+          @dialog.execute_script("receberNovoEspaco(#{dados.to_json})")
+          grupos = listar_grupos_raiz(model_atual)
+          @dialog.execute_script("receberGruposEspaco(#{grupos.to_json},#{modo_multi_espaco?.to_json})")
+        else
+          @dialog.execute_script("mostrarToast('Grupo não encontrado — recarregue a lista.')")
+        end
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao adicionar ambiente: #{e.message}".to_json})")
+      end
+    end
+
+    # [MS-4] ADICIONAR AMBIENTE PELA SELEÇÃO — o usuário clica no grupo dentro do
+    # SketchUp e manda para o memorial. Marca o grupo como espaço e lê SÓ ele;
+    # os demais ambientes ficam intactos. Aceita vários grupos de uma vez.
+    @dialog.add_action_callback("adicionar_espaco_selecionado") do |_ctx|
+      model_atual = Sketchup.active_model
+      next unless model_atual
+      begin
+        grupos = grupos_raiz_da_selecao(model_atual)
+        if grupos.empty?
+          @dialog.execute_script("alertaSelecaoSemAmbiente()")
+        else
+          novos = grupos.map { |g| coletar_dados_um_espaco_por_pid(model_atual, g.persistent_id) }.compact
+          @dialog.execute_script("receberNovosEspacos(#{novos.to_json})")
+          lista = listar_grupos_raiz(model_atual)
+          @dialog.execute_script("receberGruposEspaco(#{lista.to_json},#{modo_multi_espaco?.to_json})")
+        end
+      rescue => e
+        @dialog.execute_script("mostrarToast(#{"Erro ao adicionar ambiente: #{e.message}".to_json})")
       end
     end
 
@@ -1692,30 +1781,105 @@ module STAND1_Memorial
     ent.name.to_s.strip
   end
 
+  # [MS-1] Grupo de primeiro nível pelo persistent_id (nil se não existir mais).
+  def self.grupo_raiz_por_pid(model, pid)
+    model.entities.find do |ent|
+      ent.is_a?(Sketchup::Group) && ent.persistent_id.to_s == pid.to_s
+    end
+  end
+
+  # [MS-1] Quantos sub-grupos/componentes o espaço contém (recursivo). Serve só como
+  # prévia na lista do modal — não entra em nenhum cálculo do memorial.
+  def self.contar_subcontainers(ent, profundidade = 0)
+    return 0 if profundidade > 6
+    total = 0
+    entities_do_container(ent).each do |sub|
+      next unless sub.is_a?(Sketchup::Group) || sub.is_a?(Sketchup::ComponentInstance)
+      total += 1 + contar_subcontainers(sub, profundidade + 1)
+    end
+    total
+  rescue
+    0
+  end
+
+  # [MS-2] Nome que IDENTIFICA o ambiente no memorial. Grupo sem nome cai no
+  # persistent_id (estável) em vez de um índice de ordem — assim o ➕ (por pid) e
+  # o "Carregar Espaços" (varredura) sempre chegam ao MESMO identificador.
+  def self.nome_espaco_efetivo(ent)
+    nome = nome_container_espaco(ent)
+    nome.empty? ? "Espaço #{ent.persistent_id}" : nome
+  end
+
   def self.listar_grupos_raiz(model)
     grupos = []
     model.entities.each do |ent|
       next unless ent.is_a?(Sketchup::Group)
-      nome    = nome_container_espaco(ent)
-      nome    = "(sem nome)" if nome.empty?
-      marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
-      grupos << { "id" => ent.persistent_id.to_s, "nome" => nome, "marcado" => (marcado == true || marcado == "true") }
+      nome     = nome_container_espaco(ent)
+      sem_nome = nome.empty?
+      nome     = "(sem nome)" if sem_nome
+      marcado  = ent.get_attribute("STAND1_Memorial", "espaco", false)
+      tag      = ent.layer&.name.to_s
+      tag      = "" if tag == "Untagged" || tag == "Layer0"
+      grupos << {
+        "id"       => ent.persistent_id.to_s,
+        "nome"     => nome,
+        # identificador do ambiente no memorial (casa com _espaco das seções)
+        "nome_esp" => nome_espaco_efetivo(ent),
+        "sem_nome" => sem_nome,
+        "marcado"  => (marcado == true || marcado == "true"),
+        "n_sub"    => contar_subcontainers(ent),
+        "tag"      => tag,
+        "oculto"   => !ent.visible?
+      }
     end
     grupos
   end
 
   def self.marcar_grupo_espaco(pid, ativo, model)
+    grupo = grupo_raiz_por_pid(model, pid)
+    return false unless grupo
     model.start_operation("STAND1 — Marcar Espaço", true)
+    grupo.set_attribute("STAND1_Memorial", "espaco", ativo)
+    model.commit_operation
+    true
+  end
+
+  # [MS-1] Marca/desmarca TODOS os grupos de primeiro nível numa única operação de undo.
+  # `ids` restringe aos grupos visíveis na lista filtrada (nil = todos).
+  def self.marcar_todos_grupos_espaco(ativo, model, ids = nil)
+    alvo = ids.nil? ? nil : ids.map(&:to_s)
+    model.start_operation("STAND1 — Marcar Espaços", true)
+    n = 0
     model.entities.each do |ent|
       next unless ent.is_a?(Sketchup::Group)
-      if ent.persistent_id.to_s == pid.to_s
-        ent.set_attribute("STAND1_Memorial", "espaco", ativo)
-        model.commit_operation
-        return true
-      end
+      next if alvo && !alvo.include?(ent.persistent_id.to_s)
+      ent.set_attribute("STAND1_Memorial", "espaco", ativo)
+      n += 1
     end
-    model.abort_operation
-    false
+    model.commit_operation
+    n
+  end
+
+  # [MS-1] Seleciona o grupo no modelo e dá zoom nele — ajuda a identificar visualmente
+  # qual ambiente é qual antes de marcar. Não altera nada no modelo.
+  def self.focar_grupo_espaco(pid, model)
+    grupo = grupo_raiz_por_pid(model, pid)
+    return false unless grupo
+    model.selection.clear
+    model.selection.add(grupo)
+    model.active_view.zoom(model.selection) rescue nil
+    true
+  end
+
+  # [MS-1] Renomeia o grupo NO MODELO (Entity Info → Nome). Diferente do apelido do
+  # memorial: aqui a identidade do espaço muda de verdade.
+  def self.renomear_grupo_espaco(pid, novo_nome, model)
+    grupo = grupo_raiz_por_pid(model, pid)
+    return false unless grupo
+    model.start_operation("STAND1 — Renomear Espaço", true)
+    grupo.name = novo_nome.to_s.strip
+    model.commit_operation
+    true
   end
 
   # Processa o conteúdo de um espaço aplicando a transformação e a tag do próprio
@@ -1736,9 +1900,7 @@ module STAND1_Memorial
       next unless ent.is_a?(Sketchup::Group)
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       next unless marcado == true || marcado == "true"
-      nome = nome_container_espaco(ent)
-      nome = "Espaço #{grupos.size + 1}" if nome.empty?
-      grupos << { grupo: ent, nome: nome }
+      grupos << { grupo: ent, nome: nome_espaco_efetivo(ent) }
     end
     return nil if grupos.empty?
     resultado = []
@@ -1760,28 +1922,65 @@ module STAND1_Memorial
   # cujo nome casa — usado pelo botão ⟳ de atualizar só aquele ambiente.
   def self.coletar_dados_um_espaco(model, nome_espaco)
     limpar_cache
-    alvo = nil; idx = 0
+    alvo = nil
     model.entities.each do |ent|
       next unless ent.is_a?(Sketchup::Group)
       marcado = ent.get_attribute("STAND1_Memorial", "espaco", false)
       next unless marcado == true || marcado == "true"
-      idx += 1
-      nome = nome_container_espaco(ent)
-      nome = "Espaço #{idx}" if nome.empty?
+      nome = nome_espaco_efetivo(ent)
       if nome == nome_espaco
         alvo = { grupo: ent, nome: nome }
         break
       end
     end
     return nil unless alvo
+    coletar_espaco_do_grupo(alvo[:grupo], alvo[:nome])
+  end
+
+  # [MS-2] Núcleo da leitura de UM ambiente: recebe o grupo já resolvido e devolve
+  # {espaco, secoes}. Compartilhado pelo ⟳ (por nome) e pelo ➕ (por pid).
+  def self.coletar_espaco_do_grupo(grupo, nome)
     secoes_raw = {}
     SECOES_PERMITIDAS.each { |s| secoes_raw[s] = {} }
-    processar_conteudo_espaco(alvo[:grupo], secoes_raw)
-    materiais = listar_materiais_revestimentos_grupo(alvo[:grupo])
+    processar_conteudo_espaco(grupo, secoes_raw)
+    materiais = listar_materiais_revestimentos_grupo(grupo)
     adicionar_revestimentos_auto(secoes_raw, materiais)
     adicionar_fita_led_auto(secoes_raw, materiais)
-    secoes = montar_resultado(secoes_raw)
-    { "espaco" => alvo[:nome], "secoes" => secoes }
+    { "espaco" => nome, "secoes" => montar_resultado(secoes_raw) }
+  end
+
+  # [MS-4] Grupos de PRIMEIRO NÍVEL implicados na seleção atual. Cobre os dois jeitos
+  # naturais de "clicar no ambiente":
+  #   • clicar no grupo na raiz  → ele vem direto na seleção;
+  #   • estar editando dentro do grupo → o topo do active_path é o grupo raiz.
+  # Seleções que não resolvem para um grupo de primeiro nível são ignoradas.
+  def self.grupos_raiz_da_selecao(model)
+    ids = model.entities.grep(Sketchup::Group).map { |g| g.persistent_id }
+    achados = []
+    caminho = (model.active_path rescue nil)
+    if caminho && !caminho.empty?
+      topo = caminho.first
+      achados << topo if topo.is_a?(Sketchup::Group) && ids.include?(topo.persistent_id)
+    end
+    model.selection.each do |e|
+      achados << e if e.is_a?(Sketchup::Group) && ids.include?(e.persistent_id)
+    end
+    achados.uniq { |g| g.persistent_id }
+  end
+
+  # [MS-2] Lê UM ambiente pelo persistent_id do grupo — usado ao ADICIONAR um espaço
+  # novo, quando ele ainda pode nem estar marcado como espaço. Marca o grupo
+  # como espaço (para sobreviver à próxima leitura completa) e devolve os dados.
+  # Não toca nos demais ambientes nem no snapshot de revisão.
+  def self.coletar_dados_um_espaco_por_pid(model, pid)
+    limpar_cache
+    grupo = grupo_raiz_por_pid(model, pid)
+    return nil unless grupo
+    marcado = grupo.get_attribute("STAND1_Memorial", "espaco", false)
+    unless marcado == true || marcado == "true"
+      marcar_grupo_espaco(pid, true, model)
+    end
+    coletar_espaco_do_grupo(grupo, nome_espaco_efetivo(grupo))
   end
 
   # Relê o modelo e devolve APENAS o item (hash formatado) cuja chave+seção casam,

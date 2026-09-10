@@ -40,6 +40,14 @@
   .btn-modo { padding: 6px 14px; border-radius: 6px; border: 1.5px solid var(--borda); background: #fff; font-family: var(--font); font-size: 11px; font-weight: 600; cursor: pointer; color: #555; transition: all .15s; }
   .btn-modo:hover { border-color: var(--azul); color: var(--azul); }
   .btn-modo.ativo { background: var(--azul); color: #fff; border-color: var(--azul); }
+  /* [MS-4] Barra por modo: "Adicionar Tudo/Seleção" leem o modelo inteiro para um único
+     memorial — no Multi-Espaço dariam conflito com a leitura por ambiente. Lá
+     entram "Adicionar Ambiente" e "Lista de Ambientes" no lugar deles. */
+  .so-multi { display: none; }
+  body.modo-multi .so-multi { display: inline-block; }
+  body.modo-multi .so-padrao { display: none; }
+  .btn-add-amb { border-color: var(--azul); color: var(--azul); font-weight: 700; }
+  body.dark .btn-add-amb { border-color: #4DA8F0; color: #4DA8F0; }
 
   .scroll { flex: 1; overflow-y: auto; padding: 22px; }
 
@@ -75,7 +83,21 @@
   .fcorpo { padding: 18px 28px 24px; }
   .secao { margin-bottom: 18px; }
   .secao:last-child { margin-bottom: 0; }
-  .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); }
+  .stit { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.8px; padding-bottom: 5px; margin-bottom: 8px; color: var(--azul); display: flex; align-items: center; gap: 8px; }
+  .stit-nome { flex: 1; }
+  /* [MS-3] Ações por seção (dentro do ambiente): medidas e ocultar seção no export */
+  .sec-acoes { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  /* opacidade vai nos BOTÕES (não no container): assim um estado ativo continua
+     visível sem hover, enquanto os inativos ficam discretos */
+  .sec-acao { background: transparent; border: 1px solid var(--borda); border-radius: 4px; height: 18px; min-width: 18px; padding: 0 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; letter-spacing: 0; color: var(--azul); opacity: 0; transition: all .15s; }
+  .secao:hover .sec-acao, .sec-acao:focus, .sec-acao.ativo { opacity: 1; }
+  .sec-acao:hover { background: var(--azul); color: #fff; border-color: transparent; }
+  .sec-acao.ativo { background: #8a8a96; color: #fff; border-color: transparent; }
+  .secao.secao-oculta .stit-nome, .secao.secao-oculta ul.itens { opacity: .4; text-decoration: line-through; text-decoration-thickness: 1px; }
+  body.bloqueado .sec-acoes { display: none; }
+  body.dark .sec-acao { border-color: #2e2f3a; color: #7da2ff; }
+  body.dark .sec-acao:hover { background: #7da2ff; color: #1a1b22; }
+  body.dark .sec-acao.ativo { background: #3a3c4a; color: #fff; border-color: transparent; }
   /* Multi-Espaço: título do espaço + divisória minimalista entre espaços */
   .espaco-titulo { display: flex; align-items: center; font-size: 14px; font-weight: 800; letter-spacing: .04em; color: #C84FBF; text-transform: uppercase; margin: 4px 0 12px; padding-bottom: 6px; border-bottom: 2px solid rgba(200,79,191,.35); cursor: grab; border-radius: 4px 4px 0 0; transition: background .15s; -webkit-user-select: none; user-select: none; }
   .esp-nome { flex: 1; }
@@ -184,6 +206,25 @@
   .grupo-espaco-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:rgba(0,0,0,.15); border-radius:6px; margin-bottom:6px; cursor:pointer; }
   .grupo-espaco-item input[type=checkbox] { cursor:pointer; width:15px; height:15px; flex-shrink:0; }
   .grupo-espaco-item label { cursor:pointer; font-size:13px; flex:1; }
+  /* [MS-1] Gestão de espaços: linha marcada, metadados e ações por grupo */
+  .grupo-espaco-item.marcado { background:rgba(77,168,240,.14); box-shadow:inset 2px 0 0 var(--azul); }
+  .grupo-espaco-item .ge-nome { display:flex; flex-direction:column; gap:1px; flex:1; min-width:0; cursor:pointer; }
+  .grupo-espaco-item .ge-nome b { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .grupo-espaco-item .ge-nome b.ge-sem-nome { font-style:italic; opacity:.6; font-weight:400; }
+  .grupo-espaco-item .ge-meta { font-size:10.5px; opacity:.55; display:flex; gap:7px; white-space:nowrap; }
+  .grupo-espaco-item .ge-acoes { display:flex; gap:4px; flex-shrink:0; }
+  /* botões secundários (🎯 ✎ ⟳) só ganham destaque no hover da linha */
+  .ge-btn { background:transparent; border:1px solid var(--borda); border-radius:4px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; font-size:11px; color:inherit; opacity:.22; transition:opacity .15s; }
+  .grupo-espaco-item:hover .ge-btn { opacity:.8; }
+  .ge-btn:hover { opacity:1; background:rgba(128,128,128,.18); }
+  /* [MS-2] ＋ é a ação principal da linha: sempre legível, mesmo sem hover */
+  .grupo-espaco-item .ge-btn-add { opacity:1; color:var(--azul); border-color:var(--azul); font-weight:700; }
+  .grupo-espaco-item.no-memorial .ge-meta { opacity:.8; }
+  .ge-barra { display:flex; align-items:center; gap:6px; margin-bottom:9px; flex-wrap:wrap; }
+  .ge-barra .ge-contador { font-size:11.5px; opacity:.6; margin-left:auto; white-space:nowrap; }
+  .ge-chip { font-size:11px; padding:4px 9px; border-radius:20px; border:1px solid var(--borda); background:transparent; color:inherit; cursor:pointer; opacity:.75; }
+  .ge-chip:hover { opacity:1; }
+  .ge-chip.ativo { background:rgba(77,168,240,.18); border-color:var(--azul); color:var(--azul); opacity:1; }
   body.bloqueado .item-desc-edit,
   body.bloqueado .item-qtd-edit { pointer-events: none; border-bottom: none; cursor: default; }
   body.bloqueado .btn-excluir,
@@ -428,8 +469,10 @@
     ul.itens li::before { content: '■' !important; color: #1A2DB8 !important; background: none !important; }
     .item-desc { color: #222 !important; display: inline !important; }
     .qtd { color: #1A2DB8 !important; background: none !important; }
-    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .btn-olho, .btn-medida, .btn-refresh, .drag-handle, .badge-manual, .tag-oculto, .esp-handle { display: none !important; }
+    .btn-lupa, .btn-excluir, .btn-add-manual, .btn-obs, .btn-olho, .btn-medida, .btn-refresh, .drag-handle, .badge-manual, .tag-oculto, .esp-handle, .sec-acoes { display: none !important; }
     li.item-oculto { display: none !important; }
+    /* [MS-3] seção ocultada no export não é impressa */
+    .secao.secao-oculta { display: none !important; }
     .item-qtd-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; }
     .item-desc-edit, body.bloqueado .item-desc-edit { border-bottom: none !important; background: none !important; padding: 0 !important; cursor: default !important; pointer-events: none !important; }
     .item-obs-wrap { display: none !important; }
@@ -477,15 +520,18 @@
 </div>
 
 <div class="toolbar-modo">
-  <button class="btn-modo" id="modoTudo" onclick="carregarTudo()">📋 Adicionar Tudo</button>
-  <button class="btn-modo" id="modoSelecao" onclick="carregarSelecao()">🖱️ Adicionar Seleção</button>
+  <button class="btn-modo so-padrao" id="modoTudo" onclick="carregarTudo()">📋 Adicionar Tudo</button>
+  <button class="btn-modo so-padrao" id="modoSelecao" onclick="carregarSelecao()">🖱️ Adicionar Seleção</button>
+  <!-- [MS-4] botões exclusivos do Multi-Espaço -->
+  <button class="btn-modo so-multi btn-add-amb" onclick="adicionarAmbienteSelecionado()" title="Clique no grupo do ambiente dentro do SketchUp e depois aqui — ele entra na listagem sem reler os demais">➕ Adicionar Ambiente</button>
+  <button class="btn-modo so-multi" onclick="abrirModalMultiEspaco()" title="Escolher quais ambientes entram na listagem — marcar, retirar, adicionar, localizar e renomear">⊞ Lista de Ambientes</button>
   <button class="btn-modo" onclick="abrirModalManual()" title="Adicionar um item manualmente (ex.: tomadas) — não precisa estar no modelo">➕ Item Manual</button>
   <button class="btn-modo" onclick="abrirGerenciarRevestimentos()">🎨 Gerenciar Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalRegras()">⚙ Regras de Medição</button>
   <button class="btn-modo" onclick="abrirModalMobiliario()">⚙ Mobiliário</button>
   <button class="btn-modo" onclick="abrirModalRevAuto()">⚙ Revestimentos</button>
   <button class="btn-modo" onclick="abrirModalFitaLed()">⚙ Fita LED</button>
-  <button class="btn-modo btn-colapso-esp" onclick="toggleTodosEspacos()" title="Recolher ou expandir todos os ambientes (só visualização)">⊟ Recolher ambientes</button>
+  <button class="btn-modo so-multi btn-colapso-esp" onclick="toggleTodosEspacos()" title="Recolher ou expandir todos os ambientes (só visualização)">⊟ Recolher ambientes</button>
   <button class="btn-modo btn-limpar" onclick="limparTudo()" title="Remover TODOS os itens do memorial (não afeta o modelo)">🗑 Limpar Tudo</button>
   <input type="text" id="buscaItens" class="busca-itens" placeholder="🔎 Filtrar itens..." oninput="filtrarItens(this.value)">
 </div>
@@ -669,13 +715,21 @@
       </div>
     </div>
     <div style="padding:14px 18px 0">
-      <div class="linear-desc" style="margin-bottom:10px">Marque os grupos que representam ambientes independentes:</div>
+      <div class="linear-desc" style="margin-bottom:10px"><b>＋</b> soma <b>só aquele ambiente</b> ao memorial, sem reler os demais. <b>Carregar Espaços</b> relê todos os marcados (recalcula o diff de revisão). Use 🎯 para localizar e ✎ para renomear o grupo no SketchUp.</div>
       <input type="text" id="buscaGrupoEspaco" placeholder="🔍 Buscar grupo..." oninput="filtrarGruposEspaco()" style="width:100%;box-sizing:border-box;font-size:12px;padding:8px 11px;margin-bottom:10px;background:rgba(128,128,128,.08);border:1.5px solid rgba(128,128,128,.25);border-radius:7px;color:inherit;outline:none">
-      <div id="listaGruposEspaco" style="max-height:46vh;overflow-y:auto"></div>
+      <!-- [MS-1] barra de gestão em lote · [MS-2] o ＋ por linha fica na lista -->
+      <div class="ge-barra">
+        <button class="ge-chip" onclick="marcarTodosGruposEspaco(true)" title="Marcar todos os grupos listados">☑ Todos</button>
+        <button class="ge-chip" onclick="marcarTodosGruposEspaco(false)" title="Desmarcar todos os grupos listados">☐ Nenhum</button>
+        <button class="ge-chip" id="chipSoMarcados" onclick="toggleFiltroMarcados()" title="Mostrar somente os grupos marcados">★ Marcados</button>
+        <button class="ge-chip" onclick="recarregarGruposEspaco()" title="Reler os grupos do modelo">⟳</button>
+        <span class="ge-contador" id="contadorGruposEspaco"></span>
+      </div>
+      <div id="listaGruposEspaco" style="max-height:44vh;overflow-y:auto"></div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 18px 16px;border-top:1px solid rgba(128,128,128,.15);margin-top:12px">
       <button class="mrev-btn mrev-btn-sec" onclick="fecharModalMultiEspaco()">Fechar</button>
-      <button class="mrev-btn mrev-btn-primary" onclick="carregarMultiEspaco()">📋 Carregar Espaços</button>
+      <button class="mrev-btn mrev-btn-primary" id="btnCarregarEspacos" onclick="carregarMultiEspaco()">📋 Carregar Espaços</button>
     </div>
   </div>
 </div>
@@ -957,7 +1011,9 @@ function alertaEspacoNaoEncontrado(nome){
 }
 // Merge inteligente restrito às seções de UM espaço: adiciona novos, remove os que
 // sumiram (só origem 'modelo'), preserva manuais/editados e campos de UI (oculto/obs).
-function receberAtualizacaoEspaco(payload){
+// `silencioso` suprime o toast de "atualizado" — usado quando quem chama já vai
+// dar sua própria mensagem (ex.: ➕ adicionar ambiente novo).
+function receberAtualizacaoEspaco(payload, silencioso){
   var esp=payload && payload.espaco;
   if(!esp){ return; }
   var novos=(payload.secoes||[]);
@@ -1003,8 +1059,77 @@ function receberAtualizacaoEspaco(payload){
   // mantém o store multi coerente (dadosMemorial é o ativo no modo multi)
   if(_modoMultiEspaco) _memMulti=dadosMemorial;
   ordenarSecoes(); atualizarStatus(); renderizar(); persistirEstado();
+  if(silencioso) return;
   var label=_labelEspaco(esp);
   mostrarToast('⟳ "'+label+'" atualizado'+(adicionados?' · +'+adicionados+' novo(s)':'')+(removidos?' · -'+removidos+' removido(s)':''));
+}
+
+// ── [MS-2] ADICIONAR UM AMBIENTE (Multi-Espaço) ──────────────────────────────
+// Soma UM ambiente novo ao memorial sem reler os demais. Diferente de
+// "Carregar Espaços", que relê o modelo inteiro e recalcula o diff de revisão:
+// aqui os outros ambientes ficam intactos (edições manuais, ordem, obs).
+function adicionarUmEspaco(pid){
+  if(_bloqueioImpedeReleitura()) return;
+  if(!pid) return;
+  // Ambiente só existe no modo Multi — entra nele preservando o memorial padrão.
+  if(!_modoMultiEspaco) _ativarModo(true);
+  if(typeof sketchup!=='undefined'&&sketchup.adicionar_um_espaco) sketchup.adicionar_um_espaco(pid);
+  else mostrarToast('Disponível apenas dentro do SketchUp.');
+}
+
+// Insere o ambiente lido no memorial. Reaproveita o merge por-espaço do ⟳: como
+// o espaço ainda não existe, o merge o cria com todas as seções. Se já existir
+// (usuário clicou ➕ num ambiente já no memorial), vira uma atualização daquele
+// ambiente só — nunca duplica.
+function receberNovoEspaco(payload){
+  var esp = payload && payload.espaco;
+  if(!esp) return;
+  var jaExistia = dadosMemorial.some(function(se){ return (se._espaco||'')===esp; });
+  if(!(payload.secoes||[]).length && !jaExistia){
+    mostrarToast('"'+esp+'" não tem itens reconhecidos — nada foi adicionado.');
+    return;
+  }
+  receberAtualizacaoEspaco(payload, !jaExistia); // merge isolado + ordenar/renderizar/persistir
+  if(!jaExistia){
+    delete _espacosColapsados[esp];  // ambiente novo entra expandido
+    // _ordemEspacos não precisa mudar: ordenarSecoes() já joga espaços fora dela no fim.
+    persistirEstado();
+    var n=0;
+    dadosMemorial.forEach(function(se){ if((se._espaco||'')===esp) n+=se.itens.length; });
+    mostrarToast('➕ Ambiente "'+_labelEspaco(esp)+'" adicionado · '+n+' item(ns).');
+  }
+  atualizarBadgeKVA();
+}
+
+// ── [MS-4] ADICIONAR AMBIENTE PELA SELEÇÃO DO SKETCHUP ───────────────────────
+// Adiciona à listagem o ambiente que está selecionado no SketchUp. Aceita mais
+// de um grupo de uma vez; grupos já na listagem são apenas reatualizados.
+function adicionarAmbienteSelecionado(){
+  if(_bloqueioImpedeReleitura()) return;
+  if(!_modoMultiEspaco) _ativarModo(true);
+  if(typeof sketchup!=='undefined'&&sketchup.adicionar_espaco_selecionado) sketchup.adicionar_espaco_selecionado();
+  else mostrarToast('Disponível apenas dentro do SketchUp.');
+}
+function alertaSelecaoSemAmbiente(){
+  mostrarToast('Selecione no SketchUp o grupo do ambiente (ou entre nele) e clique de novo.');
+}
+// Vários ambientes de uma vez: mescla cada um isoladamente e resume no fim.
+function receberNovosEspacos(lista){
+  lista = lista || [];
+  if(!lista.length){ alertaSelecaoSemAmbiente(); return; }
+  var novos=[], atualizados=[];
+  lista.forEach(function(p){
+    if(!p || !p.espaco) return;
+    var jaExistia = dadosMemorial.some(function(se){ return (se._espaco||'')===p.espaco; });
+    receberAtualizacaoEspaco(p, true);
+    if(jaExistia){ atualizados.push(p.espaco); }
+    else { delete _espacosColapsados[p.espaco]; novos.push(p.espaco); }
+  });
+  persistirEstado(); atualizarBadgeKVA();
+  var msg=[];
+  if(novos.length) msg.push('➕ '+(novos.length===1?('Ambiente "'+_labelEspaco(novos[0])+'" adicionado'):(novos.length+' ambientes adicionados')));
+  if(atualizados.length) msg.push('⟳ '+(atualizados.length===1?('"'+_labelEspaco(atualizados[0])+'" atualizado'):(atualizados.length+' já na listagem, atualizados')));
+  mostrarToast(msg.join(' · ')||'Nada a adicionar.');
 }
 
 var _itemRefreshBtn = null; // botão ↻ em animação enquanto o Ruby relê o item
@@ -1100,7 +1225,15 @@ function _acharSecaoIdx(sn, esp){
 
 function excluirItem(sn,ch,esp){ var i=_acharSecaoIdx(sn,esp); if(i>=0){dadosMemorial[i].itens=dadosMemorial[i].itens.filter(function(it){return it.chave!==ch;}); if(!dadosMemorial[i].itens.length) dadosMemorial.splice(i,1);} atualizarStatus(); renderizar(); persistirEstado(); }
 
-function atualizarStatus(){ var t=0,oc=0; dadosMemorial.forEach(function(sc){ sc.itens.forEach(function(it){ t++; if(it.oculto) oc++; }); }); document.getElementById('statusTag').textContent=dadosMemorial.length+' seção(ões) · '+t+' item(ns)'+(oc?' · '+oc+' oculto(s)':''); }
+function atualizarStatus(){
+  var t=0,oc=0,so=0;
+  dadosMemorial.forEach(function(sc){
+    if(sc.oculta) so++;
+    sc.itens.forEach(function(it){ t++; if(it.oculto) oc++; });
+  });
+  document.getElementById('statusTag').textContent=dadosMemorial.length+' seção(ões) · '+t+' item(ns)'
+    +(oc?' · '+oc+' oculto(s)':'')+(so?' · '+so+' seção(ões) oculta(s)':'');
+}
 
 // Oculta/mostra o item nas exportações (PDF/TXT/Copiar/KVA). Continua visível
 // no preview interno, esmaecido. Flag persiste no .skp e sobrevive ao Atualizar.
@@ -1116,7 +1249,13 @@ function toggleOcultarItem(sn,ch,esp){
 }
 
 // Itens que entram nas exportações e no cálculo de KVA (exclui os ocultos).
-function _itensExport(sec){ if(sec._espaco && _espacosOcultos[sec._espaco]) return []; return (sec.itens||[]).filter(function(it){ return !it.oculto; }); }
+// Ponto único que decide o que sai nas exportações (PDF/TXT/KVA/revisão):
+// ambiente oculto → nada; [MS-3] seção ocultada → nada; senão, os itens não-ocultos.
+function _itensExport(sec){
+  if(sec._espaco && _espacosOcultos[sec._espaco]) return [];
+  if(sec.oculta) return [];
+  return (sec.itens||[]).filter(function(it){ return !it.oculto; });
+}
 
 // ── MEDIDA OCULTA POR ITEM (📏) ──────────────────────────────────────────────
 // Detecta parênteses de DIMENSÕES "(2.50m x 2.00m[ x 0.10m])" — exige "Nm x",
@@ -1140,6 +1279,59 @@ function toggleMedidaItem(sn,ch,esp){
   }
   renderizar(); persistirEstado();
 }
+// ── [MS-3] OCULTAR MEDIDAS / SEÇÕES EM LOTE ──────────────────────────────────
+// `medidaOculta` só faz sentido em item COM dimensões "(2.50m x 1.00m)"; nos
+// demais seria ruído. Estas funções agem apenas sobre esse conjunto.
+function _secoesDoEspaco(esp){
+  esp = esp||'';
+  return dadosMemorial.filter(function(se){ return (se._espaco||'')===esp; });
+}
+function _itensComDims(secoes){
+  var r=[];
+  secoes.forEach(function(se){ se.itens.forEach(function(it){ if(_temDims(it.descricao)) r.push(it); }); });
+  return r;
+}
+// Toggle derivado do estado atual: se ainda há alguma medida à vista, oculta
+// todas; se estão todas ocultas, mostra todas. Sem estado novo a persistir.
+function _aplicarMedidas(itens){
+  var algumaVisivel = itens.some(function(it){ return !it.medidaOculta; });
+  itens.forEach(function(it){ it.medidaOculta = algumaVisivel; });
+  return algumaVisivel;
+}
+
+// Todas as medidas de UM ambiente (todas as seções dele).
+function toggleMedidasEspaco(esp){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para editar.'); return; }
+  var itens=_itensComDims(_secoesDoEspaco(esp));
+  if(!itens.length){ mostrarToast('Nenhum item com medidas neste ambiente.'); return; }
+  var ocultou=_aplicarMedidas(itens);
+  renderizar(); persistirEstado();
+  mostrarToast((ocultou?'📏 Medidas ocultas em "':'📏 Medidas visíveis em "')+_labelEspaco(esp)+'" · '+itens.length+' item(ns).');
+}
+
+// Todas as medidas de UMA seção dentro de UM ambiente.
+function toggleMedidasSecao(sn,esp){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para editar.'); return; }
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  var itens=_itensComDims([dadosMemorial[i]]);
+  if(!itens.length){ mostrarToast('Nenhum item com medidas em '+_secaoBase(sn)+'.'); return; }
+  var ocultou=_aplicarMedidas(itens);
+  renderizar(); persistirEstado();
+  mostrarToast((ocultou?'📏 Medidas ocultas em ':'📏 Medidas visíveis em ')+_secaoBase(sn)+(esp?' · '+_labelEspaco(esp):'')+'.');
+}
+
+// Oculta a SEÇÃO inteira (naquele ambiente) de todas as exportações — PDF, TXT,
+// KVA e diff de revisão. No preview ela continua visível e editável, riscada.
+// Flag na própria seção: sobrevive ao merge do ⟳/➕ e é persistida no .skp.
+function toggleOcultarSecao(sn,esp){
+  if(bloqueado){ mostrarToast('🔒 Destrave o cadeado para editar.'); return; }
+  var i=_acharSecaoIdx(sn,esp); if(i<0) return;
+  var sec=dadosMemorial[i];
+  sec.oculta = !sec.oculta;
+  atualizarStatus(); renderizar(); persistirEstado(); atualizarBadgeKVA();
+  mostrarToast((sec.oculta?'🙈 ':'👁 ')+_secaoBase(sn)+(esp?' · '+_labelEspaco(esp):'')+(sec.oculta?' fora das exportações.':' voltou às exportações.'));
+}
+
 function atualizarProjeto(v){ nomeProjeto=v; document.querySelectorAll('.fpn').forEach(function(e){e.textContent=v||nomeArquivo;}); document.querySelectorAll('.meta-proj').forEach(function(e){e.textContent=v?'Projeto: '+v:'';}); persistirEstado(); }
 function atualizarResponsavel(v){ nomeResponsavel=v; document.querySelectorAll('.meta-resp').forEach(function(e){e.textContent=v?'Resp.: '+v:'';}); persistirEstado(); }
 function atualizarRevisao(v){ revisao=v||'00'; document.querySelectorAll('.meta-rev').forEach(function(e){e.textContent='Revisão: '+revisao;}); persistirEstado(); }
@@ -1851,7 +2043,11 @@ function renderizar(){
       var eyeEspSvg=oculto
         ?'<svg viewBox="0 0 16 16" fill="none"><path d="M2 10c1.5 1.6 3.5 2.6 6 2.6s4.5-1 6-2.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8 12.8v1.6M4 11.9l-.9 1.4M12 11.9l.9 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>'
         :'<svg viewBox="0 0 16 16" fill="none"><path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="1.9" stroke="currentColor" stroke-width="1.4"/></svg>';
+      // [MS-3] Estado do 📏 do ambiente: "ativo" quando TODAS as medidas dele já estão ocultas.
+      var _itDims=_itensComDims(_secoesDoEspaco(sec._espaco));
+      var medOcultasEsp=_itDims.length>0 && !_itDims.some(function(it){ return !it.medidaOculta; });
       var acoes='<span class="esp-acoes">'
+        +'<button class="esp-acao'+(medOcultasEsp?' esp-acao-oculto':'')+'" title="'+(medOcultasEsp?'Mostrar as medidas de todos os itens deste ambiente':'Ocultar as medidas de todos os itens deste ambiente')+'" onclick="event.stopPropagation();toggleMedidasEspaco(\''+ek+'\')">📏</button>'
         +'<button class="esp-acao'+(oculto?' esp-acao-oculto':'')+'" title="'+(oculto?'Mostrar este ambiente nas exportações':'Ocultar este ambiente das exportações (PDF/TXT/KVA)')+'" onclick="event.stopPropagation();toggleOcultarEspaco(\''+ek+'\')">'+eyeEspSvg+'</button>'
         +'<button class="esp-acao" title="Mover ambiente para cima" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',-1)">▲</button>'
         +'<button class="esp-acao" title="Mover ambiente para baixo" onclick="event.stopPropagation();moverEspacoVizinho(\''+ek+'\',1)">▼</button>'
@@ -1891,7 +2087,21 @@ function renderizar(){
       var tagOculto=item.oculto?'<span class="tag-oculto">oculto no export</span>':'';
       return '<li'+(item.oculto?' class="item-oculto"':'')+' data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" data-idx="'+idx+'" ondragover="event.preventDefault()" ondrop="dropItem(event,this)">'+handle+badge+'<span class="item-desc">'+descHtml+' - <span class="qtd">'+qtdHtml+' '+item.unidade+'</span></span>'+tagOculto+lupa+atu+btnObs+btnMedida+olho+exc+obsWrap+obsPrint+'</li>';
     }).join('');
-    return cab+'<div class="secao'+(_espacoOculto(esp)?' secao-espaco-oculto':'')+'" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit">'+escaparAttr(_secaoBase(sn))+'</div><ul class="itens">'+ih+'</ul></div>';
+    // ── [MS-3] Ações da SEÇÃO (dentro deste ambiente) ──
+    // 📏 medidas dos itens desta seção · 👁 tira a seção inteira das exportações.
+    var skc=escaparChave(sn), ekc=escaparChave(esp);
+    var itDimsSec=_itensComDims([sec]);
+    var medOcultasSec=itDimsSec.length>0 && !itDimsSec.some(function(it){ return !it.medidaOculta; });
+    var secOculta=!!sec.oculta;
+    var eyeSecSvg=secOculta
+      ?'<svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M2 10c1.5 1.6 3.5 2.6 6 2.6s4.5-1 6-2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8 12.8v1.6M4 11.9l-.9 1.4M12 11.9l.9 1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+      :'<svg viewBox="0 0 16 16" width="11" height="11" fill="none"><path d="M1.5 8s2.4-4.2 6.5-4.2S14.5 8 14.5 8s-2.4 4.2-6.5 4.2S1.5 8 1.5 8z" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="1.9" stroke="currentColor" stroke-width="1.6"/></svg>';
+    var secAcoes='<span class="sec-acoes">'
+      +(itDimsSec.length?'<button class="sec-acao'+(medOcultasSec?' ativo':'')+'" title="'+(medOcultasSec?'Mostrar as medidas desta seção':'Ocultar as medidas desta seção')+'" onclick="event.stopPropagation();toggleMedidasSecao(\''+skc+'\',\''+ekc+'\')">📏</button>':'')
+      +'<button class="sec-acao'+(secOculta?' ativo':'')+'" title="'+(secOculta?'Mostrar esta seção nas exportações':'Ocultar esta seção das exportações (PDF/TXT/KVA)')+'" onclick="event.stopPropagation();toggleOcultarSecao(\''+skc+'\',\''+ekc+'\')">'+eyeSecSvg+'</button>'
+      +'</span>';
+    var tagSecOculta=secOculta?'<span class="tag-oculto">oculta no export</span>':'';
+    return cab+'<div class="secao'+(_espacoOculto(esp)?' secao-espaco-oculto':'')+(secOculta?' secao-oculta':'')+'" data-sn="'+escaparAttr(sn)+'" data-esp="'+escaparAttr(esp)+'" ondragover="event.preventDefault()" ondrop="dropSecao(event,this)"><div class="stit"><span class="stit-nome">'+escaparAttr(_secaoBase(sn))+'</span>'+tagSecOculta+secAcoes+'</div><ul class="itens">'+ih+'</ul></div>';
   }).join('');
 
   preview.innerHTML=
@@ -2280,33 +2490,134 @@ function receberGruposEspaco(grupos, modoAtivo){
   // fonte da verdade. Apenas reflete o botão e renderiza a lista de grupos.
   var btn = document.getElementById('btnMultiEspaco');
   if(btn){ btn.textContent = _modoMultiEspaco ? '⊞ Multi-Espaço' : '⊞ Padrão'; btn.classList.toggle('ativo', _modoMultiEspaco); }
+  // mantém a barra de botões coerente com o modo (so-padrao / so-multi)
+  document.body.classList.toggle('modo-multi', _modoMultiEspaco);
   renderListaGruposEspaco();
+}
+
+// [MS-1] Gestão de ambientes no modal (busca, lote, foco, renomear)
+var _soMarcadosEspaco = false; // chip "★ Marcados" do modal (só filtra a lista)
+
+// Grupos que a lista está exibindo agora (busca + chip aplicados). As ações em
+// lote agem SOMENTE sobre estes, para "Todos" nunca surpreender com um grupo
+// que o usuário não está vendo.
+function _gruposEspacoVisiveis(){
+  var filtro = ((document.getElementById('buscaGrupoEspaco')||{}).value||'').trim().toLowerCase();
+  return _gruposEspaco.filter(function(g){
+    if(_soMarcadosEspaco && !g.marcado) return false;
+    return !filtro || (g.nome||'').toLowerCase().indexOf(filtro)>=0;
+  });
 }
 
 function renderListaGruposEspaco(){
   var lista = document.getElementById('listaGruposEspaco');
   if(!lista) return;
-  if(!_gruposEspaco.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo encontrado no modelo.</div>'; return; }
-  var filtro = ((document.getElementById('buscaGrupoEspaco')||{}).value||'').trim().toLowerCase();
-  var itens = _gruposEspaco.filter(function(g){ return !filtro || (g.nome||'').toLowerCase().indexOf(filtro)>=0; });
-  if(!itens.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo corresponde à busca.</div>'; return; }
+  _atualizarBarraGruposEspaco();
+  if(!_gruposEspaco.length){ lista.innerHTML='<div style="opacity:.55;font-size:12px">Nenhum grupo de primeiro nível encontrado no modelo.</div>'; return; }
+  var itens = _gruposEspacoVisiveis();
+  if(!itens.length){
+    lista.innerHTML='<div style="opacity:.55;font-size:12px">'+(_soMarcadosEspaco?'Nenhum grupo marcado como ambiente.':'Nenhum grupo corresponde à busca.')+'</div>';
+    return;
+  }
+  var noMemorial = {};
+  _espacosDoMemorial().forEach(function(e){ noMemorial[e]=1; });
   lista.innerHTML = itens.map(function(g){
-    return '<div class="grupo-espaco-item" onclick="toggleGrupoEspaco(\''+g.id+'\',this)">'
-      +'<input type="checkbox" id="ge_'+g.id+'" '+(g.marcado?'checked':'')+'>'
-      +'<label for="ge_'+g.id+'">'+escaparAttr(g.nome)+'</label></div>';
+    var dentro = !!noMemorial[g.nome_esp||g.nome];
+    var meta=[];
+    if(dentro) meta.push('✓ no memorial');
+    if(g.n_sub) meta.push(g.n_sub+' '+(g.n_sub===1?'objeto':'objetos'));
+    if(g.tag) meta.push('🏷 '+escaparHtml(g.tag));
+    if(g.oculto) meta.push('🙈 oculto no modelo');
+    // [MS-2] ➕/⟳ lê SÓ este ambiente e o mescla — não relê os demais.
+    var acaoAdd = dentro
+      ? '<button class="ge-btn" title="Reler só este ambiente (não afeta os demais)" onclick="event.stopPropagation();adicionarUmEspaco(\''+g.id+'\')">⟳</button>'
+      : '<button class="ge-btn ge-btn-add" title="Adicionar só este ambiente ao memorial (não relê os demais)" onclick="event.stopPropagation();adicionarUmEspaco(\''+g.id+'\')">＋</button>';
+    return '<div class="grupo-espaco-item'+(g.marcado?' marcado':'')+(dentro?' no-memorial':'')+'">'
+      +'<input type="checkbox" '+(g.marcado?'checked':'')+' onclick="event.stopPropagation();toggleGrupoEspaco(\''+g.id+'\',this.checked)">'
+      +'<span class="ge-nome" onclick="toggleGrupoEspacoLinha(\''+g.id+'\')">'
+        +'<b class="'+(g.sem_nome?'ge-sem-nome':'')+'">'+escaparHtml(g.nome)+'</b>'
+        +(meta.length?'<span class="ge-meta">'+meta.join(' · ')+'</span>':'')
+      +'</span>'
+      +'<span class="ge-acoes">'
+        +acaoAdd
+        +'<button class="ge-btn" title="Selecionar e dar zoom no SketchUp" onclick="event.stopPropagation();focarGrupoEspaco(\''+g.id+'\')">🎯</button>'
+        +'<button class="ge-btn" title="Renomear o grupo no modelo" onclick="event.stopPropagation();renomearGrupoEspaco(\''+g.id+'\')">✎</button>'
+      +'</span></div>';
   }).join('');
+}
+
+// Contador + estado do chip e do botão de carregar (0 marcados = nada a carregar).
+function _atualizarBarraGruposEspaco(){
+  var marcados = _gruposEspaco.filter(function(g){ return g.marcado; }).length;
+  var cont = document.getElementById('contadorGruposEspaco');
+  if(cont) cont.textContent = marcados+' de '+_gruposEspaco.length+' marcados';
+  var chip = document.getElementById('chipSoMarcados');
+  if(chip) chip.classList.toggle('ativo', _soMarcadosEspaco);
+  var btn = document.getElementById('btnCarregarEspacos');
+  if(btn){
+    btn.disabled = marcados===0;
+    btn.style.opacity = marcados===0 ? '.45' : '';
+    btn.style.cursor  = marcados===0 ? 'not-allowed' : '';
+    btn.title = marcados===0 ? 'Marque ao menos um grupo como ambiente.' : 'Ler '+marcados+' ambiente(s) do modelo';
+  }
 }
 
 function filtrarGruposEspaco(){ renderListaGruposEspaco(); }
 
-function toggleGrupoEspaco(pid, el){
-  var chk = el.querySelector('input[type=checkbox]');
-  if(!chk) return;
-  var ativo = chk.checked;
+function toggleFiltroMarcados(){ _soMarcadosEspaco=!_soMarcadosEspaco; renderListaGruposEspaco(); }
+
+function recarregarGruposEspaco(){
+  if(typeof sketchup!=='undefined'&&sketchup.listar_grupos_espaco) sketchup.listar_grupos_espaco();
+}
+
+function toggleGrupoEspaco(pid, ativo){
   // Mantém o estado em memória para sobreviver à filtragem (re-render da lista).
   var g = _gruposEspaco.find(function(x){ return x.id===pid; });
-  if(g) g.marcado = ativo;
-  if(typeof sketchup!=='undefined'&&sketchup.marcar_grupo_espaco) sketchup.marcar_grupo_espaco(pid, ativo.toString());
+  if(g) g.marcado = !!ativo;
+  if(typeof sketchup!=='undefined'&&sketchup.marcar_grupo_espaco) sketchup.marcar_grupo_espaco(pid, (!!ativo).toString());
+  renderListaGruposEspaco();
+}
+
+// Clique no nome da linha alterna a marcação (área de clique maior que o checkbox).
+function toggleGrupoEspacoLinha(pid){
+  var g = _gruposEspaco.find(function(x){ return x.id===pid; });
+  if(g) toggleGrupoEspaco(pid, !g.marcado);
+}
+
+// Marca/desmarca em lote — só os grupos visíveis na lista, num único undo.
+function marcarTodosGruposEspaco(ativo){
+  var ids = _gruposEspacoVisiveis().map(function(g){ return g.id; });
+  if(!ids.length){ mostrarToast('Nenhum grupo na lista para marcar.'); return; }
+  ids.forEach(function(id){
+    var g=_gruposEspaco.find(function(x){ return x.id===id; });
+    if(g) g.marcado=!!ativo;
+  });
+  renderListaGruposEspaco();
+  if(typeof sketchup!=='undefined'&&sketchup.marcar_todos_grupos_espaco)
+    sketchup.marcar_todos_grupos_espaco((!!ativo).toString(), JSON.stringify(ids));
+  mostrarToast((ativo?'☑ ':'☐ ')+ids.length+' grupo(s) '+(ativo?'marcados':'desmarcados')+'.');
+}
+
+// Seleciona + dá zoom no grupo dentro do SketchUp (identificação visual).
+function focarGrupoEspaco(pid){
+  if(typeof sketchup!=='undefined'&&sketchup.focar_grupo_espaco) sketchup.focar_grupo_espaco(pid);
+}
+
+// Renomeia o grupo NO MODELO (diferente de renomearEspaco(), que só cria um
+// apelido de exibição no memorial).
+function renomearGrupoEspaco(pid){
+  var g = _gruposEspaco.find(function(x){ return x.id===pid; });
+  if(!g) return;
+  var atual = g.sem_nome ? '' : g.nome;
+  // O memorial casa ambientes pelo NOME do grupo: renomear aqui faz o ambiente
+  // antigo ser descartado na próxima leitura (as edições manuais dele se perdem).
+  // Para mudar só o título no memorial, use o ✎ do cabeçalho do ambiente.
+  var novo = prompt('Novo nome do grupo no SketchUp:\n\n⚠ Isto muda a identidade do ambiente — na próxima leitura ele entra como novo e as edições manuais do ambiente antigo se perdem.\nPara mudar só o título do memorial, use o ✎ no cabeçalho do ambiente.', atual);
+  if(novo===null) return;
+  novo = novo.trim();
+  if(!novo){ mostrarToast('O nome não pode ficar vazio.'); return; }
+  if(novo===atual) return;
+  if(typeof sketchup!=='undefined'&&sketchup.renomear_grupo_espaco) sketchup.renomear_grupo_espaco(pid, novo);
 }
 
 function carregarMultiEspaco(){
