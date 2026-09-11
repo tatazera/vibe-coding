@@ -1,5 +1,5 @@
 {
-    "versao":  "1.4.9",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v1.4.9.rbz",
-    "notas":  "v1.4.9: fix das miniaturas da pasta (aba Apresentacao). O CEF bloqueia file://, entao agora as miniaturas sao geradas reduzidas (~260px) e exibidas em dataURL - aparecem corretamente e leves. Clicar para substituir segue igual."
+    "versao":  "2.0.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.0.0.rbz",
+    "notas":  "v2.0.0: aba Estudio removida (geracao paga via Gemini sai do plugin). LOGOS: a chave do remove.bg agora persiste de verdade (arquivo em %APPDATA% como fonte primaria, com confirmacao na UI) e o bug de nao conseguir trocar a cor duas vezes foi corrigido - o tingimento parte sempre da imagem base. MAPA DE ARTES refeito: varredura lista os materiais de arte do modelo (adesivo/lona/PVC/letra caixa e correlatos) com area e n de faces para voce marcar o que diagramar; a selecao agora reconhece faces, GRUPOS e COMPONENTES de uma vez so; cada peca ganha etiqueta com nome e medida; nenhuma cena e criada automaticamente e o quadro nasce a ESQUERDA do modelo, alinhado ao eixo do estande. Icone proprio (invertido) para o botao do Mapa de Artes. RENDER IA: campo Descricao do estande e aviso de prompt ancorado removidos; as cenas comecam DESMARCADAS no Render IA e na Apresentacao."
 }

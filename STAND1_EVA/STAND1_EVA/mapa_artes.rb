@@ -1,16 +1,24 @@
 # encoding: UTF-8
 # =============================================================================
 # EVA Stand1 — mapa_artes.rb
-# Aba "Mapa de Artes": diagrama + cota a comunicação visual numa cena KV.
+# Aba "Mapa de Artes": diagrama + cota a comunicação visual do modelo.
 #
-# FLUXO: o usuário seleciona faces (lonas/logos/balcões) no modelo e aciona
-# "Diagramar KV". Cada face é COPIADA (não move o original) para um grupo
-# dedicado "KV - Mapa de Artes" (fora do modelo real), orientada de frente,
-# arranjada em 2 zonas (peças pequenas em coluna à esquerda, paredes grandes
-# em fileiras) e COTADA com cotas nativas L×A. Uma cena "KV AUTO" é criada.
+# TRÊS ENTRADAS, UM MESMO PIPELINE:
+#   1. Varredura  — a aba lista os materiais de CV encontrados no modelo
+#                   (adesivo / lona / PVC / letra caixa e correlatos) e o
+#                   usuário marca quais quer diagramar.
+#   2. Seleção    — o usuário seleciona no SketchUp faces, GRUPOS e/ou
+#                   COMPONENTES (vários de uma vez) e diagrama o que estiver
+#                   dentro deles.
+#   3. Toolbar    — atalho para a varredura automática de todos os materiais.
 #
-# ISOLADO: capacidade nova, não altera nenhum fluxo existente. Tudo roda em
-# start_operation/commit_operation (1 Ctrl+Z desfaz).
+# Cada face é COPIADA (o modelo real nunca muda) para o grupo "KV - Mapa de
+# Artes", orientada de frente, arranjada (peças à esquerda, paredes em
+# fileiras), COTADA com cotas nativas L×A e etiquetada com o nome do material.
+# O quadro é posicionado à ESQUERDA do modelo, alinhado ao eixo do estande —
+# pronto para você enquadrar e salvar a cena manualmente.
+#
+# Tudo roda em start_operation/commit_operation (1 Ctrl+Z desfaz).
 # =============================================================================
 
 require 'json'
@@ -19,74 +27,257 @@ module STAND1
   module EVA
     module MapaArtes
 
-      ATTR_NS   = 'EVA'          # namespace de atributos
-      KV_TAG    = 'KV'          # tag/layer do grupo KV
-      KV_SCENE  = 'KV AUTO'      # nome da cena gerada (não usa 'KV' p/ não
-                                 # sobrescrever a cena manual do usuário)
-      POL_M     = 0.0254         # polegada -> metro
+      ATTR_NS  = 'EVA'    # namespace de atributos
+      KV_TAG   = 'KV'     # tag/layer do grupo KV
+      POL_M    = 0.0254   # polegada -> metro
+      FACE_CAP = 4000     # teto de faces por varredura (proteção)
+
+      # ── Reconhecimento de materiais de comunicação visual ───────────────────
+      #
+      # Casa por "contém", sobre o nome normalizado (minúsculo, sem acento). A
+      # lista cobre adesivo, lona, PVC, letra caixa e correlatos — o suficiente
+      # para não trazer todas as texturas aleatórias do modelo.
+      KEYWORDS = [
+        'adesivo', 'adesivado', 'vinil', 'plotter', 'plotagem', 'decalque', 'sticker',
+        'lona', 'banner', 'tecido impresso', 'backdrop', 'front light', 'back light',
+        'pvc', 'acm', 'acrilico', 'mdf impresso',
+        'letra caixa', 'letracaixa', 'letra-caixa',
+        'impress',                 # impresso / impressa / impressão
+        'comunicacao visual', 'logo', 'testeira', 'painel grafico'
+      ].freeze
+
+      # Falsos positivos comuns — se o nome casar com algo daqui, não é arte.
+      EXCLUDE = ['pvc branco liso', 'pvc estrutural'].freeze
 
       # ── Entradas públicas ───────────────────────────────────────────────────
 
-      # Chamado pela aba (recebe o limite parede×peça em metros, como string).
-      def self.diagramar_from_dialog(thr, dlg = nil)
-        thr_m = thr.to_s.strip.tr(',', '.').to_f
-        thr_m = 2.0 if thr_m <= 0
-        diagramar(thr_m, dlg)
+      # Aba: varre o modelo e devolve os materiais de CV encontrados.
+      def self.scan_from_dialog(dlg = nil)
+        model = Sketchup.active_model
+        return notify('Nenhum modelo aberto.', false, dlg) unless model
+        mats = scan_materials(model)
+        dlg.execute_script("window.setMapaMats(#{mats.to_json})") if dlg && dlg.visible?
+        mats
+      rescue => e
+        notify("Erro na varredura: #{e.message}", false, dlg)
       end
 
-      # Chamado pela toolbar (sem diálogo) — usa limite padrão de 2 m.
-      def self.diagramar_selecao
-        diagramar(2.0, nil)
+      # Aba: diagrama as faces dos materiais marcados na lista.
+      def self.diagramar_from_dialog_mats(msg, dlg = nil)
+        cfg   = (JSON.parse(msg) rescue {})
+        names = (cfg['mats'] || []).map { |n| normalize(n) }
+        thr   = parse_thr(cfg['thr'])
+        model = Sketchup.active_model
+        return notify('Nenhum modelo aberto.', false, dlg) unless model
+        return notify('Marque ao menos um material na lista.', false, dlg) if names.empty?
+
+        items = []
+        collect_faces(model.entities, Geom::Transformation.new, items) do |f|
+          face_material_names(f).any? { |n| names.include?(n) }
+        end
+        return notify('Nenhuma face encontrada para os materiais marcados.', false, dlg) if items.empty?
+        build_kv(model, items, thr, cfg['labels'] != false, dlg)
       end
 
-      # ── Núcleo ──────────────────────────────────────────────────────────────
+      # Aba: diagrama a SELEÇÃO do SketchUp (faces, grupos e componentes).
+      def self.diagramar_from_dialog(msg, dlg = nil)
+        cfg = (JSON.parse(msg) rescue nil)
+        cfg = { 'thr' => msg } unless cfg.is_a?(Hash)   # compat: payload antigo era só o limite
+        diagramar_selecao(parse_thr(cfg['thr']), cfg['labels'] != false, dlg)
+      end
 
-      def self.diagramar(threshold_m, dlg = nil)
+      # Toolbar (sem diálogo): varredura automática de todos os materiais de CV.
+      def self.diagramar_auto(threshold_m = 2.0, dlg = nil)
+        model = Sketchup.active_model
+        return notify('Nenhum modelo aberto.', false, dlg) unless model
+        items = []
+        collect_faces(model.entities, Geom::Transformation.new, items) { |f| face_matches?(f) }
+        if items.empty?
+          return notify('Nenhuma face de comunicação visual encontrada (adesivo / lona / PVC / letra caixa).', false, dlg)
+        end
+        build_kv(model, items, threshold_m, true, dlg)
+      end
+
+      # ── Varredura de materiais (alimenta a lista da aba) ────────────────────
+
+      def self.scan_materials(model)
+        acc = {}
+        tally_materials(model.entities, Geom::Transformation.new, acc)
+        acc.values.sort_by { |m| [-m[:area_m2], m[:name].downcase] }
+      end
+
+      def self.tally_materials(entities, tr, acc, depth = 0)
+        return if depth > 12
+        entities.each do |e|
+          if e.is_a?(Sketchup::Face)
+            next unless face_matches?(e)
+            name = display_material_name(e)
+            next unless name
+            key = normalize(name)
+            acc[key] ||= { name: name, key: key, faces: 0, area_m2: 0.0 }
+            acc[key][:faces]   += 1
+            acc[key][:area_m2] += face_area_m2(e, tr)
+          elsif e.is_a?(Sketchup::Group)
+            next if kv_group?(e)
+            tally_materials(e.entities, tr * e.transformation, acc, depth + 1)
+          elsif e.is_a?(Sketchup::ComponentInstance)
+            tally_materials(e.definition.entities, tr * e.transformation, acc, depth + 1)
+          end
+        end
+      rescue
+      end
+
+      def self.face_area_m2(f, tr)
+        (f.area(tr) * POL_M * POL_M).round(3)
+      rescue
+        (f.area * POL_M * POL_M).round(3)
+      end
+
+      # ── Coleta genérica de faces (com filtro opcional) ──────────────────────
+
+      def self.collect_faces(entities, tr, items, depth = 0, &filter)
+        return if depth > 12 || items.size >= FACE_CAP
+        entities.each do |e|
+          break if items.size >= FACE_CAP
+          if e.is_a?(Sketchup::Face)
+            next if filter && !filter.call(e)
+            info = (face_info(e, tr) rescue nil)
+            items << info if info
+          elsif e.is_a?(Sketchup::Group)
+            next if kv_group?(e)
+            collect_faces(e.entities, tr * e.transformation, items, depth + 1, &filter)
+          elsif e.is_a?(Sketchup::ComponentInstance)
+            collect_faces(e.definition.entities, tr * e.transformation, items, depth + 1, &filter)
+          end
+        end
+      rescue
+      end
+
+      # ── Seleção rica: faces + grupos + componentes, vários de uma vez ───────
+      #
+      # Regra por container selecionado: pega as faces de CV de dentro dele; se
+      # não houver nenhuma, o usuário claramente escolheu aquele objeto de
+      # propósito, então pega todas as faces com material.
+      def self.diagramar_selecao(threshold_m, labels = true, dlg = nil)
         model = Sketchup.active_model
         return notify('Nenhum modelo aberto.', false, dlg) unless model
 
-        faces = model.selection.grep(Sketchup::Face)
-        if faces.empty?
-          return notify('Selecione ao menos uma face de comunicação visual.', false, dlg)
+        sel = model.selection.to_a
+        if sel.empty?
+          return notify('Selecione faces, grupos ou componentes no SketchUp.', false, dlg)
         end
 
-        tw = model.edit_transform
-
+        tw    = model.edit_transform
         items = []
-        faces.each do |f|
+        sel.each do |e|
           begin
-            info = face_info(f, tw)
-            items << info if info
-          rescue => e
+            if e.is_a?(Sketchup::Face)
+              info = face_info(e, tw)
+              items << info if info
+            elsif e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+              ents = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
+              sub  = []
+              collect_faces(ents, tw * e.transformation, sub) { |f| face_matches?(f) }
+              if sub.empty?
+                collect_faces(ents, tw * e.transformation, sub) { |f| !display_material_name(f).nil? }
+              end
+              items.concat(sub)
+            end
+          rescue
           end
         end
-        if items.empty?
-          return notify('Nenhuma face válida na seleção.', false, dlg)
-        end
 
+        if items.empty?
+          return notify('Nada diagramável na seleção (sem faces com material).', false, dlg)
+        end
+        build_kv(model, items, threshold_m, labels, dlg)
+      end
+
+      # ── Pipeline compartilhado — monta o quadro KV ──────────────────────────
+
+      def self.build_kv(model, items, threshold_m, labels, dlg)
+        items = dedup(items)
         model.start_operation('EVA — Mapa de Artes (KV)', true)
         begin
+          bb     = model_bounds(model)        # antes de mexer no grupo KV
           kv     = ensure_kv_group(model)
           kv_ent = kv.entities
-          kv_ent.clear!   # rebuild — re-rodar re-diagrama do zero
+          kv_ent.clear!                       # rebuild — re-rodar re-diagrama do zero
+          # Eixo do estande com o quadro JÁ vazio: senão as peças recém-criadas
+          # entrariam no cálculo e enviesariam a orientação.
+          ang = (PromptBuilder.footprint_axis(model) rescue nil) || 0.0
 
           walls  = items.select { |it| [it[:w_m], it[:h_m]].max >= threshold_m }
           pieces = items - walls
 
           pack(pieces, walls).each do |pl|
-            begin
-              place_item(kv_ent, pl[:item], pl[:x], pl[:z])
-            rescue => e
-            end
+            (place_item(kv_ent, pl[:item], pl[:x], pl[:z], labels) rescue nil)
           end
 
-          make_scene(model, kv)
+          place_board(kv, bb, ang)
           model.commit_operation
-          notify("KV gerado: #{walls.size} parede(s) + #{pieces.size} peça(s).", true, dlg)
+          notify("KV gerado: #{walls.size} parede(s) + #{pieces.size} peça(s). " \
+                 'Enquadre e salve a cena manualmente.', true, dlg)
         rescue => e
           model.abort_operation
           notify("Erro: #{e.message}", false, dlg)
         end
+      end
+
+      # A mesma face pode ser alcançada por caminhos diferentes (ex.: face solta
+      # também coberta por um grupo selecionado). Descarta repetições.
+      def self.dedup(items)
+        seen = {}
+        items.select do |it|
+          k = [it[:face].entityID, it[:w_in].round(3), it[:h_in].round(3)]
+          seen[k] ? false : (seen[k] = true)
+        end
+      rescue
+        items
+      end
+
+      # ── Reconhecimento de material ──────────────────────────────────────────
+
+      def self.kv_group?(g)
+        g.get_attribute(ATTR_NS, 'kv', nil) == '1'
+      rescue
+        false
+      end
+
+      def self.face_material_names(face)
+        [face.material, face.back_material].compact.map { |m| normalize(m.name.to_s) }
+      rescue
+        []
+      end
+
+      # Nome "bonito" (como aparece na paleta) do material da face.
+      def self.display_material_name(face)
+        m = face.material || face.back_material
+        return nil unless m
+        n = m.display_name.to_s
+        n.strip.empty? ? nil : n
+      rescue
+        nil
+      end
+
+      def self.face_matches?(face)
+        names = face_material_names(face)
+        return false if names.empty?
+        return false if names.any? { |n| EXCLUDE.any? { |x| n.include?(x) } }
+        names.any? { |n| KEYWORDS.any? { |k| n.include?(k) } }
+      rescue
+        false
+      end
+
+      def self.normalize(s)
+        s.to_s.downcase.unicode_normalize(:nfkd).gsub(/\p{Mn}/, '').gsub(/\s+/, ' ').strip
+      rescue
+        s.to_s.downcase.strip
+      end
+
+      def self.parse_thr(thr)
+        v = thr.to_s.strip.tr(',', '.').to_f
+        v <= 0 ? 2.0 : v
       end
 
       # Gira 90° (no plano do quadro) os itens/grupos selecionados dentro do KV.
@@ -95,17 +286,14 @@ module STAND1
         return notify('Nenhum modelo aberto.', false, dlg) unless model
 
         groups = model.selection.grep(Sketchup::Group)
-        if groups.empty?
-          return notify('Selecione um item do KV (grupo) para girar.', false, dlg)
-        end
+        return notify('Selecione um item do KV (grupo) para girar.', false, dlg) if groups.empty?
 
         model.start_operation('EVA — girar 90° KV', true)
         begin
           groups.each do |g|
             next unless g.valid?
             c = g.bounds.center
-            t = Geom::Transformation.rotation(c, Geom::Vector3d.new(0, 1, 0), 90.degrees)
-            g.transform!(t)
+            g.transform!(Geom::Transformation.rotation(c, Geom::Vector3d.new(0, 1, 0), 90.degrees))
           end
           model.commit_operation
           notify('Item girado 90°.', true, dlg)
@@ -142,12 +330,13 @@ module STAND1
         return nil if w_in < 1e-3 || h_in < 1e-3
 
         {
-          face:     f,
-          uv:       verts.each_index.map { |i| [us[i] - minu, vs[i] - minv] },
-          w_in:     w_in,
-          h_in:     h_in,
-          w_m:      w_in * POL_M,
-          h_m:      h_in * POL_M
+          face:  f,
+          label: display_material_name(f),
+          uv:    verts.each_index.map { |i| [us[i] - minu, vs[i] - minv] },
+          w_in:  w_in,
+          h_in:  h_in,
+          w_m:   w_in * POL_M,
+          h_m:   h_in * POL_M
         }
       end
 
@@ -155,10 +344,9 @@ module STAND1
 
       def self.pack(pieces, walls)
         gap   = 0.5.m
-        cotag = 0.5.m          # espaço extra p/ a cota entre itens
+        cotag = 0.6.m          # espaço extra p/ cota + etiqueta entre itens
         out   = []
 
-        # Coluna de peças (empilhadas de baixo p/ cima)
         col_w = (pieces.map { |it| it[:w_in] }.max || 0.0)
         z = 0.0
         pieces.each do |it|
@@ -166,7 +354,6 @@ module STAND1
           z += it[:h_in] + gap + cotag
         end
 
-        # Área das paredes (fileiras), à direita da coluna de peças
         wx0        = pieces.empty? ? 0.0 : (col_w + gap + 1.0.m)
         total_area = walls.reduce(0.0) { |s, it| s + it[:w_in] * it[:h_in] }
         widest     = (walls.map { |it| it[:w_in] }.max || 0.0)
@@ -186,19 +373,20 @@ module STAND1
         out
       end
 
-      # ── Coloca 1 item (cópia da face + cotas) num sub-grupo ─────────────────
+      # ── Coloca 1 item (cópia da face + cotas + etiqueta) num sub-grupo ──────
 
-      def self.place_item(kv_ent, it, x0, z0)
+      def self.place_item(kv_ent, it, x0, z0, labels)
         ig  = kv_ent.add_group
         e   = ig.entities
         pts = it[:uv].map { |p| Geom::Point3d.new(x0 + p[0], 0.0, z0 + p[1]) }
 
         newf = e.add_face(pts)
         return unless newf && newf.valid?
-        # Garante a frente virada para +Y (lado da câmera do KV).
-        newf.reverse! if newf.normal.to_a[1] < 0
+        newf.reverse! if newf.normal.to_a[1] < 0    # frente virada p/ +Y
         apply_texture(newf, it[:face], pts)
         add_cotas(e, x0, z0, it[:w_in], it[:h_in])
+        add_label(e, it, x0, z0) if labels
+        ig.name = it[:label].to_s unless it[:label].to_s.empty?
         ig
       end
 
@@ -223,7 +411,7 @@ module STAND1
               newf.back_material = mat
               return
             end
-          rescue => e
+          rescue
           end
         end
         newf.material      = mat
@@ -236,50 +424,82 @@ module STAND1
         br  = Geom::Point3d.new(x0 + w, 0.0, z0)
         tl  = Geom::Point3d.new(x0,     0.0, z0 + h)
         e.add_dimension_linear(bl, br, Geom::Vector3d.new(0, 0, -off))  # largura
-        e.add_dimension_linear(bl, tl, Geom::Vector3d.new(-off, 0, 0)) # altura
-      rescue => e
+        e.add_dimension_linear(bl, tl, Geom::Vector3d.new(-off, 0, 0))  # altura
+      rescue
       end
 
-      # ── Grupo KV (isolado, tag própria, deslocado do modelo) ────────────────
+      # Etiqueta abaixo da peça: nome do material + medida em metros. O texto 3D
+      # nasce no plano XY, então o sub-grupo é girado 90° em X para o plano do quadro.
+      def self.add_label(e, it, x0, z0)
+        txt = it[:label].to_s.strip
+        dim = format('%.2f x %.2f m', it[:w_m], it[:h_m]).tr('.', ',')
+        txt = txt.empty? ? dim : "#{txt}  —  #{dim}"
+
+        g = e.add_group
+        g.entities.add_3d_text(txt, TextAlignLeft, 'Arial', false, false, 0.10.m, 0.0, 0.0, true, 0.0)
+        g.transform!(Geom::Transformation.rotation(ORIGIN, Geom::Vector3d.new(1, 0, 0), 90.degrees))
+        g.transform!(Geom::Transformation.translation(Geom::Vector3d.new(x0, 0.0, z0 - 0.60.m)))
+        g.name = 'etiqueta'
+      rescue
+      end
+
+      # ── Grupo KV (isolado, tag própria) ─────────────────────────────────────
 
       def self.ensure_kv_group(model)
-        kv = model.entities.grep(Sketchup::Group).find do |g|
-          g.valid? && (g.get_attribute(ATTR_NS, 'kv', nil) == '1')
-        end
+        kv = model.entities.grep(Sketchup::Group).find { |g| g.valid? && kv_group?(g) }
         return kv if kv
 
         kv = model.entities.add_group
         kv.set_attribute(ATTR_NS, 'kv', '1')
         kv.name  = 'KV - Mapa de Artes'
         kv.layer = (model.layers[KV_TAG] || model.layers.add(KV_TAG))
-
-        bb = Geom::BoundingBox.new
-        model.entities.each { |ent| next if ent == kv; (bb.add(ent.bounds) rescue nil) }
-        unless bb.empty?
-          kv.transformation = Geom::Transformation.translation(
-            Geom::Vector3d.new(bb.max.x + 2.m, bb.min.y, bb.min.z)
-          )
-        end
         kv
       end
 
-      # ── Cena KV (projeção paralela, enquadrando o quadro) ───────────────────
+      # Bounding box do modelo IGNORANDO o próprio quadro KV.
+      def self.model_bounds(model)
+        bb = Geom::BoundingBox.new
+        model.entities.each do |ent|
+          next if ent.is_a?(Sketchup::Group) && kv_group?(ent)
+          (bb.add(ent.bounds) rescue nil)
+        end
+        bb
+      end
 
-      def self.make_scene(model, kv)
-        view   = model.active_view
-        gb     = kv.bounds
-        center = gb.center
-        dist   = [gb.width, gb.height, gb.depth].max * 2 + 5.m
-        eye    = Geom::Point3d.new(center.x, gb.max.y + dist, center.z)
-        cam    = Sketchup::Camera.new(eye, center, Geom::Vector3d.new(0, 0, 1))
-        cam.perspective = false
-        view.camera = cam
-        view.zoom(kv)
+      # ── Posiciona o quadro à ESQUERDA do modelo, alinhado ao eixo do estande ─
+      #
+      # O quadro é desenhado em coordenadas locais no plano XZ (x p/ a direita,
+      # z p/ cima). Aqui ele é girado para acompanhar o eixo principal da planta
+      # (o estande pode estar modelado torto em relação aos eixos do mundo) e
+      # encostado à esquerda do modelo, com a base na mesma cota.
+      def self.place_board(kv, bb, ang)
+        gap = 2.0.m
+        w   = kv.bounds.width.to_f
+        return if w <= 0
 
-        old = model.pages[KV_SCENE]
-        model.pages.erase(old) if old
-        model.pages.add(KV_SCENE)
-      rescue => e
+        dx  = Geom::Vector3d.new(Math.cos(ang), Math.sin(ang), 0)
+        dy  = Geom::Vector3d.new(-Math.sin(ang), Math.cos(ang), 0)
+
+        if bb.empty?
+          kv.transformation = Geom::Transformation.axes(
+            Geom::Point3d.new(-(w + gap), 0, 0), dx, dy, Z_AXIS
+          )
+          return
+        end
+
+        corners = (0..7).map { |i| bb.corner(i).to_a }
+        u_min   = corners.map { |p| p[0] * dx.x + p[1] * dx.y }.min
+        v_min   = corners.map { |p| p[0] * dy.x + p[1] * dy.y }.min
+
+        u = u_min - gap - w
+        v = v_min
+        origin = Geom::Point3d.new(
+          dx.x * u + dy.x * v,
+          dx.y * u + dy.y * v,
+          bb.min.z
+        )
+        kv.transformation = Geom::Transformation.axes(origin, dx, dy, Z_AXIS)
+      rescue
       end
 
       # ── Status → diálogo (ou barra/messagebox se acionado pela toolbar) ─────
@@ -307,9 +527,7 @@ module STAND1
         m = vlen(a); m < 1e-9 ? [0.0, 0.0, 0.0] : vscl(a, 1.0 / m)
       end
       def self.vtransform(vec, tr)
-        v = vec.clone
-        v = v.transform(tr)
-        v.to_a
+        vec.clone.transform(tr).to_a
       end
 
     end

@@ -17,12 +17,6 @@ module STAND1
         balanced proportions and refined details.
       TXT
 
-      # CRITICAL de ancoragem — reforça a descrição/projeto de referência (ponto forte p/ o modelo).
-      ANCHOR_CRITICAL =
-        'STRICTLY PRESERVE THE EXACT GEOMETRY, MATERIALS, PROPORTIONS, COLORS AND LAYOUT OF THE ' \
-        'ORIGINAL PROJECT AS DESCRIBED AND SHOWN IN THE REFERENCE IMAGE — NO ALTERATIONS, ' \
-        'ADDITIONS OR SUBSTITUTIONS.'
-
       # ── Modo "imagem anexada" (v1.4.0) ────────────────────────────────────────
       # Quando o usuário anexa o PNG exportado da viewport junto do prompt (o Nano
       # Banana aceita imagem + texto), a ancoragem vem da IMAGEM: o [TASK] manda
@@ -36,7 +30,7 @@ module STAND1
         environment and people.
       TXT
 
-      # Substitui o ANCHOR_CRITICAL no modo imagem (a âncora passa a ser a imagem).
+      # Âncora do prompt: a imagem anexada.
       IMAGE_ANCHOR_CRITICAL =
         'MATCH THE ATTACHED IMAGE EXACTLY: SAME CAMERA ANGLE, SAME FRAMING, SAME GEOMETRY, ' \
         'SAME PROPORTIONS AND SAME LAYOUT. DO NOT ADD, REMOVE, MOVE, RESIZE OR REDESIGN ANY ' \
@@ -163,7 +157,7 @@ module STAND1
         'elevation' => 'Orthographic front elevation view of the booth, head-on and perfectly level.'
       }.freeze
 
-      # A preservação de geometria/proporções ficou no ANCHOR_CRITICAL (evita duplicar).
+      # A preservação de geometria/proporções fica no IMAGE_ANCHOR_CRITICAL (evita duplicar).
       CRITICALS_FIXED = [
         'DO NOT ADD SUSPENDED BOXTRUSS STRUCTURES.',
         'DO NOT ADD NEW LOGOS OR GRAPHICS NOT PRESENT IN THE ORIGINAL PROJECT.'
@@ -305,7 +299,6 @@ module STAND1
         env_key      = opts[:environment]  || 'feira'
         booth_key    = opts[:booth_type]   || 'ilha'
         criticals_pt = opts[:criticals_pt] || []
-        description  = opts[:description].to_s.strip   # âncora, igual em todos os ângulos
         axis_rad     = opts[:axis_rad]                 # eixo principal da planta (ou nil)
         cam_override = opts[:camera_override].to_s.strip # ângulo manual por cena ('' = auto)
         image_mode   = !!opts[:image_mode]             # prompt p/ uso com PNG anexado
@@ -343,20 +336,16 @@ module STAND1
           "artificial lighting creates a dramatic atmosphere with strong contrast and sculpted shadows, " \
           "creating a sharp luminous outline that enhances the volumetry."
 
-        # SUBJECT = estética (INTRO) + âncora do projeto (2º parágrafo, alta atenção).
-        subject = description.empty? ? INTRO : "#{INTRO} #{description}"
+        # SUBJECT = estética. A âncora de geometria/câmera é a imagem anexada.
+        subject = INTRO
 
         # CRITICALs: âncora primeiro (reforço), depois fixos, pessoas e os do usuário.
         user_criticals = criticals_pt.reject { |c| c.to_s.strip.empty? }.map do |c|
           Dictionary.translate(c).upcase
         end
         all_criticals = []
-        if image_mode
-          # A âncora é a imagem anexada — reforço no 1º CRITICAL.
-          all_criticals << IMAGE_ANCHOR_CRITICAL
-        elsif !description.empty?
-          all_criticals << ANCHOR_CRITICAL
-        end
+        # A âncora é a imagem anexada — reforço no 1º CRITICAL.
+        all_criticals << IMAGE_ANCHOR_CRITICAL if image_mode
         all_criticals += CRITICALS_FIXED
         all_criticals << PEOPLE_CRITICAL if people
         all_criticals += user_criticals

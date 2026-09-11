@@ -411,13 +411,12 @@
     textarea:focus { outline: none; border-color: var(--rosa) !important; box-shadow: 0 0 0 3px rgba(214,53,127,.1); }
 
     /* ── Aba Logos ── */
-    #content-logos .logos-wrap, #content-studio .logos-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; }
-    #content-logos input[type="password"], #content-logos input[type="text"],
-    #content-studio input[type="password"], #content-studio input[type="text"] {
+    #content-logos .logos-wrap, #content-mapa .logos-wrap { padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; flex:1; }
+    #content-logos input[type="password"], #content-logos input[type="text"] {
       flex:1; padding:7px 10px; border:1.5px solid var(--borda); border-radius:6px;
       font-size:12px; font-family:var(--font); background:#fafafa; color:#333;
     }
-    #content-logos input:focus, #content-studio input:focus { outline:none; border-color:var(--rosa); }
+    #content-logos input:focus { outline:none; border-color:var(--rosa); }
     .api-header { display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; }
     .api-chevron { margin-left:auto; font-size:12px; color:#999; transition:transform .15s; }
     .api-header.collapsed .api-chevron { transform:rotate(-90deg); }
@@ -459,74 +458,8 @@
     .btn-green { background:var(--verde); }
     .btn-green:not(:disabled):hover { background:#1e8a55; }
 
-    /* ── Aba Estúdio ── */
-    #content-studio .studio-row { display:flex; gap:10px; }
-    #content-studio .studio-field { flex:1; display:flex; flex-direction:column; gap:5px; min-width:0; }
-    #content-studio .studio-field label { font-size:9.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#999; }
-    #content-studio select {
-      width:100%; padding:8px 9px; border:1.5px solid var(--borda); border-radius:8px;
-      font-size:12px; color:#222; background:#fff; font-family:var(--font); cursor:pointer;
-    }
-    #content-studio select:focus { outline:none; border-color:var(--rosa); }
-    #studioViewer {
-      position:relative; width:100%; aspect-ratio:16/9; background:#14151d;
-      border-radius:12px; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
-    }
-    #studioViewImg { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; }
-    #studioEmpty {
-      position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
-      justify-content:center; gap:8px; color:#5a5c6e; font-size:12px; text-align:center; padding:0 30px;
-    }
-    #studioEmpty .ic { font-size:30px; opacity:.85; }
-    #studioPills {
-      position:absolute; top:10px; left:50%; transform:translateX(-50%); display:none; gap:4px;
-      background:rgba(10,10,16,.55); backdrop-filter:blur(6px); padding:4px; border-radius:99px; z-index:4;
-    }
-    .studio-pill {
-      border:none; border-radius:99px; padding:5px 14px; font-size:10.5px; font-weight:700;
-      font-family:var(--font); color:#cfd0dc; background:transparent; cursor:pointer; letter-spacing:.3px;
-    }
-    .studio-pill.active { background:var(--g); color:#fff; }
-    .studio-pill:disabled { opacity:.35; cursor:default; }
-    #studioHold {
-      position:absolute; bottom:10px; right:12px; z-index:4; display:none; font-size:9.5px;
-      color:#cfd0dc; background:rgba(10,10,16,.55); padding:4px 10px; border-radius:99px; user-select:none;
-    }
-    #studioProgress {
-      position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
-      justify-content:center; gap:14px; background:rgba(10,10,16,.72); z-index:6;
-    }
-    .studio-bar { width:56%; height:5px; border-radius:99px; background:rgba(255,255,255,.12); overflow:hidden; position:relative; }
-    .studio-bar::after {
-      content:''; position:absolute; top:0; bottom:0; width:38%; border-radius:99px;
-      background:var(--g); animation:studioSlide 1.2s ease-in-out infinite;
-    }
-    @keyframes studioSlide { 0% { left:-38%; } 100% { left:100%; } }
-    #studioProgressText { font-size:11.5px; color:#e8e9f2; font-weight:600; letter-spacing:.3px; }
-    #studioStatus { font-size:12px; min-height:18px; }
-    #studioStatus.ok  { color:var(--verde); }
-    #studioStatus.err { color:var(--rosa); }
     .btn-regen { background:#fff !important; color:var(--azul) !important; border:1.5px solid var(--borda) !important; box-shadow:none !important; }
     .btn-regen:hover:not(:disabled) { border-color:var(--azul) !important; opacity:1 !important; }
-    #content-studio textarea {
-      width:100%; padding:9px; border:1.5px solid var(--borda); border-radius:8px;
-      font-size:12px; font-family:var(--font); background:#fafafa; color:#333; resize:vertical; min-height:62px;
-    }
-    #content-studio textarea:focus { outline:none; border-color:var(--rosa); }
-    #content-studio textarea:disabled { background:#f0f0f4; color:#aaa; }
-    .studio-refs { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px; }
-    .ref-thumb { position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:1.5px solid var(--borda); background:#eee; }
-    .ref-thumb img { width:100%; height:100%; object-fit:cover; }
-    .ref-thumb button {
-      position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
-      border:none; background:var(--rosa); color:#fff; font-size:12px; line-height:1; cursor:pointer;
-      display:flex; align-items:center; justify-content:center; box-shadow:0 1px 4px rgba(0,0,0,.3);
-    }
-    .ref-add {
-      width:56px; height:56px; border-radius:8px; border:2px dashed var(--borda); background:#fafafa;
-      color:#aaa; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center;
-    }
-    .ref-add:hover { border-color:var(--azul); color:var(--azul); }
 
     /* ── Crop editor modal ── */
     #cropModal { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.82); flex-direction:column; }
@@ -654,21 +587,16 @@
     body.dark .update-banner { background: #17293b; border-color: #2f6ea8; color: #bcd8f2; }
     body.dark .upd-no { background: #2a2f38; color: #b9bbc7; }
 
-    /* Logos / Estúdio */
+    /* Logos / Mapa de Artes */
     body.dark #content-logos input[type="password"],
     body.dark #content-logos input[type="text"],
-    body.dark #content-studio input[type="password"],
-    body.dark #content-studio input[type="text"],
-    body.dark #content-studio select,
-    body.dark #content-studio textarea {
+    body.dark #content-mapa input[type="number"],
+    body.dark #content-mapa input[type="text"] {
       background: #24262f !important; border-color: #3a3c47 !important; color: #d3d5e0 !important;
     }
-    body.dark #logoDropZone,
-    body.dark .ref-add { background: #1e1f29; border-color: #3a3c47; color: #8b8d9a; }
+    body.dark #logoDropZone { background: #1e1f29; border-color: #3a3c47; color: #8b8d9a; }
     body.dark .logo-img-box.orig { background: #23252f; border-color: #3a3c47; }
-    body.dark .logo-preview-label,
-    body.dark #content-studio .studio-field label { color: #8b8d9a; }
-    body.dark .ref-thumb { border-color: #3a3c47; background: #23252f; }
+    body.dark .logo-preview-label { color: #8b8d9a; }
     body.dark .folder-img { border-color: #3a3c47; background: #23252f; }
     body.dark .folder-grid-empty { color: #6d6f7c; }
 
@@ -677,7 +605,6 @@
     body.dark #cropReadout { color: #a9abb8; }
 
     /* Overrides de estilos inline hardcoded (textareas/selects) */
-    body.dark #boothDesc,
     body.dark #criticals,
     body.dark #sceneCriticals,
     body.dark #sceneSelect,
@@ -726,7 +653,7 @@
     <button class="tab active" id="tab-render" onclick="switchTab('render')">Render IA</button>
     <button class="tab" id="tab-pres" onclick="switchTab('pres')">Apresentação</button>
     <button class="tab" id="tab-logos" onclick="switchTab('logos')">Logos</button>
-    <button class="tab" id="tab-studio" onclick="switchTab('studio')">Estúdio</button>
+
     <button class="tab" id="tab-mapa" onclick="switchTab('mapa')">Mapa de Artes</button>
   </div>
   <span class="version" id="verLabel" title="Verificar atualização" style="cursor:pointer;margin-left:auto" onclick="su('check_update')">⟳</span>
@@ -771,15 +698,6 @@
   <div class="panel-config">
 
     <div class="section">
-      <div class="section-label">Descrição do estande
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— por projeto, igual em todos os ângulos</span>
-      </div>
-      <textarea id="boothDesc" onchange="saveSettings()"
-        placeholder="Âncora de consistência. Ex: Estande de dois pavimentos com mezanino e escada central; balcão curvo em napa branca; testeira retroiluminada com logo; pé-direito de 5m..."
-        style="width:100%;min-height:70px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
-    </div>
-
-    <div class="section">
       <div class="section-label">Iluminação</div>
       <div class="toggle-group">
         <button class="toggle-btn active" id="btn-frio" onclick="setLight('frio')">Branco Frio</button>
@@ -794,15 +712,6 @@
         <button class="toggle-btn" id="booth-ponta" onclick="setBooth('ponta')">Ponta<br><small style="opacity:.6;font-weight:400">3 lados</small></button>
         <button class="toggle-btn" id="booth-esquina" onclick="setBooth('esquina')">Esquina<br><small style="opacity:.6;font-weight:400">2 lados</small></button>
         <button class="toggle-btn" id="booth-corredor" onclick="setBooth('corredor')">Corredor<br><small style="opacity:.6;font-weight:400">1 lado</small></button>
-      </div>
-    </div>
-
-    <div class="section" style="background:#f4f6ff;border:1px solid #dde3ff;border-radius:8px;padding:10px 12px">
-      <div style="font-size:11.5px;color:var(--azul);font-weight:700">🖼️ Prompt ancorado na imagem</div>
-      <div style="font-size:10.5px;color:#666;margin-top:4px;line-height:1.4">
-        O prompt é gerado para uso <b>sempre junto</b> com o PNG da cena (exporte na aba Apresentação
-        e anexe os dois no Nano Banana). A imagem é a âncora de geometria e câmera — o prompt não
-        descreve o ângulo em texto, só instrui a preservar exatamente o que está na foto.
       </div>
     </div>
 
@@ -1065,101 +974,6 @@
   </div>
 </div><!-- /content-logos -->
 
-<!-- ════ ABA ESTÚDIO (geração via API Gemini / Nano Banana) ════ -->
-<div class="tab-content" id="content-studio">
-  <div class="logos-wrap">
-
-    <div class="section">
-      <div class="api-header" id="gemHeaderEl" onclick="toggleGemSection()">
-        <span class="section-label" style="margin:0;padding:0">API key do Gemini</span>
-        <span id="geminiBadge" class="api-badge empty">Sem chave</span>
-        <span class="api-chevron">▾</span>
-      </div>
-      <div id="gemBody" style="margin-top:8px">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="geminiApiKey" placeholder="Cole sua API key do Google AI Studio"
-                 oninput="onGeminiKeyInput()" style="flex:1">
-          <button class="btn-small" id="btnGemVis" onclick="toggleGemKeyVis()">Mostrar</button>
-        </div>
-        <a href="#" onclick="su('open_url','https://aistudio.google.com/apikey');return false;"
-           style="display:inline-block;font-size:10px;font-weight:600;color:var(--azul);margin-top:7px;text-decoration:none">
-          Obter key →
-        </a>
-        <div style="font-size:10px;color:#999;margin-top:4px">Cobrada pelo Google por imagem gerada (centavos de dólar). O modo grátis continua na aba Render IA.</div>
-      </div>
-    </div>
-
-    <div class="studio-row">
-      <div class="studio-field" style="flex:1.25">
-        <label>Cena</label>
-        <select id="studioScene" onchange="onStudioSceneSelect()">
-          <option value="">— selecione —</option>
-        </select>
-      </div>
-      <div class="studio-field" style="flex:1.6">
-        <label>Modelo</label>
-        <select id="studioModel">
-          <option value="gemini-3.1-flash-image-preview">Nano Banana 2 — equilíbrio (~US$ 0,045)</option>
-          <option value="gemini-3-pro-image-preview">Nano Banana Pro — melhor qualidade (~US$ 0,134)</option>
-          <option value="gemini-2.5-flash-image">Nano Banana — mais barato (~US$ 0,039)</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="studio-field">
-      <label>Instruções desta cena
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— itens específicos, salvos por cena</span>
-      </label>
-      <textarea id="studioSceneInstr" disabled placeholder="Selecione uma cena. Um por linha. Ex.:&#10;Balcão à esquerda em aço escovado&#10;Logo do fundo em verde neon&#10;Piso de madeira clara"
-        oninput="studioInstrDebounce()"></textarea>
-    </div>
-
-    <div class="studio-field">
-      <label>Imagens de referência
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— opcional: logo, material, cor (enviadas junto)</span>
-      </label>
-      <div class="studio-refs" id="studioRefs"
-           ondragover="studioRefsDragOver(event)" ondragleave="studioRefsDragLeave(event)" ondrop="studioRefsDrop(event)">
-        <div class="ref-add" onclick="su('choose_ref_image')" title="Adicionar referência">+</div>
-      </div>
-      <div style="font-size:10px;color:#999;margin-top:4px">A viewport é sempre a âncora. As referências guiam elementos específicos (ex.: aplicar a logo fiel). Pode arrastar imagens aqui também.</div>
-    </div>
-
-    <div id="studioViewer">
-      <img id="studioViewImg" alt="">
-      <div id="studioEmpty">
-        <div class="ic">✨</div>
-        <div><b>Estúdio EVA</b></div>
-        <div>Escolha a cena e clique em <b>Gerar render</b> — a viewport é capturada e enviada como âncora, com as configurações da aba Render IA.</div>
-      </div>
-      <div id="studioPills">
-        <button class="studio-pill" id="pillOrig" onclick="studioShow('orig')">Viewport</button>
-        <button class="studio-pill" id="pillResult" onclick="studioShow('result')" disabled>Render</button>
-      </div>
-      <div id="studioHold">segure para comparar</div>
-      <div id="studioProgress">
-        <div class="studio-bar"></div>
-        <div id="studioProgressText">Gerando…</div>
-      </div>
-    </div>
-
-    <div id="studioStatus"></div>
-
-    <div class="logo-actions">
-      <button class="btn-export" id="btnStudioGen" onclick="doStudioGenerate()" style="flex:1.4">
-        ✨ Gerar render
-      </button>
-      <button class="btn-export btn-regen" id="btnStudioRegen" onclick="doStudioGenerate()" style="display:none">
-        ↻
-      </button>
-      <button class="btn-export btn-green" id="btnStudioSave" onclick="saveStudioPng()" disabled style="flex:1">
-        Salvar PNG...
-      </button>
-    </div>
-
-  </div>
-</div><!-- /content-studio -->
-
 <!-- ════════════ TAB: MAPA DE ARTES ════════════ -->
 <div class="tab-content" id="content-mapa">
   <div class="logos-wrap">
@@ -1167,10 +981,30 @@
     <div class="section" style="background:#f4f6ff;border:1px solid #dde3ff;border-radius:8px;padding:12px 14px">
       <div style="font-size:12px;color:var(--azul);font-weight:700">🎯 Como usar</div>
       <div style="font-size:11px;color:#555;margin-top:5px;line-height:1.5">
-        No SketchUp, <b>selecione as faces</b> da comunicação visual (lonas, logos, faces de balcão)
-        e clique em <b>Diagramar KV</b>. Cada face é <b>copiada</b> (o modelo real não é alterado)
-        para um grupo/cena <b>KV</b> — orientada de frente, arranjada (peças à esquerda, paredes em
-        fileiras) e <b>cotada</b> com cotas nativas L×A. Um Ctrl+Z desfaz tudo.
+        <b>Por material:</b> varra o modelo, marque na lista o que é arte e diagrame.<br>
+        <b>Por seleção:</b> selecione no SketchUp <b>faces, grupos e/ou componentes</b> — vários de
+        uma vez — e diagrame só eles.<br>
+        Em ambos, cada face é <b>copiada</b> (o modelo real não muda), posta de frente, arranjada
+        (peças à esquerda, paredes em fileiras), <b>cotada</b> L×A e etiquetada. O quadro nasce à
+        <b>esquerda do modelo</b>, alinhado ao eixo do estande — enquadre e salve a cena do jeito
+        que você quiser. Um Ctrl+Z desfaz tudo.
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label-row" style="margin-bottom:8px">
+        <span class="section-label" style="margin:0">Materiais de arte no modelo</span>
+        <span>
+          <button class="btn-small" onclick="doMapaScan()">↻ Varrer modelo</button>
+          <button class="btn-small" onclick="mapaMarkAll(true)">Marcar todos</button>
+          <button class="btn-small" onclick="mapaMarkAll(false)">Limpar</button>
+        </span>
+      </div>
+      <div class="mat-box" id="mapaMats" style="max-height:210px">
+        <div class="empty-scenes">Clique em <b>Varrer modelo</b> para listar adesivo, lona, PVC, letra caixa e correlatos.</div>
+      </div>
+      <div style="font-size:10px;color:#999;margin-top:5px">
+        Só entram materiais com nome de comunicação visual — as texturas genéricas do modelo ficam de fora.
       </div>
     </div>
 
@@ -1182,12 +1016,20 @@
         <span>m</span>
         <span style="color:#999;font-size:11px">— faces com maior dimensão ≥ este valor entram na zona de paredes; abaixo, na coluna de peças.</span>
       </div>
+      <label class="mat-filter" style="margin-top:10px;margin-bottom:0">
+        <input type="checkbox" id="mapaLabels" checked onchange="saveMapaThr()">
+        Etiquetar cada peça com o nome do material e a medida
+      </label>
     </div>
 
     <div class="section">
-      <div class="logo-actions">
-        <button class="btn-export" id="btnMapa" onclick="doMapa()" style="flex:1.6">
-          🗺️ Diagramar KV
+      <button class="btn-export" id="btnMapaMats" onclick="doMapaMats()" style="width:100%">
+        ✨ Diagramar materiais marcados
+      </button>
+      <div class="logo-actions" style="margin-top:10px">
+        <button class="btn-export btn-regen" id="btnMapa" onclick="doMapa()" style="flex:1.4"
+                title="Diagrama as faces, grupos e componentes selecionados no SketchUp">
+          🗺️ Diagramar seleção do SketchUp
         </button>
         <button class="btn-export btn-regen" id="btnMapaGirar" onclick="doMapaGirar()" style="flex:1"
                 title="Gira 90° o item do KV selecionado">
@@ -1198,9 +1040,9 @@
     </div>
 
     <div class="section" style="color:#999;font-size:11px;line-height:1.5">
-      A cena gerada chama-se <b>“KV AUTO”</b> (não sobrescreve sua cena KV manual). Exporte-a pela
-      aba Apresentação na proporção A4 paisagem para levar ao seu template do MAPA DE ARTES.
-      As cotas herdam a cor/estilo de cota do seu modelo (Model Info → Dimensions).
+      O quadro fica no grupo <b>“KV - Mapa de Artes”</b>, na tag <b>KV</b>. Nenhuma cena é criada
+      automaticamente: posicione a câmera, salve a cena e exporte pela aba Apresentação na proporção
+      A4 paisagem. As cotas herdam a cor/estilo do seu modelo (Model Info → Dimensions).
     </div>
 
   </div>
@@ -1292,7 +1134,6 @@
       if (s.environment)                 setEnv(s.environment);
       if (s.boothType)                   setBooth(s.boothType);
       if (typeof s.people === 'boolean') setPeople(s.people);
-      if (typeof s.description === 'string') document.getElementById('boothDesc').value = s.description;
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
       if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
       if (s.pFolder)                     window.setFolder('pres', s.pFolder);
@@ -1312,16 +1153,9 @@
       if (s.sceneStore && typeof s.sceneStore === 'object') {
         sceneStore = s.sceneStore;
         populateSceneSelect();
-        onStudioSceneSelect();
         renderSavedPrompts();
       }
-      if (typeof s.geminiApiKey === 'string' && s.geminiApiKey) {
-        document.getElementById('geminiApiKey').value = s.geminiApiKey;
-        // Chave já salva: recolhe a seção (fica só o badge "✓ Conectada").
-        document.getElementById('gemHeaderEl').classList.add('collapsed');
-      }
       updateApiBadge();
-      updateGeminiBadge();
     } catch (e) {}
     _applying = false;
   };
@@ -1351,37 +1185,101 @@
       boothType: boothType, people: people,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
-      description: document.getElementById('boothDesc').value,
       criticals: document.getElementById('criticals').value,
       cropEnabled: cropIsEnabled(),
-      crops: _cropRects,
-      rbgApiKey: document.getElementById('rbgApiKey').value
+      crops: _cropRects
     };
     su('save_settings', JSON.stringify(s));
   }
 
   // ── Abas ───────────────────────────────────────────────────────────────────
   function switchTab(tab) {
-    ['render','pres','logos','studio','mapa'].forEach(function(t) {
+    // A aba Mapa de Artes se popula sozinha na primeira abertura.
+    if (tab === 'mapa' && !mapaMats.length) doMapaScan();
+    ['render','pres','logos','mapa'].forEach(function(t) {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
       document.getElementById('content-' + t).classList.toggle('active', t === tab);
     });
   }
 
-  // ── Mapa de Artes (diagramar + cotar CV na cena KV) ─────────────────────────
-  function doMapa() {
-    var thr = document.getElementById('mapaThreshold').value || '2';
-    setMapaStatus('Diagramando a seleção no KV...', 'info');
-    su('mapa_diagramar', String(thr));
+  // ── Mapa de Artes (diagramar + cotar a comunicação visual) ──────────────────
+  var mapaMats = [];   // [{ name, key, faces, area_m2 }]
+
+  function mapaCfg(extra) {
+    var cfg = {
+      thr:    document.getElementById('mapaThreshold').value || '2',
+      labels: document.getElementById('mapaLabels').checked
+    };
+    if (extra) for (var k in extra) cfg[k] = extra[k];
+    return JSON.stringify(cfg);
   }
+
+  function doMapaScan() {
+    setMapaStatus('Varrendo o modelo...', 'info');
+    su('mapa_scan');
+  }
+
+  // Ruby devolve os materiais de arte encontrados no modelo.
+  window.setMapaMats = function(list) {
+    mapaMats = list || [];
+    var box = document.getElementById('mapaMats');
+    if (!mapaMats.length) {
+      box.innerHTML = '<div class="empty-scenes">Nenhum material de arte encontrado ' +
+                      '(adesivo, lona, PVC, letra caixa...).</div>';
+      setMapaStatus('Varredura concluída — nada encontrado.', 'info');
+      return;
+    }
+    box.innerHTML = mapaMats.map(function(m, i) {
+      return '<label class="mat-item" style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
+             '<input type="checkbox" checked id="mapaMat-' + i + '" style="accent-color:var(--rosa);width:15px;height:15px;flex-shrink:0">' +
+             '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(m.name) + '</span>' +
+             '<span style="color:#aaa;font-size:11px;white-space:nowrap">' + m.faces + ' face(s) &middot; ' +
+             Number(m.area_m2).toFixed(2).replace('.', ',') + ' m&sup2;</span>' +
+             '</label>';
+    }).join('');
+    setMapaStatus(mapaMats.length + ' material(is) de arte encontrado(s).', 'ok');
+  };
+
+  function mapaMarkAll(on) {
+    mapaMats.forEach(function(_, i) {
+      var el = document.getElementById('mapaMat-' + i);
+      if (el) el.checked = on;
+    });
+  }
+
+  function mapaChecked() {
+    return mapaMats.filter(function(_, i) {
+      var el = document.getElementById('mapaMat-' + i);
+      return el && el.checked;
+    }).map(function(m) { return m.name; });
+  }
+
+  function doMapaMats() {
+    var mats = mapaChecked();
+    if (!mats.length) { setMapaStatus('Marque ao menos um material na lista.', 'error'); return; }
+    setMapaStatus('Diagramando ' + mats.length + ' material(is)...', 'info');
+    su('mapa_diagramar_mats', mapaCfg({ mats: mats }));
+  }
+
+  function doMapa() {
+    setMapaStatus('Diagramando a seleção do SketchUp...', 'info');
+    su('mapa_diagramar', mapaCfg());
+  }
+
   function doMapaGirar() { su('mapa_girar'); }
+
   function saveMapaThr() {
-    try { localStorage.setItem('eva_mapa_thr', document.getElementById('mapaThreshold').value); } catch (e) {}
+    try {
+      localStorage.setItem('eva_mapa_thr', document.getElementById('mapaThreshold').value);
+      localStorage.setItem('eva_mapa_labels', document.getElementById('mapaLabels').checked ? '1' : '0');
+    } catch (e) {}
   }
   (function () {
     try {
       var v = localStorage.getItem('eva_mapa_thr');
       if (v) { var el = document.getElementById('mapaThreshold'); if (el) el.value = v; }
+      var l = localStorage.getItem('eva_mapa_labels');
+      if (l !== null) { var c = document.getElementById('mapaLabels'); if (c) c.checked = (l === '1'); }
     } catch (e) {}
   })();
 
@@ -1403,7 +1301,6 @@
     refreshButtons('r');
     refreshButtons('p');
     populateSceneSelect();
-    populateStudioScenes();
     renderSavedPrompts();
   };
 
@@ -1423,11 +1320,15 @@
     }
 
     count.textContent = scenes.length + ' cenas';
+    // Nada vem marcado: o usuário escolhe as cenas a cada uso. A seleção atual
+    // é preservada quando a lista é redesenhada (ex.: ao gerar as miniaturas).
+    var prev = st[p].sel || {};
     st[p].sel = {};
     list.innerHTML = scenes.map(function(s, i) {
-      st[p].sel[i] = true;
-      return '<div class="scene-item checked" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
-             '<input type="checkbox" checked id="' + p + 'chk-' + i + '" onclick="boxClick(\'' + p + '\',' + i + ',event)">' +
+      var on = !!prev[i];
+      st[p].sel[i] = on;
+      return '<div class="scene-item' + (on ? ' checked' : '') + '" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
+             '<input type="checkbox"' + (on ? ' checked' : '') + ' id="' + p + 'chk-' + i + '" onclick="boxClick(\'' + p + '\',' + i + ',event)">' +
              thumbTag(s.sid) +
              '<label>' + escHtml(s.name) + '</label>' +
              '</div>';
@@ -1526,9 +1427,6 @@
     if (!sceneStore[curSid]) sceneStore[curSid] = {};
     sceneStore[curSid].criticals = val;
     su('save_scene_criticals', JSON.stringify({ sid: curSid, criticals: val }));
-    // Reflete no campo equivalente do Estúdio, se for a mesma cena.
-    if (_sidForName(document.getElementById('studioScene').value) === curSid)
-      document.getElementById('studioSceneInstr').value = val;
   }
 
   function saveSceneCamera() {
@@ -1729,7 +1627,6 @@
       env_custom: document.getElementById('envCustom').value.trim(),
       booth_type: boothType, people: people,
       image_mode: true, // o prompt do EVA é sempre ancorado na imagem exportada
-      description: document.getElementById('boothDesc').value.trim(),
       criticals_pt: criticals
     };
 
@@ -2055,8 +1952,9 @@
   }
 
   // ── Aba Logos ─────────────────────────────────────────────────────────────
-  var _logoFilePath   = '';
-  var _logoResultPath = '';
+  var _logoFilePath   = '';   // original importado
+  var _logoBasePath   = '';   // base do tingimento (original ou sem-fundo)
+  var _logoResultPath = '';   // último resultado exibido (sem-fundo ou tingido)
   var _logoFileName   = '';
 
   // ── API key: seção colapsável + estado conectado ──
@@ -2069,6 +1967,15 @@
     // Grava imediatamente em registro dedicado (não depende da saveSettings geral).
     su('save_api_key', document.getElementById('rbgApiKey').value);
   }
+
+  // Ruby confirma que a chave foi realmente gravada em disco.
+  window.apiKeySaved = function(ok, hasKey) {
+    var badge = document.getElementById('apiBadge');
+    if (!badge) return;
+    if (!hasKey) { updateApiBadge(); return; }
+    badge.className   = ok ? 'api-badge connected' : 'api-badge empty';
+    badge.textContent = ok ? '✓ Salva' : '✗ Falha ao salvar';
+  };
 
   function updateApiBadge() {
     var key   = document.getElementById('rbgApiKey').value.trim();
@@ -2096,6 +2003,7 @@
   // então o preview vem embutido como data:image.
   window.setLogoFile = function(path, dataUrl) {
     _logoFilePath   = path;
+    _logoBasePath   = path;
     _logoResultPath = '';
     _logoFileName   = path.replace(/.*[\\/]/, '').replace(/\.[^.]+$/, '');
     document.getElementById('logoFilePath').value = path.replace(/.*[\\/]/, '');
@@ -2132,8 +2040,11 @@
   }
   window.dropError = function(m) { setLogoStatus('err', '✗ ' + m); };
 
-  // Imagem de trabalho: resultado (sem fundo / tingido) se existir, senão original.
+  // Imagem para SALVAR: o último resultado, senão o original.
   function _workingImage() { return _logoResultPath || _logoFilePath; }
+  // Imagem para TINGIR: a base (sem-fundo, se houver; senão o original).
+  // Nunca o resultado já tingido — senão a cor "trava" na primeira aplicada.
+  function _tintSource() { return _logoBasePath || _logoFilePath; }
 
   // ── Recolorir (tingir cor sólida) ──
   function _validHex(h) { return /^#[0-9a-fA-F]{6}$/.test(h); }
@@ -2168,9 +2079,9 @@
   function applyTint() {
     var hex = document.getElementById('tintHex').value.trim();
     if (!_validHex(hex)) { setLogoStatus('err', 'Cor inválida. Use #RRGGBB.'); return; }
-    if (!_workingImage()) { setLogoStatus('err', 'Selecione uma imagem primeiro.'); return; }
+    if (!_tintSource()) { setLogoStatus('err', 'Selecione uma imagem primeiro.'); return; }
     setLogoStatus('', 'Aplicando cor...');
-    su('tint_logo', JSON.stringify({ path: _workingImage(), hex: hex, name: _logoFileName }));
+    su('tint_logo', JSON.stringify({ path: _tintSource(), hex: hex, name: _logoFileName }));
   }
 
   window.tintDone = function(result) {
@@ -2182,7 +2093,7 @@
       document.getElementById('logoResultPlaceholder').style.display = 'none';
       document.getElementById('logoResultBox').classList.add('ready');
       document.getElementById('btnSaveLogo').disabled = false;
-      setLogoStatus('ok', '✓ Cor aplicada.');
+      setLogoStatus('ok', '✓ Cor aplicada. Pode trocar a cor quantas vezes quiser.');
     } else {
       setLogoStatus('err', '✗ ' + result.error);
     }
@@ -2201,6 +2112,7 @@
     document.getElementById('btnRemoveBg').disabled = false;
     if (result.ok) {
       _logoResultPath = result.path;
+      _logoBasePath   = result.path;   // vira a base: tingir parte do PNG sem fundo
       var img = document.getElementById('logoResultImg');
       img.src = result.data || '';
       img.style.display = 'block';
@@ -2230,248 +2142,6 @@
 
   function setLogoStatus(cls, msg) {
     var el = document.getElementById('logoStatus');
-    el.className = cls;
-    el.textContent = msg;
-  }
-
-  // ── Aba Estúdio (geração via API Gemini) ────────────────────────────────────
-  var _studioResultPath = '';
-  var _studioOrigData   = '';
-  var _studioResultData = '';
-  var _studioBusy       = false;
-  var _studioView       = 'orig';   // 'orig' | 'result'
-  var _studioTick       = null;
-
-  function populateStudioScenes() {
-    var sel = document.getElementById('studioScene');
-    if (!sel) return;
-    var keep = sel.value;
-    sel.innerHTML = '<option value="">— selecione —</option>' +
-      scenes.map(function(s) {
-        return '<option value="' + escHtml(s.name) + '">' + escHtml(s.name) + '</option>';
-      }).join('');
-    if (keep && scenes.some(function(s){ return s.name === keep; })) sel.value = keep;
-    onStudioSceneSelect();
-  }
-
-  function _sidForName(name) {
-    var s = scenes.filter(function(x){ return x.name === name; })[0];
-    return s ? s.sid : '';
-  }
-
-  // Instruções da cena = os MESMOS CRITICALs por cena da aba Render IA (store por
-  // sid, sincronizado por projeto). Editar aqui reflete lá e vice-versa.
-  function onStudioSceneSelect() {
-    var name = document.getElementById('studioScene').value;
-    var ta   = document.getElementById('studioSceneInstr');
-    var sid  = _sidForName(name);
-    if (!sid) { ta.value = ''; ta.disabled = true; return; }
-    ta.disabled = false;
-    ta.value = (sceneStore[sid] && sceneStore[sid].criticals) || '';
-  }
-
-  function saveStudioInstr() {
-    var name = document.getElementById('studioScene').value;
-    var sid  = _sidForName(name);
-    if (!sid) return;
-    var val = document.getElementById('studioSceneInstr').value;
-    if (!sceneStore[sid]) sceneStore[sid] = {};
-    sceneStore[sid].criticals = val;
-    su('save_scene_criticals', JSON.stringify({ sid: sid, criticals: val }));
-    // Reflete no campo equivalente da aba Render IA, se for a mesma cena selecionada.
-    if (curSid === sid) document.getElementById('sceneCriticals').value = val;
-  }
-  var _instrT = null;
-  function studioInstrDebounce() { clearTimeout(_instrT); _instrT = setTimeout(saveStudioInstr, 800); }
-
-  // ── Imagens de referência (multi-imagem) ──
-  var _studioRefs = [];   // array de data URLs
-  var STUDIO_REF_MAX = 3;
-
-  function renderStudioRefs() {
-    var box = document.getElementById('studioRefs');
-    var html = _studioRefs.map(function(d, i) {
-      return '<div class="ref-thumb"><img src="' + d + '" alt="">' +
-             '<button onclick="removeStudioRef(' + i + ')" title="Remover">×</button></div>';
-    }).join('');
-    if (_studioRefs.length < STUDIO_REF_MAX) {
-      html += '<div class="ref-add" onclick="su(\'choose_ref_image\')" title="Adicionar referência">+</div>';
-    }
-    box.innerHTML = html;
-  }
-
-  window.addStudioRef = function(dataUrl) {
-    if (!dataUrl || !/^data:image\//.test(dataUrl)) return;
-    if (_studioRefs.length >= STUDIO_REF_MAX) { setStudioStatus('err', 'Máximo de ' + STUDIO_REF_MAX + ' referências.'); return; }
-    _studioRefs.push(dataUrl);
-    renderStudioRefs();
-  };
-  function removeStudioRef(i) { _studioRefs.splice(i, 1); renderStudioRefs(); }
-
-  function studioRefsDragOver(e)  { e.preventDefault(); e.stopPropagation(); document.getElementById('studioRefs').style.opacity = '.7'; }
-  function studioRefsDragLeave(e) { e.preventDefault(); document.getElementById('studioRefs').style.opacity = '1'; }
-  function studioRefsDrop(e) {
-    e.preventDefault(); e.stopPropagation();
-    document.getElementById('studioRefs').style.opacity = '1';
-    var files = e.dataTransfer && e.dataTransfer.files;
-    if (!files) return;
-    function readOne(f) {
-      var r = new FileReader();
-      r.onload = function() { window.addStudioRef(r.result); };
-      r.readAsDataURL(f);
-    }
-    for (var i = 0; i < files.length; i++) {
-      var f = files[i];
-      if (!/image\/(png|jpeg)/.test(f.type) && !/\.(png|jpe?g)$/i.test(f.name)) continue;
-      readOne(f);
-    }
-  }
-
-  // ── API key (colapsável, como a do remove.bg) ──
-  function toggleGemSection() {
-    document.getElementById('gemHeaderEl').classList.toggle('collapsed');
-  }
-
-  function toggleGemKeyVis() {
-    var inp = document.getElementById('geminiApiKey');
-    var btn = document.getElementById('btnGemVis');
-    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = 'Ocultar'; }
-    else { inp.type = 'password'; btn.textContent = 'Mostrar'; }
-    event.stopPropagation();
-  }
-
-  function onGeminiKeyInput() {
-    updateGeminiBadge();
-    su('save_gemini_key', document.getElementById('geminiApiKey').value);
-  }
-
-  function updateGeminiBadge() {
-    var key   = document.getElementById('geminiApiKey').value.trim();
-    var badge = document.getElementById('geminiBadge');
-    badge.className   = key ? 'api-badge connected' : 'api-badge empty';
-    badge.textContent = key ? '✓ Conectada' : 'Sem chave';
-  }
-
-  // ── Viewer: uma imagem grande + pills Viewport/Render ──
-  function studioShow(which) {
-    if (which === 'result' && !_studioResultData) return;
-    if (which === 'orig'   && !_studioOrigData)   return;
-    _studioView = which;
-    var img = document.getElementById('studioViewImg');
-    img.src = which === 'result' ? _studioResultData : _studioOrigData;
-    img.style.display = 'block';
-    document.getElementById('studioEmpty').style.display = 'none';
-    document.getElementById('pillOrig').classList.toggle('active',   which === 'orig');
-    document.getElementById('pillResult').classList.toggle('active', which === 'result');
-    document.getElementById('studioHold').style.display =
-      (which === 'result' && _studioOrigData) ? 'block' : 'none';
-  }
-
-  // Segurar para comparar: no modo Render, pressionar mostra a viewport.
-  function _studioHoldStart(e) {
-    if (_studioView !== 'result' || !_studioOrigData) return;
-    document.getElementById('studioViewImg').src = _studioOrigData;
-  }
-  function _studioHoldEnd(e) {
-    if (_studioView !== 'result' || !_studioResultData) return;
-    document.getElementById('studioViewImg').src = _studioResultData;
-  }
-  window.addEventListener('load', function() {
-    var v = document.getElementById('studioViewer');
-    if (!v) return;
-    v.addEventListener('mousedown',  _studioHoldStart);
-    v.addEventListener('mouseup',    _studioHoldEnd);
-    v.addEventListener('mouseleave', _studioHoldEnd);
-  });
-
-  function _studioProgress(on, startedAt) {
-    var el = document.getElementById('studioProgress');
-    el.style.display = on ? 'flex' : 'none';
-    clearInterval(_studioTick);
-    if (on) {
-      var txt = document.getElementById('studioProgressText');
-      txt.textContent = 'Gerando…';
-      _studioTick = setInterval(function() {
-        var s = Math.round((Date.now() - startedAt) / 1000);
-        txt.textContent = 'Gerando… ' + s + 's';
-      }, 1000);
-    }
-  }
-
-  function doStudioGenerate() {
-    if (_studioBusy) return;
-    var scene = document.getElementById('studioScene').value;
-    var key   = document.getElementById('geminiApiKey').value.trim();
-    if (!key)   { setStudioStatus('err', 'Informe a API key do Gemini.'); return; }
-    if (!scene) { setStudioStatus('err', 'Selecione uma cena.'); return; }
-
-    // Persiste os campos (mesma garantia do doBuild) antes de gerar.
-    saveSettings();
-    saveSceneCriticals();
-
-    var criticals = document.getElementById('criticals').value
-      .split('\n').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
-
-    _studioBusy = true;
-    _studioResultPath = '';
-    _studioResultData = '';
-    document.getElementById('btnStudioGen').disabled   = true;
-    document.getElementById('btnStudioRegen').disabled = true;
-    document.getElementById('btnStudioSave').disabled  = true;
-    document.getElementById('pillResult').disabled     = true;
-    _studioProgress(true, Date.now());
-    setStudioStatus('', '');
-
-    su('studio_generate', JSON.stringify({
-      scene: scene,
-      model: document.getElementById('studioModel').value,
-      lighting: lighting, environment: environment,
-      env_custom: document.getElementById('envCustom').value.trim(),
-      booth_type: boothType, people: people,
-      description: document.getElementById('boothDesc').value.trim(),
-      criticals_pt: criticals,
-      refs: _studioRefs
-    }));
-  }
-
-  // Preview da viewport capturada (chega antes do resultado).
-  window.studioOrig = function(dataUrl) {
-    _studioOrigData = dataUrl || '';
-    document.getElementById('studioPills').style.display = _studioOrigData ? 'flex' : 'none';
-    if (_studioOrigData) studioShow('orig');
-  };
-
-  window.studioDone = function(result) {
-    _studioBusy = false;
-    _studioProgress(false);
-    document.getElementById('btnStudioGen').disabled   = false;
-    document.getElementById('btnStudioRegen').disabled = false;
-    if (result.ok) {
-      _studioResultPath = result.path;
-      _studioResultData = result.data || '';
-      document.getElementById('pillResult').disabled = false;
-      document.getElementById('btnStudioSave').disabled = false;
-      document.getElementById('btnStudioRegen').style.display = 'block';
-      studioShow('result');
-      setStudioStatus('ok', '✓ Render gerado — segure na imagem para comparar com a viewport.');
-    } else {
-      setStudioStatus('err', '✗ ' + result.error);
-    }
-  };
-
-  function saveStudioPng() {
-    if (!_studioResultPath) return;
-    var scene = document.getElementById('studioScene').value || 'render';
-    su('save_studio_png', JSON.stringify({ path: _studioResultPath, name: scene }));
-  }
-
-  window.saveStudioDone = function(result) {
-    if (result.ok) setStudioStatus('ok', '✓ Salvo em: ' + result.path);
-    else           setStudioStatus('err', '✗ ' + result.error);
-  };
-
-  function setStudioStatus(cls, msg) {
-    var el = document.getElementById('studioStatus');
     el.className = cls;
     el.textContent = msg;
   }
