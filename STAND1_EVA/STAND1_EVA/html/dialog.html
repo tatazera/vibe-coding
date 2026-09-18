@@ -835,10 +835,11 @@
     <div class="section">
       <div class="section-label">Resolução</div>
       <div class="res-row">
-        <input type="number" id="pResW" value="3840" min="100" max="7680" onchange="onResWidthChange()">
+        <input type="number" id="pResW" value="3840" min="100" max="7680" onchange="saveSettings()">
         <span>×</span>
-        <input type="number" id="pResH" value="2160" min="100" max="8192" readonly tabindex="-1"
-          title="A altura acompanha o enquadramento da vista" style="background:#f2f2f2;color:#777;cursor:default">
+        <input type="text" id="pResH" value="auto" readonly tabindex="-1"
+          title="A altura acompanha a proporção do que a cena enquadra"
+          style="background:#f2f2f2;color:#777;cursor:default;text-align:center">
         <span>px</span>
       </div>
       <div class="res-presets" id="pResPresets">
@@ -848,8 +849,9 @@
         <button class="res-preset" onclick="setRes('p',1280,720,this)">HD</button>
       </div>
       <div style="font-size:10.5px;color:#999;margin-top:7px;line-height:1.4">
-        A imagem sai no <b>enquadramento exato da vista</b>: você define a largura e a
-        altura acompanha a proporção da janela do SketchUp.
+        Você define a largura. Cada cena é <b>centralizada no que ela enquadra</b> e a
+        altura acompanha essa proporção — o print não depende do tamanho da janela
+        nem das bandejas abertas.
       </div>
     </div>
 
@@ -1174,12 +1176,10 @@
   }
 
   function applyRes(p, w, h) {
-    if (!w || !h) return;
+    if (!w) return;
     document.getElementById(p + 'ResW').value = w;
-    document.getElementById(p + 'ResH').value = h;
     document.getElementById(p + 'ResPresets').querySelectorAll('.res-preset')
       .forEach(function(el) { el.classList.remove('active'); });
-    updateResHeight();
   }
 
   function saveSettings() {
@@ -1523,31 +1523,9 @@
 
   function setRes(p, w, h, btn) {
     document.getElementById(p + 'ResW').value = w;
-    document.getElementById(p + 'ResH').value = h;
     document.getElementById(p + 'ResPresets').querySelectorAll('.res-preset')
       .forEach(function(el) { el.classList.remove('active'); });
     btn.classList.add('active');
-    updateResHeight();
-    saveSettings();
-  }
-
-  // Proporção do viewport do SketchUp (altura/largura), informada pelo Ruby.
-  var viewAspect = null;
-
-  window.setViewAspect = function(r) {
-    viewAspect = (r > 0) ? r : null;
-    updateResHeight();
-  };
-
-  // A altura do export é derivada do enquadramento da vista, não digitada.
-  function updateResHeight() {
-    if (!viewAspect) return;
-    var w = parseInt(document.getElementById('pResW').value) || 3840;
-    document.getElementById('pResH').value = Math.round(w * viewAspect);
-  }
-
-  function onResWidthChange() {
-    updateResHeight();
     saveSettings();
   }
 

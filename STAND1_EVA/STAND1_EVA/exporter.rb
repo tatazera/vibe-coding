@@ -53,15 +53,15 @@ module STAND1
             # A transição animada entre cenas está desligada no snapshot, mas a
             # câmera da página é reaplicada direto para o enquadramento ser o da
             # cena, e não um estado intermediário do movimento.
-            (view.camera = page.camera) rescue nil if page.use_camera?
+            aplicar_camera(view, page) if page.use_camera?
             apply_settings(model, ro, mode, style_mode, bg_mode)
 
             safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
             path      = File.join(folder, "#{safe_name}.png")
 
-            out_w, out_h = fit_resolution(view,
-                                          resolution[:width]  || 3840,
-                                          resolution[:height] || 2160)
+            larg_pedida  = resolution[:width] || 3840
+            out_w, out_h = frame_content(view, larg_pedida) ||
+                           fit_resolution(view, larg_pedida, resolution[:height] || 2160)
 
             opts = {
               filename:    path,
@@ -89,28 +89,124 @@ module STAND1
       end
 
       MAX_LADO = 8192
+      MARGEM   = 0.04   # folga em volta do conteúdo, em fração do próprio conteúdo
 
-      # Resolução de saída com a proporção exata do enquadramento da vista.
+      # Resolução de saída com a proporção do enquadramento da vista.
       #
       # O SketchUp preserva a ALTURA enquadrada pela câmera e estica a largura
-      # até a proporção pedida. Pedir 16:9 num viewport mais estreito (a bandeja
-      # padrão aberta estreita o viewport) faz entrar conteúdo lateral que a cena
-      # não mostra: o modelo sai pequeno, deslocado e com sobra nas laterais.
-      # Mantendo a largura pedida e derivando a altura do viewport, a imagem sai
-      # com o mesmo enquadramento da vista — sem sobra e sem corte.
+      # até a proporção pedida. Pedir 16:9 num viewport de outra proporção faz
+      # entrar conteúdo lateral que a cena não mostra.
       def self.fit_resolution(view, width, height)
         w  = width.to_i
         vw = view.vpwidth.to_i
         vh = view.vpheight.to_i
-        return [w, height.to_i] if vw <= 0 || vh <= 0
+        return limitar(w, height.to_i > 0 ? height.to_i : (w * 9 / 16)) if vw <= 0 || vh <= 0
 
-        h = (w * vh.to_f / vw).round
+        limitar(w, (w * vh.to_f / vw).round)
+      end
+
+      # Cópia independente de uma câmera: o enquadramento é ajustado sobre ela e
+      # nunca sobre a câmera guardada na página — exportar não pode alterar a
+      # cena, e guardar a câmera da view para restaurar depois exige uma cópia.
+      def self.clonar_camera(c)
+        nova = Sketchup::Camera.new(c.eye, c.target, c.up, c.perspective?, c.fov)
+        (nova.height = c.height) rescue nil unless c.perspective?
+        nova
+      rescue
+        c
+      end
+
+      def self.aplicar_camera(view, page)
+        view.camera = clonar_camera(page.camera)
+      rescue
+        (view.camera = page.camera) rescue nil
+      end
+
+      def self.limitar(w, h)
         h = 1 if h < 1
         if h > MAX_LADO
           w = (w * MAX_LADO.to_f / h).round
           h = MAX_LADO
         end
         [w, h]
+      end
+
+      # Enquadramento calculado a partir do conteúdo — não do viewport.
+      #
+      # O viewport que o SketchUp informa inclui a faixa coberta pela bandeja
+      # padrão: a cena que você centraliza na área visível tem, para o SketchUp,
+      # a câmera deslocada, e o PNG sai com o modelo fora do centro e com sobra
+      # do lado da bandeja. Aqui a câmera é centralizada no conteúdo visível e,
+      # em vista paralela (plantas, elevações, isométricas), o zoom é ajustado
+      # para preenchê-la com margem uniforme — o resultado não depende do
+      # tamanho da janela nem das bandejas abertas.
+      #
+      # Em perspectiva só a centralização é aplicada: mexer no zoom mudaria a
+      # lente e a composição da cena.
+      #
+      # Devolve [largura, altura] da imagem, ou nil se não houver o que enquadrar.
+      def self.frame_content(view, width)
+        bb = visible_bounds(view.model)
+        return nil unless bb && !bb.empty? && bb.diagonal > 0
+        enquadrar(view, bb, width)
+      end
+
+      def self.enquadrar(view, bb, width)
+        cam = view.camera
+        larg, alt, cu, cv = extensao_na_camera(bb, cam)
+        return nil if larg <= 0 || alt <= 0
+
+        centralizar(cam, cu, cv)
+
+        return fit_resolution(view, width, nil) if cam.perspective?
+
+        # Paralela: a altura da câmera define o enquadramento. A folga é a mesma
+        # nos dois eixos e a imagem sai na proporção do conteúdo mais a folga,
+        # então a margem fica igual nos quatro lados.
+        folga     = MARGEM * [larg, alt].max
+        larg_tot  = larg + 2 * folga
+        alt_tot   = alt  + 2 * folga
+        cam.height = alt_tot
+        limitar(width.to_i, (width.to_i * alt_tot / larg_tot).round)
+      end
+
+      # Bounding box do que está visível: entidades ocultas e tags desligadas
+      # ficam de fora para não empurrarem o enquadramento.
+      def self.visible_bounds(model)
+        bb = Geom::BoundingBox.new
+        model.entities.each do |e|
+          next if e.respond_to?(:hidden?) && e.hidden?
+          next if e.respond_to?(:layer) && e.layer && !e.layer.visible?
+          bb.add(e.bounds) rescue nil
+        end
+        bb
+      end
+
+      # Extensão do bbox no plano da câmera e o quanto seu centro está fora do
+      # centro do quadro: [largura, altura, desvio_horizontal, desvio_vertical].
+      def self.extensao_na_camera(bb, cam)
+        xa = cam.xaxis
+        ya = cam.yaxis
+        us = []
+        vs = []
+        8.times do |i|
+          d = bb.corner(i) - cam.eye
+          us << d.dot(xa)
+          vs << d.dot(ya)
+        end
+        [us.max - us.min, vs.max - vs.min,
+         (us.min + us.max) / 2.0, (vs.min + vs.max) / 2.0]
+      end
+
+      # Desloca a câmera no seu próprio plano (pan), sem girar nem aproximar.
+      def self.centralizar(cam, cu, cv)
+        return if cu.abs < 1e-6 && cv.abs < 1e-6
+        alt_atual = (cam.height rescue nil)
+        d = Geom::Vector3d.new(cam.xaxis.to_a.map { |c| c * cu })
+        d = d + Geom::Vector3d.new(cam.yaxis.to_a.map { |c| c * cv })
+        cam.set(cam.eye.offset(d), cam.target.offset(d), cam.up)
+        # cam.set recalcula a altura da câmera paralela: repõe a que havia.
+        (cam.height = alt_atual) rescue nil if alt_atual && !cam.perspective?
       end
 
       # Recorta o PNG exportado usando System.Drawing via PowerShell.
@@ -186,7 +282,7 @@ module STAND1
         end
 
         {
-          camera:      view.camera,
+          camera:      clonar_camera(view.camera),
           transition:  transition,
           page:        model.pages.selected_page,
           shadows:     (model.shadow_info['DisplayShadows'] rescue nil),

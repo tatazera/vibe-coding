@@ -82,19 +82,6 @@ module STAND1
       model  = Sketchup.active_model
       scenes = model.pages.map { |p| { name: p.name, sid: scene_sid(p) } }
       @dialog.execute_script("window.setScenes(#{scenes.to_json})")
-      send_view_aspect
-    end
-
-    # Proporção do viewport: o export sai com ela, então o diálogo mostra a
-    # altura que realmente vai sair em vez da altura digitada.
-    def self.send_view_aspect
-      view = Sketchup.active_model.active_view
-      vw   = view.vpwidth.to_i
-      vh   = view.vpheight.to_i
-      return if vw <= 0 || vh <= 0
-      @dialog.execute_script("window.setViewAspect(#{(vh.to_f / vw).round(6)})")
-    rescue
-      nil
     end
 
     # ID estável por cena, gravado na própria Page (sobrevive a renomear a cena).
@@ -286,11 +273,16 @@ module STAND1
         model.pages.selected_page = page if page
       end
       view = model.active_view
-      (view.camera = page.camera) rescue nil if page && page.use_camera?
-      tmp  = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_crop_preview.png')
-      # Mesma proporção do export, senão o crop marcado aqui não corresponde ao PNG final.
-      pw, ph = Exporter.fit_resolution(view, 1280, 720)
+      # Mesmo enquadramento do export, senão o crop marcado aqui não corresponde
+      # ao PNG final. A câmera da tela é reposta ao final: quem está escolhendo o
+      # recorte não deve ver a vista se mexer.
+      cam_tela = Exporter.clonar_camera(view.camera)
+      Exporter.aplicar_camera(view, page) if page && page.use_camera?
+      pw, ph = Exporter.frame_content(view, 1280) || Exporter.fit_resolution(view, 1280, 720)
+      tmp    = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_crop_preview.png')
       view.write_image(filename: tmp, width: pw, height: ph, antialias: false)
+      view.camera = cam_tela
+      view.invalidate
       @dialog.execute_script("window.showCropEditor(#{tmp.to_json})")
     rescue => e
       @dialog.execute_script("window.cropPreviewError(#{e.message.to_json})")
@@ -516,13 +508,13 @@ module STAND1
       view  = model.active_view
       names = (JSON.parse(msg)['scenes'] rescue nil)
       pages = model.pages.select { |p| names.nil? || names.include?(p.name) }
-      orig  = view.camera
+      orig  = Exporter.clonar_camera(view.camera)
       out   = {}
       tmp   = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_thumb.png')
       pages.each do |p|
         begin
-          view.camera = p.camera
-          tw, th = Exporter.fit_resolution(view, 160, 96)
+          Exporter.aplicar_camera(view, p)
+          tw, th = Exporter.frame_content(view, 160) || Exporter.fit_resolution(view, 160, 96)
           view.write_image(filename: tmp, width: tw, height: th, antialias: true)
           out[scene_sid(p)] = image_data_url(tmp)
         rescue
