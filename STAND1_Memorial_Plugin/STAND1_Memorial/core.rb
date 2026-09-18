@@ -17,7 +17,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.13.0"
+  VERSAO        = "7.13.1"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -1816,8 +1816,15 @@ module STAND1_Memorial
       next unless ent.is_a?(Sketchup::Group)
       nome     = nome_container_espaco(ent)
       sem_nome = nome.empty?
-      nome     = "(sem nome)" if sem_nome
       marcado  = ent.get_attribute("STAND1_Memorial", "espaco", false)
+      marcado  = (marcado == true || marcado == "true")
+      # Grupo sem nome não entra na lista — modelo real costuma ter dezenas de
+      # grupos técnicos/auxiliares sem nome que não são ambientes de verdade,
+      # e listar todos poluía a busca. Exceção: já marcado como espaço (uso no
+      # memorial) continua aparecendo, senão não teria como desmarcar/renomear
+      # pela lista — só pelo Outliner do SketchUp.
+      next if sem_nome && !marcado
+      nome     = "(sem nome)" if sem_nome
       tag      = ent.layer&.name.to_s
       tag      = "" if tag == "Untagged" || tag == "Layer0"
       grupos << {
@@ -1826,7 +1833,7 @@ module STAND1_Memorial
         # identificador do ambiente no memorial (casa com _espaco das seções)
         "nome_esp" => nome_espaco_efetivo(ent),
         "sem_nome" => sem_nome,
-        "marcado"  => (marcado == true || marcado == "true"),
+        "marcado"  => marcado,
         "n_sub"    => contar_subcontainers(ent),
         "tag"      => tag,
         "oculto"   => !ent.visible?
