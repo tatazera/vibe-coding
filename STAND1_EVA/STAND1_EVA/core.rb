@@ -262,18 +262,30 @@ module STAND1
     # ── Abre diálogo de pasta e retorna path ──────────────────────────────────
 
     # O seletor de pasta do Windows não lista arquivos — só pastas. O painel de
-    # salvar lista os PNG/JPEG que já estão lá, então dá para ver o que a pasta
-    # tem e clicar no arquivo a substituir. Só a pasta do caminho escolhido é
-    # usada: cada cena grava com o próprio nome.
-    def self.choose_folder(target = 'render')
-      escolha = UI.savepanel('Pasta de destino — clique num arquivo ou confirme',
-                             ultima_pasta(target),
-                             'Imagens (PNG/JPEG)|*.png;*.jpg;*.jpeg||')
+    # salvar lista o que já está na pasta e deixa clicar num arquivo para
+    # substituí-lo.
+    #
+    # O painel abre com um nome já preenchido (o da primeira cena marcada): com
+    # um filtro no lugar do nome, o campo vinha vazio e o Salvar não confirmava
+    # numa pasta sem arquivos. Se o caminho devolvido é um arquivo que já existe,
+    # o usuário clicou nele para substituir; senão, vale só a pasta.
+    def self.choose_folder(msg = 'render')
+      data   = (JSON.parse(msg.to_s) rescue nil)
+      target = data.is_a?(Hash) ? data['target'].to_s : msg.to_s
+      nome   = data.is_a?(Hash) ? data['nome'].to_s : ''
+      nome   = nome.gsub(/[\\\/:\*\?"<>\|]/, '_').strip
+      nome   = 'export' if nome.empty?
+
+      escolha = UI.savepanel('Pasta de destino — clique num arquivo para substituir ou salve',
+                             ultima_pasta(target), "#{nome}.png")
       return unless escolha
       folder = File.directory?(escolha) ? escolha : File.dirname(escolha)
       return unless File.directory?(folder)
-      tgt = (target.nil? || target.to_s.empty?) ? 'render' : target.to_s
+
+      substituir = File.file?(escolha) ? File.basename(escolha) : ''
+      tgt = target.empty? ? 'render' : target
       @dialog.execute_script("window.setFolder(#{tgt.to_json}, #{folder.tr('\\', '/').to_json})")
+      @dialog.execute_script("window.setReplaceTarget(#{substituir.to_json})")
     end
 
     # Reabre o painel na última pasta usada, em vez de sempre no mesmo lugar.
@@ -422,7 +434,7 @@ module STAND1
       pages.each do |p|
         begin
           Exporter.aplicar_camera(view, p)
-          tw, th = Exporter.frame_content(view, 160) || Exporter.fit_resolution(view, 160, 96)
+          tw, th = Exporter.fit_resolution(view, 160, 96)
           view.write_image(filename: tmp, width: tw, height: th, antialias: true)
           out[scene_sid(p)] = image_data_url(tmp)
         rescue

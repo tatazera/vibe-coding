@@ -796,9 +796,8 @@
         <button class="res-preset" onclick="setRes('p',1280,720,this)">HD</button>
       </div>
       <div style="font-size:10.5px;color:#999;margin-top:7px;line-height:1.4">
-        Você define a largura. Cada cena é <b>centralizada no que ela enquadra</b> e a
-        altura acompanha essa proporção — o print não depende do tamanho da janela
-        nem das bandejas abertas.
+        Você define a largura; a altura acompanha a proporção da vista do SketchUp,
+        para o print sair com o enquadramento da cena.
       </div>
     </div>
 
@@ -807,10 +806,6 @@
       <div class="folder-row">
         <div class="folder-path" id="pFolderPath">Nenhuma pasta selecionada</div>
         <button class="btn-folder" onclick="chooseFolder('pres')">Escolher...</button>
-      </div>
-      <div style="font-size:10.5px;color:#999;margin-top:7px;line-height:1.4">
-        O seletor mostra os PNG/JPEG que já estão na pasta: clique no arquivo que
-        quer substituir ou confirme para usar a pasta.
       </div>
     </div>
 
@@ -1340,7 +1335,18 @@
   }
 
   // ── Pasta de destino ────────────────────────────────────────────────────────
-  function chooseFolder(target) { su('choose_folder', target); }
+  // Manda o nome da primeira cena marcada: o seletor abre com ele preenchido,
+  // então o Salvar funciona mesmo numa pasta vazia.
+  function chooseFolder(target) {
+    var p   = target === 'pres' ? 'p' : 'r';
+    var sel = getSelected(p);
+    su('choose_folder', JSON.stringify({ target: target, nome: sel[0] || '' }));
+  }
+
+  // Arquivo da pasta que o usuário clicou para substituir ('' = nenhum).
+  window.setReplaceTarget = function(nome) {
+    st.p.replace = nome || '';
+  };
 
   window.setFolder = function(target, path) {
     var p = target === 'pres' ? 'p' : 'r';
@@ -1424,7 +1430,9 @@
 
     var config = {
       mode: 'presentation', scenes: sel, folder: st.p.folder,
-      resolution: readRes('p'), background: st.p.bg
+      resolution: readRes('p'), background: st.p.bg,
+      // Substituir só faz sentido com uma cena: várias gravam com o próprio nome.
+      replace: sel.length === 1 ? (st.p.replace || '') : ''
     };
     _exportTotal = sel.length;
     document.getElementById('btnExportP').disabled = true;

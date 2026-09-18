@@ -53,6 +53,7 @@ module STAND1
           style:      config[:style]      || 'flat',
           bg:         config[:background] || 'black',
           resolution: config[:resolution] || { width: 3840, height: 2160 },
+          replace:    config[:replace],
           saved:      snapshot_settings(model, view, ro),
           exported:   [],
           failed:     [],
@@ -76,17 +77,10 @@ module STAND1
           aplicar_camera(s[:view], page) if page.use_camera?
           apply_settings(s[:model], s[:ro], s[:mode], s[:style], s[:bg])
 
-          safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
-          path      = File.join(s[:folder], "#{safe_name}.png")
+          path = caminho_saida(s, page)
 
           larg         = s[:resolution][:width] || 3840
-          out_w, out_h = frame_content(s[:view], larg) ||
-                         fit_resolution(s[:view], larg, s[:resolution][:height] || 2160)
-
-          # Trava a proporção na câmera: com aspect_ratio em 0 o render segue o
-          # viewport, que inclui a faixa coberta pela bandeja padrão e joga o
-          # modelo para fora do centro. Reposto em restore_settings.
-          (s[:view].camera.aspect_ratio = out_w.to_f / out_h) rescue nil
+          out_w, out_h = fit_resolution(s[:view], larg, s[:resolution][:height] || 2160)
 
           s[:view].write_image(filename:    path,
                                width:       out_w,
@@ -111,8 +105,19 @@ module STAND1
         { ok: true, exported: s[:exported], failed: s[:failed], folder: s[:folder] }
       end
 
+      # Com uma cena só e um arquivo escolhido para substituir, grava por cima
+      # dele (o formato segue a extensão: .jpg sai JPEG). Com várias cenas cada
+      # uma grava com o próprio nome — um arquivo só não comporta várias cenas.
+      def self.caminho_saida(s, page)
+        alvo = s[:replace].to_s
+        if !alvo.empty? && s[:pages].length == 1
+          return File.join(s[:folder], File.basename(alvo))
+        end
+        safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
+        File.join(s[:folder], "#{safe_name}.png")
+      end
+
       MAX_LADO = 8192
-      MARGEM   = 0.04   # folga em volta do conteúdo, em fração do próprio conteúdo
 
       # Resolução de saída com a proporção do enquadramento da vista.
       #
@@ -154,94 +159,6 @@ module STAND1
         [w, h]
       end
 
-      # Enquadramento calculado a partir do conteúdo — não do viewport.
-      #
-      # O viewport que o SketchUp informa inclui a faixa coberta pela bandeja
-      # padrão: a cena que você centraliza na área visível tem, para o SketchUp,
-      # a câmera deslocada, e o PNG sai com o modelo fora do centro e com sobra
-      # do lado da bandeja. Aqui a câmera é centralizada no conteúdo visível e,
-      # em vista paralela (plantas, elevações, isométricas), o zoom é ajustado
-      # para preenchê-la com margem uniforme — o resultado não depende do
-      # tamanho da janela nem das bandejas abertas.
-      #
-      # Em perspectiva só a centralização é aplicada: mexer no zoom mudaria a
-      # lente e a composição da cena.
-      #
-      # Devolve [largura, altura] da imagem, ou nil se não houver o que enquadrar.
-      def self.frame_content(view, width)
-        bb = visible_bounds(view.model)
-        return nil if bb.nil?
-        return nil unless (bb.diagonal.to_f > 0 rescue false)
-        enquadrar(view, bb, width)
-      end
-
-      def self.enquadrar(view, bb, width)
-        cam = view.camera
-        larg, alt, cu, cv = extensao_na_camera(bb, cam)
-        return nil if larg <= 0 || alt <= 0
-
-        centralizar(cam, cu, cv)
-
-        return fit_resolution(view, width, nil) if cam.perspective?
-
-        # Paralela: a altura da câmera define o enquadramento. A folga é a mesma
-        # nos dois eixos e a imagem sai na proporção do conteúdo mais a folga,
-        # então a margem fica igual nos quatro lados.
-        folga     = MARGEM * [larg, alt].max
-        larg_tot  = larg + 2 * folga
-        alt_tot   = alt  + 2 * folga
-        cam.height = alt_tot
-        limitar(width.to_i, (width.to_i * alt_tot / larg_tot).round)
-      end
-
-      # Bounding box do que está visível: entidades ocultas e tags desligadas
-      # ficam de fora para não empurrarem o enquadramento.
-      #
-      # Os cantos vão um a um (e não o bbox inteiro de uma vez) porque é a forma
-      # que qualquer versão aceita; se mesmo assim nada entrar, vale o bbox do
-      # modelo inteiro — enquadrar demais é melhor que devolver o print torto.
-      def self.visible_bounds(model)
-        bb = Geom::BoundingBox.new
-        model.entities.each do |e|
-          next if e.respond_to?(:hidden?) && e.hidden?
-          next if e.respond_to?(:layer) && e.layer && !e.layer.visible?
-          b = (e.bounds rescue nil)
-          next if b.nil?
-          (bb.add(b.min); bb.add(b.max)) rescue nil
-        end
-        bb = model.bounds if (bb.diagonal.to_f <= 0 rescue true)
-        bb
-      rescue
-        (model.bounds rescue nil)
-      end
-
-      # Extensão do bbox no plano da câmera e o quanto seu centro está fora do
-      # centro do quadro: [largura, altura, desvio_horizontal, desvio_vertical].
-      def self.extensao_na_camera(bb, cam)
-        xa = cam.xaxis
-        ya = cam.yaxis
-        us = []
-        vs = []
-        8.times do |i|
-          d = bb.corner(i) - cam.eye
-          us << d.dot(xa)
-          vs << d.dot(ya)
-        end
-        [us.max - us.min, vs.max - vs.min,
-         (us.min + us.max) / 2.0, (vs.min + vs.max) / 2.0]
-      end
-
-      # Desloca a câmera no seu próprio plano (pan), sem girar nem aproximar.
-      def self.centralizar(cam, cu, cv)
-        return if cu.abs < 1e-6 && cv.abs < 1e-6
-        alt_atual = (cam.height rescue nil)
-        d = Geom::Vector3d.new(cam.xaxis.to_a.map { |c| c * cu })
-        d = d + Geom::Vector3d.new(cam.yaxis.to_a.map { |c| c * cv })
-        cam.set(cam.eye.offset(d), cam.target.offset(d), cam.up)
-        # cam.set recalcula a altura da câmera paralela: repõe a que havia.
-        (cam.height = alt_atual) rescue nil if alt_atual && !cam.perspective?
-      end
-
       # Acesso tolerante a rendering_options: opções inexistentes nesta versão do
       # SketchUp são ignoradas em vez de derrubar o export inteiro.
       def self.safe_get(ro, key)
@@ -276,7 +193,6 @@ module STAND1
 
         {
           camera:      clonar_camera(view.camera),
-          aspect:      (view.camera.aspect_ratio rescue nil),
           transition:  transition,
           page:        model.pages.selected_page,
           shadows:     (model.shadow_info['DisplayShadows'] rescue nil),
@@ -358,9 +274,6 @@ module STAND1
           (model.pages.selected_page = nil) rescue nil
         end
         (model.active_view.camera = saved[:camera]) rescue nil if saved[:camera]
-        # 0 devolve a câmera ao comportamento normal: proporção do viewport.
-        (model.active_view.camera.aspect_ratio = saved[:aspect] || 0) rescue nil
-
         if saved[:transition]
           po = (model.options['PageOptions'] rescue nil)
           if po

@@ -1,5 +1,5 @@
 {
-    "versao":  "2.3.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.3.0.rbz",
-    "notas":  "v2.3.0: EXPORT DE VARIAS CENAS voltou a funcionar - na v2.2.x so a primeira cena era gravada, porque o intervalo entre uma cena e outra estava em zero e o SketchUp nao dispara um timer assim de forma confiavel. ENQUADRAMENTO: o print sai enquadrado pelo limite do desenho com margem fixa nos quatro lados, e nao mais pelo tamanho da janela. Duas causas corrigidas: o calculo do limite do desenho podia vir vazio e cair no comportamento antigo sem avisar (agora, se isso acontecer, usa o limite do modelo inteiro); e a camera passa a ter a proporcao travada durante o export, entao o SketchUp deixa de considerar a faixa coberta pela bandeja padrao. Ao terminar, a camera volta ao normal."
+    "versao":  "2.4.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.4.0.rbz",
+    "notas":  "v2.4.0: o print volta a sair EXATAMENTE como a cena foi criada - o enquadramento automatico das versoes 2.1.1 a 2.3.0 recentralizava e dava zoom pelo desenho, e isso mudava a cena. PASTA DE DESTINO: o seletor abre com o nome da primeira cena ja preenchido, entao Salvar funciona tambem numa pasta vazia (antes so confirmava se ja houvesse um arquivo la). Para substituir, clique num arquivo da pasta: com UMA cena marcada ela e gravada por cima dele (um .jpg sai em JPEG); com varias cenas cada uma grava com o proprio nome."
 }
