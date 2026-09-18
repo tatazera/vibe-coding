@@ -1,5 +1,5 @@
 {
-    "versao":  "2.2.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.2.0.rbz",
-    "notas":  "v2.2.0: APRESENTACAO mais leve e com andamento na tela. O export agora sai uma cena por vez e devolve o controle ao SketchUp entre elas: o rodape mostra o arquivo que esta sendo gravado (Exportando 2/5 - PORTICO ISO) e a barra anda de verdade, em vez da janela travar ate a ultima cena. Saiu o pre-visualizador de imagens da pasta, que gerava miniaturas de todos os PNGs a cada export e era o que mais pesava o dialogo; no lugar entrou um botao Abrir pasta, que abre o destino no Explorer. Saiu tambem a funcao de Recortar margens, sem uso desde que o enquadramento passou a sair certo na v2.1.1."
+    "versao":  "2.2.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.2.1.rbz",
+    "notas":  "v2.2.1: a janela do Windows que escolhe a pasta de destino agora LISTA os PNG e JPEG que ja estao la. O seletor de pasta do Windows so mostra pastas, nunca arquivos - por isso a lista aparecia vazia. Trocado pelo painel de salvar, que lista as imagens: da para ver o conteudo da pasta e clicar no arquivo que voce quer substituir, ou so confirmar para usar a pasta. Apenas a pasta e aproveitada: cada cena continua gravando com o proprio nome. O painel tambem reabre na ultima pasta usada. Saiu o botao Abrir pasta da v2.2.0, que nao resolvia isso."
 }

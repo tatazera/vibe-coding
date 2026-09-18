@@ -44,7 +44,6 @@ module STAND1
       @dialog.set_file(DIALOG_HTML)
       @dialog.add_action_callback('get_scenes')     { |_, _|   send_scenes      }
       @dialog.add_action_callback('choose_folder')  { |_, tgt| choose_folder(tgt) }
-      @dialog.add_action_callback('open_folder')    { |_, path| open_folder(path) }
       @dialog.add_action_callback('export_scenes')  { |_, msg| handle_export(msg) }
       @dialog.add_action_callback('get_materials')  { |_, msg| send_materials(msg) }
       @dialog.add_action_callback('build_prompts')  { |_, msg| handle_build(msg) }
@@ -262,21 +261,29 @@ module STAND1
 
     # ── Abre diálogo de pasta e retorna path ──────────────────────────────────
 
+    # O seletor de pasta do Windows não lista arquivos — só pastas. O painel de
+    # salvar lista os PNG/JPEG que já estão lá, então dá para ver o que a pasta
+    # tem e clicar no arquivo a substituir. Só a pasta do caminho escolhido é
+    # usada: cada cena grava com o próprio nome.
     def self.choose_folder(target = 'render')
-      folder = UI.select_directory(title: 'Selecione a pasta de destino')
-      return unless folder
+      escolha = UI.savepanel('Pasta de destino — clique num arquivo ou confirme',
+                             ultima_pasta(target),
+                             'Imagens (PNG/JPEG)|*.png;*.jpg;*.jpeg||')
+      return unless escolha
+      folder = File.directory?(escolha) ? escolha : File.dirname(escolha)
+      return unless File.directory?(folder)
       tgt = (target.nil? || target.to_s.empty?) ? 'render' : target.to_s
-      @dialog.execute_script("window.setFolder(#{tgt.to_json}, #{folder.to_json})")
+      @dialog.execute_script("window.setFolder(#{tgt.to_json}, #{folder.tr('\\', '/').to_json})")
     end
 
-    # Abre a pasta no Explorer — o seletor de pasta do Windows não lista arquivos,
-    # então é daqui que se confere o que já foi exportado.
-    def self.open_folder(path)
-      return if path.nil? || path.to_s.empty?
-      return unless File.directory?(path)
-      UI.openURL("file:///#{path.to_s.tr('\\', '/')}")
+    # Reabre o painel na última pasta usada, em vez de sempre no mesmo lugar.
+    def self.ultima_pasta(_target)
+      raw = Sketchup.read_default(SETTINGS_KEY, 'settings', '')
+      obj = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
+      dir = obj['pFolder'].to_s
+      File.directory?(dir) ? dir : ''
     rescue
-      nil
+      ''
     end
 
     # ── Recebe configuração do HTML e dispara export ───────────────────────────

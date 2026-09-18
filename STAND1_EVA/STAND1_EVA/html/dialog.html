@@ -808,10 +808,10 @@
         <div class="folder-path" id="pFolderPath">Nenhuma pasta selecionada</div>
         <button class="btn-folder" onclick="chooseFolder('pres')">Escolher...</button>
       </div>
-      <button class="btn-small" id="pOpenFolder" onclick="openFolder()" disabled
-        style="margin-top:8px;width:100%;letter-spacing:0" title="Abrir a pasta no Explorer">
-        Abrir pasta
-      </button>
+      <div style="font-size:10.5px;color:#999;margin-top:7px;line-height:1.4">
+        O seletor mostra os PNG/JPEG que já estão na pasta: clique no arquivo que
+        quer substituir ou confirme para usar a pasta.
+      </div>
     </div>
 
     <div class="section" style="color:#999;font-size:11.5px;line-height:1.5">
@@ -1350,12 +1350,7 @@
     el.classList.add('set');
     refreshButtons(p);
     saveSettings();
-    if (p === 'p') document.getElementById('pOpenFolder').disabled = !path;
   };
-
-  function openFolder() {
-    if (st.p.folder) su('open_folder', st.p.folder);
-  }
 
   // ── Seletores ───────────────────────────────────────────────────────────────
   function setBg(p, val) {
