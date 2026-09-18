@@ -312,7 +312,9 @@ module STAND1
       @dialog.execute_script(
         "window.exportProgress(#{passo[:feito]}, #{passo[:nome].to_json}, #{!!passo[:erro]})"
       )
-      UI.start_timer(0, false) { exportar_proxima }
+      # Intervalo curto, mas nunca zero: um timer de 0s não dispara de forma
+      # confiável no SketchUp e o export parava na primeira cena.
+      UI.start_timer(0.05, false) { exportar_proxima }
     rescue => e
       Exporter.finalizar rescue nil
       @dialog.execute_script("window.exportDone(#{ { ok: false, error: e.message }.to_json })")

@@ -83,6 +83,11 @@ module STAND1
           out_w, out_h = frame_content(s[:view], larg) ||
                          fit_resolution(s[:view], larg, s[:resolution][:height] || 2160)
 
+          # Trava a proporção na câmera: com aspect_ratio em 0 o render segue o
+          # viewport, que inclui a faixa coberta pela bandeja padrão e joga o
+          # modelo para fora do centro. Reposto em restore_settings.
+          (s[:view].camera.aspect_ratio = out_w.to_f / out_h) rescue nil
+
           s[:view].write_image(filename:    path,
                                width:       out_w,
                                height:      out_h,
@@ -165,7 +170,8 @@ module STAND1
       # Devolve [largura, altura] da imagem, ou nil se não houver o que enquadrar.
       def self.frame_content(view, width)
         bb = visible_bounds(view.model)
-        return nil unless bb && !bb.empty? && bb.diagonal > 0
+        return nil if bb.nil?
+        return nil unless (bb.diagonal.to_f > 0 rescue false)
         enquadrar(view, bb, width)
       end
 
@@ -190,14 +196,23 @@ module STAND1
 
       # Bounding box do que está visível: entidades ocultas e tags desligadas
       # ficam de fora para não empurrarem o enquadramento.
+      #
+      # Os cantos vão um a um (e não o bbox inteiro de uma vez) porque é a forma
+      # que qualquer versão aceita; se mesmo assim nada entrar, vale o bbox do
+      # modelo inteiro — enquadrar demais é melhor que devolver o print torto.
       def self.visible_bounds(model)
         bb = Geom::BoundingBox.new
         model.entities.each do |e|
           next if e.respond_to?(:hidden?) && e.hidden?
           next if e.respond_to?(:layer) && e.layer && !e.layer.visible?
-          bb.add(e.bounds) rescue nil
+          b = (e.bounds rescue nil)
+          next if b.nil?
+          (bb.add(b.min); bb.add(b.max)) rescue nil
         end
+        bb = model.bounds if (bb.diagonal.to_f <= 0 rescue true)
         bb
+      rescue
+        (model.bounds rescue nil)
       end
 
       # Extensão do bbox no plano da câmera e o quanto seu centro está fora do
@@ -261,6 +276,7 @@ module STAND1
 
         {
           camera:      clonar_camera(view.camera),
+          aspect:      (view.camera.aspect_ratio rescue nil),
           transition:  transition,
           page:        model.pages.selected_page,
           shadows:     (model.shadow_info['DisplayShadows'] rescue nil),
@@ -342,6 +358,8 @@ module STAND1
           (model.pages.selected_page = nil) rescue nil
         end
         (model.active_view.camera = saved[:camera]) rescue nil if saved[:camera]
+        # 0 devolve a câmera ao comportamento normal: proporção do viewport.
+        (model.active_view.camera.aspect_ratio = saved[:aspect] || 0) rescue nil
 
         if saved[:transition]
           po = (model.options['PageOptions'] rescue nil)

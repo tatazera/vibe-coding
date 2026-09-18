@@ -1,5 +1,5 @@
 {
-    "versao":  "2.2.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.2.1.rbz",
-    "notas":  "v2.2.1: a janela do Windows que escolhe a pasta de destino agora LISTA os PNG e JPEG que ja estao la. O seletor de pasta do Windows so mostra pastas, nunca arquivos - por isso a lista aparecia vazia. Trocado pelo painel de salvar, que lista as imagens: da para ver o conteudo da pasta e clicar no arquivo que voce quer substituir, ou so confirmar para usar a pasta. Apenas a pasta e aproveitada: cada cena continua gravando com o proprio nome. O painel tambem reabre na ultima pasta usada. Saiu o botao Abrir pasta da v2.2.0, que nao resolvia isso."
+    "versao":  "2.3.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.3.0.rbz",
+    "notas":  "v2.3.0: EXPORT DE VARIAS CENAS voltou a funcionar - na v2.2.x so a primeira cena era gravada, porque o intervalo entre uma cena e outra estava em zero e o SketchUp nao dispara um timer assim de forma confiavel. ENQUADRAMENTO: o print sai enquadrado pelo limite do desenho com margem fixa nos quatro lados, e nao mais pelo tamanho da janela. Duas causas corrigidas: o calculo do limite do desenho podia vir vazio e cair no comportamento antigo sem avisar (agora, se isso acontecer, usa o limite do modelo inteiro); e a camera passa a ter a proporcao travada durante o export, entao o SketchUp deixa de considerar a faixa coberta pela bandeja padrao. Ao terminar, a camera volta ao normal."
 }
