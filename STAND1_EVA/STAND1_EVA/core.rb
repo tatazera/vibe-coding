@@ -44,8 +44,7 @@ module STAND1
       @dialog.set_file(DIALOG_HTML)
       @dialog.add_action_callback('get_scenes')     { |_, _|   send_scenes      }
       @dialog.add_action_callback('choose_folder')  { |_, tgt| choose_folder(tgt) }
-      @dialog.add_action_callback('list_folder_images')   { |_, path| list_folder_images(path)   }
-      @dialog.add_action_callback('replace_folder_image') { |_, path| replace_folder_image(path) }
+      @dialog.add_action_callback('open_folder')    { |_, path| open_folder(path) }
       @dialog.add_action_callback('export_scenes')  { |_, msg| handle_export(msg) }
       @dialog.add_action_callback('get_materials')  { |_, msg| send_materials(msg) }
       @dialog.add_action_callback('build_prompts')  { |_, msg| handle_build(msg) }
@@ -53,7 +52,6 @@ module STAND1
       @dialog.add_action_callback('install_update') { |_, url| AutoUpdate.install(url) }
       @dialog.add_action_callback('get_settings')    { |_, _|   send_settings        }
       @dialog.add_action_callback('save_settings')  { |_, msg| save_settings(msg)   }
-      @dialog.add_action_callback('capture_preview')  { |_, msg| send_preview(msg)          }
       @dialog.add_action_callback('choose_logo_file') { |_, _|   choose_logo_file            }
       @dialog.add_action_callback('remove_bg')        { |_, msg| handle_remove_bg(msg)       }
       @dialog.add_action_callback('save_logo_png')    { |_, msg| save_logo_png(msg)         }
@@ -262,32 +260,6 @@ module STAND1
       ''
     end
 
-    # ── Captura preview da viewport atual para o editor visual de crop ────────
-
-    def self.send_preview(scene_name = nil)
-      model = Sketchup.active_model
-      # Muda para a cena solicitada (se fornecida e existir)
-      page = nil
-      if scene_name && !scene_name.empty?
-        page = model.pages.find { |p| p.name == scene_name }
-        model.pages.selected_page = page if page
-      end
-      view = model.active_view
-      # Mesmo enquadramento do export, senão o crop marcado aqui não corresponde
-      # ao PNG final. A câmera da tela é reposta ao final: quem está escolhendo o
-      # recorte não deve ver a vista se mexer.
-      cam_tela = Exporter.clonar_camera(view.camera)
-      Exporter.aplicar_camera(view, page) if page && page.use_camera?
-      pw, ph = Exporter.frame_content(view, 1280) || Exporter.fit_resolution(view, 1280, 720)
-      tmp    = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_crop_preview.png')
-      view.write_image(filename: tmp, width: pw, height: ph, antialias: false)
-      view.camera = cam_tela
-      view.invalidate
-      @dialog.execute_script("window.showCropEditor(#{tmp.to_json})")
-    rescue => e
-      @dialog.execute_script("window.cropPreviewError(#{e.message.to_json})")
-    end
-
     # ── Abre diálogo de pasta e retorna path ──────────────────────────────────
 
     def self.choose_folder(target = 'render')
@@ -297,118 +269,45 @@ module STAND1
       @dialog.execute_script("window.setFolder(#{tgt.to_json}, #{folder.to_json})")
     end
 
-    # ── Aba Apresentação: lista PNG/JPG da pasta p/ grid clicável ──────────────
-    # Aditivo/isolado — não altera o fluxo de export.
-    # O CEF do HtmlDialog bloqueia file:///, então as miniaturas vão por dataURL.
-    # Para não estourar o diálogo com PNGs 4K, geramos thumbs reduzidos (~260px)
-    # via System.Drawing (PowerShell oculto) e só esses thumbs viram base64.
-    def self.list_folder_images(folder)
-      unless folder && !folder.to_s.empty? && File.directory?(folder)
-        @dialog.execute_script("window.setFolderImages([])")
-        return
-      end
-      exts  = %w[png jpg jpeg]
-      files = Dir.entries(folder).select do |f|
-        File.file?(File.join(folder, f)) && exts.include?(f.split('.').last.to_s.downcase)
-      end.sort_by { |f| f.downcase }
-
-      thumbs = build_folder_thumbs(folder, files)   # index => caminho do thumb
-
-      data = files.each_with_index.map do |f, i|
-        full = File.join(folder, f)
-        {
-          name:  f,
-          path:  full.tr('\\', '/'),
-          size:  (File.size(full) rescue 0),
-          mtime: (File.mtime(full).to_i rescue 0),
-          thumb: (thumbs[i] ? image_data_url(thumbs[i]) : '')
-        }
-      end
-      @dialog.execute_script("window.setFolderImages(#{data.to_json})")
-    rescue => e
-      @dialog.execute_script("window.setFolderImages([])")
-    end
-
-    # Gera miniaturas reduzidas dos arquivos da pasta num diretório temporário.
-    # Retorna um hash { indice_do_arquivo => caminho_do_thumb }. Robusto: se o
-    # PowerShell/System.Drawing falhar, retorna {} e o grid degrada (só o nome).
-    def self.build_folder_thumbs(folder, files)
-      return {} if files.empty?
-      dir = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_folderthumbs')
-      FileUtils.rm_rf(dir) rescue (Dir.glob(File.join(dir, '*')).each { |x| File.delete(x) rescue nil })
-      Dir.mkdir(dir) unless File.directory?(dir)
-
-      items = files.each_with_index.map do |f, i|
-        full = File.join(folder, f).tr('/', '\\')
-        "'#{i}|#{full.gsub("'", "''")}'"
-      end.join(",\n")
-      safe_dir = dir.tr('/', '\\').gsub("'", "''")
-
-      ps = <<~PS
-        Add-Type -AssemblyName System.Drawing
-        $dst = '#{safe_dir}'
-        $items = @(
-        #{items}
-        )
-        foreach ($it in $items) {
-          $p = $it -split '\\|', 2
-          $idx = $p[0]; $src = $p[1]
-          try {
-            $img = [System.Drawing.Image]::FromFile($src)
-            $max = 260.0
-            $w = [double]$img.Width; $h = [double]$img.Height
-            $s = [Math]::Min($max / $w, $max / $h)
-            if ($s -gt 1) { $s = 1 }
-            $nw = [int][Math]::Max(1, [Math]::Round($w * $s))
-            $nh = [int][Math]::Max(1, [Math]::Round($h * $s))
-            $bmp = New-Object System.Drawing.Bitmap $nw, $nh
-            $g = [System.Drawing.Graphics]::FromImage($bmp)
-            $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
-            $g.DrawImage($img, 0, 0, $nw, $nh)
-            $bmp.Save((Join-Path $dst ("t" + $idx + ".png")), [System.Drawing.Imaging.ImageFormat]::Png)
-            $g.Dispose(); $bmp.Dispose(); $img.Dispose()
-          } catch {}
-        }
-      PS
-
-      tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_thumbs_#{Process.pid}.ps1")
-      File.write(tmp_ps, ps)
-      run_ps_hidden(tmp_ps)
-      File.delete(tmp_ps) rescue nil
-
-      out = {}
-      files.each_index do |i|
-        t = File.join(dir, "t#{i}.png")
-        out[i] = t if File.exist?(t)
-      end
-      out
-    rescue => e
-      {}
-    end
-
-    # Substitui um arquivo da pasta por outro escolhido no PC (mantém o nome do alvo).
-    def self.replace_folder_image(target)
-      return if target.nil? || target.to_s.empty?
-      src = UI.openpanel('Escolher imagem para substituir', '', 'Imagens|*.png;*.jpg;*.jpeg||')
-      return unless src
-      # Sobrescreve o alvo com os bytes do arquivo escolhido (preserva nome/extensão do alvo).
-      File.open(target, 'wb') { |o| File.open(src, 'rb') { |i| o.write(i.read) } }
-      list_folder_images(File.dirname(target))
-      @dialog.execute_script("window.folderImageReplaced(#{File.basename(target).to_json})")
-    rescue => e
-      @dialog.execute_script("window.folderImageError(#{e.message.to_json})")
+    # Abre a pasta no Explorer — o seletor de pasta do Windows não lista arquivos,
+    # então é daqui que se confere o que já foi exportado.
+    def self.open_folder(path)
+      return if path.nil? || path.to_s.empty?
+      return unless File.directory?(path)
+      UI.openURL("file:///#{path.to_s.tr('\\', '/')}")
+    rescue
+      nil
     end
 
     # ── Recebe configuração do HTML e dispara export ───────────────────────────
 
+    # Exporta uma cena por vez, devolvendo o controle ao SketchUp entre elas: o
+    # diálogo continua respondendo e o status anda junto com os arquivos. Um
+    # laço fechado congelaria a interface até a última cena.
     def self.handle_export(msg)
       config = JSON.parse(msg, symbolize_names: true)
-      # crops usa nomes de cena como chaves — preserva strings para lookup correto
-      raw = JSON.parse(msg)
-      config[:crops] = raw['crops'] if raw['crops']
-      result = Exporter.run(config)
-      @dialog.execute_script("window.exportDone(#{result.to_json})")
+      sessao = Exporter.preparar(config)
+      unless sessao[:ok]
+        @dialog.execute_script("window.exportDone(#{sessao.to_json})")
+        return
+      end
+      exportar_proxima
     rescue => e
+      @dialog.execute_script("window.exportDone(#{ { ok: false, error: e.message }.to_json })")
+    end
+
+    def self.exportar_proxima
+      passo = Exporter.passo
+      if passo[:fim]
+        @dialog.execute_script("window.exportDone(#{Exporter.finalizar.to_json})")
+        return
+      end
+      @dialog.execute_script(
+        "window.exportProgress(#{passo[:feito]}, #{passo[:nome].to_json}, #{!!passo[:erro]})"
+      )
+      UI.start_timer(0, false) { exportar_proxima }
+    rescue => e
+      Exporter.finalizar rescue nil
       @dialog.execute_script("window.exportDone(#{ { ok: false, error: e.message }.to_json })")
     end
 

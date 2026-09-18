@@ -22,8 +22,8 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 - Resolução 4K padrão (2K / FHD / HD ou customizada): você define a largura e a
   altura acompanha o enquadramento da vista, para o PNG sair exatamente como a cena mostra
 - Fundo branco / preto / transparente, sombras desativadas, eixos e anotações ocultos
-- Crop por cena com editor visual
-- Export em lote; restaura as configurações originais do modelo ao final
+- Export em lote, uma cena por vez, com o nome do arquivo em andamento no rodapé
+- Restaura as configurações originais do modelo ao final
 
 ### Logos — tratamento de imagem
 - Remoção de fundo via API remove.bg (chave persistida em `%APPDATA%/STAND1_EVA`)

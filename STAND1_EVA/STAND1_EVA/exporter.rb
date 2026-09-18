@@ -23,69 +23,87 @@ module STAND1
       # MODO presentation  → exporta a cena COMO ESTÁ (estilo/sombras da própria
       #                      cena), aplicando apenas o fundo escolhido e a resolução.
 
-      def self.run(config)
+      # O export corre em passos — uma cena por chamada de `passo` — para o
+      # diálogo continuar respondendo e o status andar junto com os arquivos.
+      # `preparar` valida e guarda o estado, `passo` grava um PNG, `finalizar`
+      # devolve o modelo ao estado original.
+
+      def self.preparar(config)
         model = Sketchup.active_model
         view  = model.active_view
         ro    = model.rendering_options
 
-        mode           = (config[:mode] || 'render').to_s
         selected_names = config[:scenes] || []
         folder         = config[:folder].to_s
-        resolution     = config[:resolution] || { width: 3840, height: 2160 }
-        style_mode     = config[:style]      || 'flat'
-        bg_mode        = config[:background] || 'black'
 
-        return { ok: false, error: 'Nenhuma cena selecionada.' }     if selected_names.empty?
+        return { ok: false, error: 'Nenhuma cena selecionada.' }      if selected_names.empty?
         return { ok: false, error: 'Pasta de destino não definida.' } if folder.empty?
         return { ok: false, error: 'Pasta de destino não existe.' }   unless File.directory?(folder)
 
         pages = model.pages.select { |p| selected_names.include?(p.name) }
         return { ok: false, error: 'Nenhuma cena encontrada no modelo.' } if pages.empty?
 
-        saved = snapshot_settings(model, view, ro)
+        @sessao = {
+          model:      model,
+          view:       view,
+          ro:         ro,
+          pages:      pages,
+          folder:     folder,
+          mode:       (config[:mode] || 'render').to_s,
+          style:      config[:style]      || 'flat',
+          bg:         config[:background] || 'black',
+          resolution: config[:resolution] || { width: 3840, height: 2160 },
+          saved:      snapshot_settings(model, view, ro),
+          exported:   [],
+          failed:     [],
+          i:          0
+        }
+        { ok: true, total: pages.length }
+      end
 
-        exported = []
-        failed   = []
+      def self.passo
+        s = @sessao
+        return { fim: true } unless s
+        page = s[:pages][s[:i]]
+        return { fim: true } unless page
 
-        pages.each do |page|
-          begin
-            model.pages.selected_page = page
-            # A transição animada entre cenas está desligada no snapshot, mas a
-            # câmera da página é reaplicada direto para o enquadramento ser o da
-            # cena, e não um estado intermediário do movimento.
-            aplicar_camera(view, page) if page.use_camera?
-            apply_settings(model, ro, mode, style_mode, bg_mode)
+        erro = nil
+        begin
+          s[:model].pages.selected_page = page
+          # A transição animada entre cenas está desligada no snapshot, mas a
+          # câmera da página é reaplicada direto para o enquadramento ser o da
+          # cena, e não um estado intermediário do movimento.
+          aplicar_camera(s[:view], page) if page.use_camera?
+          apply_settings(s[:model], s[:ro], s[:mode], s[:style], s[:bg])
 
-            safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
-            path      = File.join(folder, "#{safe_name}.png")
+          safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
+          path      = File.join(s[:folder], "#{safe_name}.png")
 
-            larg_pedida  = resolution[:width] || 3840
-            out_w, out_h = frame_content(view, larg_pedida) ||
-                           fit_resolution(view, larg_pedida, resolution[:height] || 2160)
+          larg         = s[:resolution][:width] || 3840
+          out_w, out_h = frame_content(s[:view], larg) ||
+                         fit_resolution(s[:view], larg, s[:resolution][:height] || 2160)
 
-            opts = {
-              filename:    path,
-              width:       out_w,
-              height:      out_h,
-              antialias:   true,
-              transparent: (bg_mode == 'transparent')
-            }
-
-            view.write_image(opts)
-            if config[:crops]
-              # crops é um Hash com chaves string (nome da cena)
-              scene_crop = config[:crops].is_a?(Hash) ? config[:crops][page.name] : nil
-              crop_png(path, scene_crop) if scene_crop
-            end
-            exported << page.name
-          rescue => e
-            failed << { name: page.name, error: e.message }
-          end
+          s[:view].write_image(filename:    path,
+                               width:       out_w,
+                               height:      out_h,
+                               antialias:   true,
+                               transparent: (s[:bg] == 'transparent'))
+          s[:exported] << page.name
+        rescue => e
+          erro = e.message
+          s[:failed] << { name: page.name, error: e.message }
         end
 
-        restore_settings(model, ro, saved)
+        s[:i] += 1
+        { fim: false, feito: s[:i], total: s[:pages].length, nome: page.name, erro: erro }
+      end
 
-        { ok: true, exported: exported, failed: failed, folder: folder }
+      def self.finalizar
+        s = @sessao
+        return { ok: false, error: 'Nenhum export em andamento.' } unless s
+        restore_settings(s[:model], s[:ro], s[:saved])
+        @sessao = nil
+        { ok: true, exported: s[:exported], failed: s[:failed], folder: s[:folder] }
       end
 
       MAX_LADO = 8192
@@ -209,46 +227,6 @@ module STAND1
         (cam.height = alt_atual) rescue nil if alt_atual && !cam.perspective?
       end
 
-      # Recorta o PNG exportado usando System.Drawing via PowerShell.
-      # crop: { left:, top:, right:, bottom: } — percentual de cada borda a remover.
-      def self.crop_png(path, crop)
-        l = (crop[:left]   || crop['left']   || 0).to_f
-        r = (crop[:right]  || crop['right']  || 0).to_f
-        t = (crop[:top]    || crop['top']    || 0).to_f
-        b = (crop[:bottom] || crop['bottom'] || 0).to_f
-        return if l + r >= 100 || t + b >= 100
-        return if [l, r, t, b].all? { |v| v == 0 }
-
-        safe = path.gsub("'", "''")
-        ps = <<~PS
-          Add-Type -AssemblyName System.Drawing
-          $orig = '#{safe}'
-          $tmp  = [System.IO.Path]::ChangeExtension([System.IO.Path]::GetTempFileName(), '.png')
-          $src  = [System.Drawing.Bitmap]::FromFile($orig)
-          $w = $src.Width; $h = $src.Height
-          $x  = [int]($w * #{l} / 100.0)
-          $y  = [int]($h * #{t} / 100.0)
-          $cw = $w - $x - [int]($w * #{r} / 100.0)
-          $ch = $h - $y - [int]($h * #{b} / 100.0)
-          if ($cw -gt 0 -and $ch -gt 0) {
-            $rect = [System.Drawing.Rectangle]::new($x, $y, $cw, $ch)
-            $dst  = $src.Clone($rect, $src.PixelFormat)
-            $src.Dispose()
-            $dst.Save($tmp)
-            $dst.Dispose()
-            [System.IO.File]::Copy($tmp, $orig, $true)
-            [System.IO.File]::Delete($tmp)
-          } else { $src.Dispose() }
-        PS
-
-        tmp_ps = File.join(ENV['TEMP'] || Dir.tmpdir, "eva_crop_#{Process.pid}.ps1")
-        File.write(tmp_ps, ps, encoding: 'UTF-8')
-        system("powershell -NonInteractive -ExecutionPolicy Bypass -File \"#{tmp_ps}\"")
-        File.delete(tmp_ps) rescue nil
-      rescue => e
-        # Crop falhou — mantém o PNG original sem erro
-      end
-
       # Acesso tolerante a rendering_options: opções inexistentes nesta versão do
       # SketchUp são ignoradas em vez de derrubar o export inteiro.
       def self.safe_get(ro, key)
@@ -356,7 +334,13 @@ module STAND1
           l.visible = v unless v.nil? || l.visible? == v
         end
 
-        model.pages.selected_page = saved[:page] if saved[:page]
+        if saved[:page]
+          model.pages.selected_page = saved[:page]
+        else
+          # Não havia cena ativa: sai sem nenhuma selecionada, senão o modelo
+          # fica parado na última cena exportada.
+          (model.pages.selected_page = nil) rescue nil
+        end
         (model.active_view.camera = saved[:camera]) rescue nil if saved[:camera]
 
         if saved[:transition]

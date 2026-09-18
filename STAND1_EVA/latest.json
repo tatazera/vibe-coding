@@ -1,5 +1,5 @@
 {
-    "versao":  "2.1.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.1.1.rbz",
-    "notas":  "v2.1.1: o print sai CENTRALIZADO. O viewport que o SketchUp informa inclui a faixa coberta pela bandeja padrao, entao a cena que voce centraliza na area visivel tem, para o SketchUp, a camera deslocada - o PNG saia com o modelo fora do centro e sobra de um lado so. O enquadramento agora e calculado a partir do proprio conteudo visivel, e nao do viewport: a camera e centralizada no que a cena mostra e, em planta, elevacao ou isometrica, o zoom preenche a imagem com margem igual nos quatro lados. O resultado nao depende mais do tamanho da janela nem das bandejas abertas. Em perspectiva so a centralizacao e aplicada, para nao mexer na lente nem na composicao. Voce define a largura e a altura acompanha a proporcao do que a cena enquadra. O preview do recorte de margens e as miniaturas usam o mesmo enquadramento do export, e nenhuma cena do modelo e alterada no processo."
+    "versao":  "2.2.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.2.0.rbz",
+    "notas":  "v2.2.0: APRESENTACAO mais leve e com andamento na tela. O export agora sai uma cena por vez e devolve o controle ao SketchUp entre elas: o rodape mostra o arquivo que esta sendo gravado (Exportando 2/5 - PORTICO ISO) e a barra anda de verdade, em vez da janela travar ate a ultima cena. Saiu o pre-visualizador de imagens da pasta, que gerava miniaturas de todos os PNGs a cada export e era o que mais pesava o dialogo; no lugar entrou um botao Abrir pasta, que abre o destino no Explorer. Saiu tambem a funcao de Recortar margens, sem uso desde que o enquadramento passou a sair certo na v2.1.1."
 }
