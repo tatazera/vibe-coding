@@ -19,7 +19,8 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 - Copiar individual, copiar todos ou salvar em `.txt`
 
 ### Apresentação — exportador de Scenes
-- Resolução 4K padrão (2K / FHD / HD ou customizada)
+- Resolução 4K padrão (2K / FHD / HD ou customizada): você define a largura e a
+  altura acompanha o enquadramento da vista, para o PNG sair exatamente como a cena mostra
 - Fundo branco / preto / transparente, sombras desativadas, eixos e anotações ocultos
 - Crop por cena com editor visual
 - Export em lote; restaura as configurações originais do modelo ao final
@@ -45,7 +46,7 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 
 ## Instalação
 
-1. Baixe o `.rbz` mais recente (`STAND1_EVA_v2.0.0.rbz`)
+1. Baixe o `.rbz` mais recente (`STAND1_EVA_v2.1.0.rbz`)
 2. No SketchUp: **Extensions → Extension Manager → Install Extension**
 3. Selecione o `.rbz` e reinicie o SketchUp
 4. Menu: **Plugins → STAND1 → EVA Stand1** (ou o botão na toolbar)

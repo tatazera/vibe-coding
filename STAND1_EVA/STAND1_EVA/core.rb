@@ -82,6 +82,19 @@ module STAND1
       model  = Sketchup.active_model
       scenes = model.pages.map { |p| { name: p.name, sid: scene_sid(p) } }
       @dialog.execute_script("window.setScenes(#{scenes.to_json})")
+      send_view_aspect
+    end
+
+    # Proporção do viewport: o export sai com ela, então o diálogo mostra a
+    # altura que realmente vai sair em vez da altura digitada.
+    def self.send_view_aspect
+      view = Sketchup.active_model.active_view
+      vw   = view.vpwidth.to_i
+      vh   = view.vpheight.to_i
+      return if vw <= 0 || vh <= 0
+      @dialog.execute_script("window.setViewAspect(#{(vh.to_f / vw).round(6)})")
+    rescue
+      nil
     end
 
     # ID estável por cena, gravado na própria Page (sobrevive a renomear a cena).
@@ -267,13 +280,17 @@ module STAND1
     def self.send_preview(scene_name = nil)
       model = Sketchup.active_model
       # Muda para a cena solicitada (se fornecida e existir)
+      page = nil
       if scene_name && !scene_name.empty?
         page = model.pages.find { |p| p.name == scene_name }
         model.pages.selected_page = page if page
       end
       view = model.active_view
+      (view.camera = page.camera) rescue nil if page && page.use_camera?
       tmp  = File.join(ENV['TEMP'] || Dir.tmpdir, 'eva_crop_preview.png')
-      view.write_image(filename: tmp, width: 1280, height: 720, antialias: false)
+      # Mesma proporção do export, senão o crop marcado aqui não corresponde ao PNG final.
+      pw, ph = Exporter.fit_resolution(view, 1280, 720)
+      view.write_image(filename: tmp, width: pw, height: ph, antialias: false)
       @dialog.execute_script("window.showCropEditor(#{tmp.to_json})")
     rescue => e
       @dialog.execute_script("window.cropPreviewError(#{e.message.to_json})")
@@ -505,7 +522,8 @@ module STAND1
       pages.each do |p|
         begin
           view.camera = p.camera
-          view.write_image(filename: tmp, width: 160, height: 96, antialias: true)
+          tw, th = Exporter.fit_resolution(view, 160, 96)
+          view.write_image(filename: tmp, width: tw, height: th, antialias: true)
           out[scene_sid(p)] = image_data_url(tmp)
         rescue
         end

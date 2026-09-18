@@ -50,15 +50,23 @@ module STAND1
         pages.each do |page|
           begin
             model.pages.selected_page = page
+            # A transição animada entre cenas está desligada no snapshot, mas a
+            # câmera da página é reaplicada direto para o enquadramento ser o da
+            # cena, e não um estado intermediário do movimento.
+            (view.camera = page.camera) rescue nil if page.use_camera?
             apply_settings(model, ro, mode, style_mode, bg_mode)
 
             safe_name = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
             path      = File.join(folder, "#{safe_name}.png")
 
+            out_w, out_h = fit_resolution(view,
+                                          resolution[:width]  || 3840,
+                                          resolution[:height] || 2160)
+
             opts = {
               filename:    path,
-              width:       resolution[:width]  || 3840,
-              height:      resolution[:height] || 2160,
+              width:       out_w,
+              height:      out_h,
               antialias:   true,
               transparent: (bg_mode == 'transparent')
             }
@@ -78,6 +86,31 @@ module STAND1
         restore_settings(model, ro, saved)
 
         { ok: true, exported: exported, failed: failed, folder: folder }
+      end
+
+      MAX_LADO = 8192
+
+      # Resolução de saída com a proporção exata do enquadramento da vista.
+      #
+      # O SketchUp preserva a ALTURA enquadrada pela câmera e estica a largura
+      # até a proporção pedida. Pedir 16:9 num viewport mais estreito (a bandeja
+      # padrão aberta estreita o viewport) faz entrar conteúdo lateral que a cena
+      # não mostra: o modelo sai pequeno, deslocado e com sobra nas laterais.
+      # Mantendo a largura pedida e derivando a altura do viewport, a imagem sai
+      # com o mesmo enquadramento da vista — sem sobra e sem corte.
+      def self.fit_resolution(view, width, height)
+        w  = width.to_i
+        vw = view.vpwidth.to_i
+        vh = view.vpheight.to_i
+        return [w, height.to_i] if vw <= 0 || vh <= 0
+
+        h = (w * vh.to_f / vw).round
+        h = 1 if h < 1
+        if h > MAX_LADO
+          w = (w * MAX_LADO.to_f / h).round
+          h = MAX_LADO
+        end
+        [w, h]
       end
 
       # Recorta o PNG exportado usando System.Drawing via PowerShell.
@@ -135,11 +168,26 @@ module STAND1
       end
 
       # ── Captura estado atual (para restaurar fielmente) ─────────────────────
+      # Também desliga a transição entre cenas: restaurada em restore_settings.
 
       def self.snapshot_settings(model, view, ro)
         layer_vis = {}
         model.layers.each { |l| layer_vis[l.persistent_id] = l.visible? }
+
+        # Transição animada entre cenas: com ela ligada, o write_image logo após
+        # trocar de página captura um frame no meio do movimento.
+        po = (model.options['PageOptions'] rescue nil)
+        transition = nil
+        if po
+          transition = { show: (po['ShowTransition'] rescue nil),
+                         time: (po['TransitionTime'] rescue nil) }
+          (po['ShowTransition'] = false) rescue nil
+          (po['TransitionTime'] = 0)     rescue nil
+        end
+
         {
+          camera:      view.camera,
+          transition:  transition,
           page:        model.pages.selected_page,
           shadows:     (model.shadow_info['DisplayShadows'] rescue nil),
           sky:         safe_get(ro, 'DisplaySky'),
@@ -213,6 +261,15 @@ module STAND1
         end
 
         model.pages.selected_page = saved[:page] if saved[:page]
+        (model.active_view.camera = saved[:camera]) rescue nil if saved[:camera]
+
+        if saved[:transition]
+          po = (model.options['PageOptions'] rescue nil)
+          if po
+            (po['ShowTransition'] = saved[:transition][:show]) rescue nil unless saved[:transition][:show].nil?
+            (po['TransitionTime'] = saved[:transition][:time]) rescue nil unless saved[:transition][:time].nil?
+          end
+        end
       end
 
     end
