@@ -17,7 +17,7 @@ module STAND1_Memorial
   POL2_PARA_M2        = 0.0254 * 0.0254
 
   # ── VERSÃO + AUTO-UPDATE (via GitHub público) ───────────────────────────────
-  VERSAO        = "7.13.1"
+  VERSAO        = "7.14.0"
   URL_MANIFESTO = "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/latest.json"
 
   # ── KVA ─────────────────────────────────────────────────────────────────────
@@ -892,6 +892,10 @@ module STAND1_Memorial
       copiar_para_clipboard(texto)
     end
 
+    @dialog.add_action_callback("copiar_png_clipboard") do |_ctx, base64|
+      copiar_png_clipboard(base64)
+    end
+
     @dialog.add_action_callback("criar_tags") do |_ctx|
       criar_tags_padrao
     end
@@ -1082,6 +1086,28 @@ module STAND1_Memorial
     File.delete(tmp) rescue nil
   rescue => e
     UI.messagebox("Não foi possível copiar:\n#{e.message}")
+  end
+
+  # ── COPIAR IMAGEM PARA A ÁREA DE TRANSFERÊNCIA ──────────────────────────────
+  # Publica o bloco nos dois formatos: "PNG" (com alfa, que Canva/Chrome leem) e
+  # Bitmap (fallback dos programas que só entendem CF_BITMAP, aí sem transparência).
+  def self.copiar_png_clipboard(base64)
+    tmp = File.join(ENV['TEMP'] || ENV['TMP'] || Dir.tmpdir, "stand1_memorial_canva.png")
+    File.open(tmp, "wb") { |f| f.write(base64.to_s.unpack("m0").first) }
+    ps = [
+      "Add-Type -AssemblyName System.Windows.Forms, System.Drawing",
+      "$bytes = [System.IO.File]::ReadAllBytes('#{tmp}')",
+      "$ms = New-Object System.IO.MemoryStream(, $bytes)",
+      "$img = [System.Drawing.Image]::FromStream($ms)",
+      "$do = New-Object System.Windows.Forms.DataObject",
+      "$do.SetData('PNG', $false, $ms)",
+      "$do.SetImage($img)",
+      "[System.Windows.Forms.Clipboard]::SetDataObject($do, $true)"
+    ].join("; ")
+    system("powershell", "-NoProfile", "-STA", "-WindowStyle", "Hidden", "-Command", ps)
+    File.delete(tmp) rescue nil
+  rescue => e
+    UI.messagebox("Não foi possível copiar a imagem:\n#{e.message}")
   end
 
   # ── SELEÇÃO DE COMPONENTE NO MODELO (LUPA) ──────────────────────────────────

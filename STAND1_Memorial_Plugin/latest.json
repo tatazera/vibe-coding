@@ -1,5 +1,5 @@
 {
-    "versao":  "7.13.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.13.1.rbz",
-    "notas":  "v7.13.1: Hotfix da v7.13.0. A Lista de Ambientes (Multi-Espaco) listava TODOS os grupos de primeiro nivel do modelo, inclusive dezenas de grupos tecnicos/auxiliares sem nome que nao sao ambientes de verdade - poluia a busca em modelos grandes. Agora um grupo sem nome so aparece na lista se ja estiver marcado como espaco (uso no memorial); se nunca foi marcado, some da lista e so volta a aparecer quando ganhar um nome no SketchUp."
+    "versao":  "7.14.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.14.0.rbz",
+    "notas":  "v7.14.0: Novo Copiar para apresentacao (Canva), ao lado do Copiar de sempre. Formato enxuto sem cabecalho/metadados e sem a secao Revestimentos: so a secao, a descricao, a medida LxPxA e a quantidade, com negrito nas medidas e na quantidade. Duas opcoes: Copiar (texto, cola formatado em Word/e-mail/WhatsApp) e Copiar Imagem (PNG com fundo transparente - o Canva zera a formatacao de texto colado, entao a imagem e o unico jeito de manter o negrito la). No Multi-Espaco, os dois botoes aparecem tambem ao lado de cada ambiente."
 }
