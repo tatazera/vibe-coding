@@ -1,5 +1,5 @@
 {
-    "versao":  "7.14.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.14.0.rbz",
-    "notas":  "v7.14.0: Novo Copiar para apresentacao (Canva), ao lado do Copiar de sempre. Formato enxuto sem cabecalho/metadados e sem a secao Revestimentos: so a secao, a descricao, a medida LxPxA e a quantidade, com negrito nas medidas e na quantidade. Duas opcoes: Copiar (texto, cola formatado em Word/e-mail/WhatsApp) e Copiar Imagem (PNG com fundo transparente - o Canva zera a formatacao de texto colado, entao a imagem e o unico jeito de manter o negrito la). No Multi-Espaco, os dois botoes aparecem tambem ao lado de cada ambiente."
+    "versao":  "7.14.1",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.14.1.rbz",
+    "notas":  "v7.14.1: Hotfix do Copiar para apresentacao (Canva), lancado na v7.14.0. 1) Itens de Estruturas com formula de comprimento/perimetro/desenvolvimento/volume (coluna, moldura, testeira etc.) mostravam a medida calculada solta depois do parentese, tipo '(3.65m x 2.00m x 3.00m) - 3.65m' - agora so fica a medida LxPxA entre parenteses. 2) Sobrava uma linha em branco extra no final do texto copiado, depois da ultima secao - removida."
 }

@@ -2335,11 +2335,13 @@ function criarTags(){
 var CANVA_COR='#1a1ac0';
 
 // Descrição do item neste formato: mantém os parênteses de dimensão lxpxa e os
-// parênteses de texto ("(entrada)"), tira a área "- 12.00m²" e a medida solta "(58.00m)".
+// parênteses de texto ("(entrada)"), tira a área/comprimento/volume calculado que
+// vem depois — "- 12.00m²", "- 3.65m" (comprimento/perímetro/desenvolvimento),
+// "- 1.50m³" (volume) — e a medida solta "(58.00m)".
 function _descCanva(item){
   return fmtMedidas(String(item.descricao||''))
-    .replace(/\s*-\s*[\d.,]+\s*m²/gi,'')
-    .replace(/\s*\(\s*[\d.,]+\s*m²?\s*\)/gi,'')
+    .replace(/\s*-\s*[\d.,]+\s*m[²³]?(?![\wµ²³])/gi,'')
+    .replace(/\s*\(\s*[\d.,]+\s*m[²³]?\s*\)/gi,'')
     .replace(/\s{2,}/g,' ').trim();
 }
 function _undCanva(u){ u=String(u||'').trim(); return /\.$/.test(u)?u:u+'.'; }
@@ -2368,6 +2370,7 @@ function _canvaLinhas(esp){
     });
     L.push([]);
   });
+  if(L.length) L.pop();                  // sem linha em branco sobrando no fim
   return L;
 }
 
