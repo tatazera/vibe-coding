@@ -2419,20 +2419,42 @@ function buildCanvaPNG(esp){
       x+=ctx.measureText(s.t).width;
     });
   });
-  return cv.toDataURL('image/png');
+  return cv;
 }
 
 // Espera a Barlow carregar antes de desenhar — senão o measureText usa o fallback
 // e a largura da imagem sai errada. Some das vezes a fonte já está pronta (cache).
+//
+// Dois caminhos para o clipboard, nessa ordem:
+// 1. navigator.clipboard — instantâneo. A janela é carregada com set_file (file://),
+//    que o Chromium aceita como contexto seguro, então a API existe; a permissão de
+//    escrita, porém, pode ser negada para essa origem e só falha na hora.
+// 2. Ruby + PowerShell — sempre funciona, mas custa ~2s (subir o processo e carregar
+//    System.Windows.Forms/Drawing) e pisca o console.
 function copiarCanvaPNG(esp){
   var gerar=function(){
-    var url=buildCanvaPNG(esp||'');
-    if(!url){ mostrarToast('Nada para copiar.'); return; }
-    if(typeof sketchup!=='undefined'&&sketchup.copiar_png_clipboard){
-      sketchup.copiar_png_clipboard(url.split(',')[1]);
-      mostrarToast('🖼 Imagem copiada'+(esp?' · '+_labelEspaco(esp):'')+' — cole no Canva.');
+    var cv=buildCanvaPNG(esp||'');
+    if(!cv){ mostrarToast('Nada para copiar.'); return; }
+    var aviso='🖼 Imagem copiada'+(esp?' · '+_labelEspaco(esp):'')+' — cole no Canva.';
+
+    var viaRuby=function(){
+      if(typeof sketchup!=='undefined'&&sketchup.copiar_png_clipboard){
+        sketchup.copiar_png_clipboard(cv.toDataURL('image/png').split(',')[1]);
+        mostrarToast(aviso);
+      } else {
+        mostrarToast('Disponível apenas dentro do SketchUp.');
+      }
+    };
+
+    if(navigator.clipboard && window.ClipboardItem && cv.toBlob){
+      cv.toBlob(function(blob){
+        if(!blob){ viaRuby(); return; }
+        navigator.clipboard.write([new ClipboardItem({'image/png': blob})])
+          .then(function(){ mostrarToast(aviso); })
+          .catch(viaRuby);
+      }, 'image/png');
     } else {
-      mostrarToast('Disponível apenas dentro do SketchUp.');
+      viaRuby();
     }
   };
   if(document.fonts && document.fonts.ready){

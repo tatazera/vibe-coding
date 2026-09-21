@@ -1,5 +1,5 @@
 {
-    "versao":  "7.14.1",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.14.1.rbz",
-    "notas":  "v7.14.1: Hotfix do Copiar para apresentacao (Canva), lancado na v7.14.0. 1) Itens de Estruturas com formula de comprimento/perimetro/desenvolvimento/volume (coluna, moldura, testeira etc.) mostravam a medida calculada solta depois do parentese, tipo '(3.65m x 2.00m x 3.00m) - 3.65m' - agora so fica a medida LxPxA entre parenteses. 2) Sobrava uma linha em branco extra no final do texto copiado, depois da ultima secao - removida."
+    "versao":  "7.14.2",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_Memorial_Plugin/STAND1_Memorial_v7.14.2.rbz",
+    "notas":  "v7.14.2: Copiar Imagem ficou instantaneo. Antes a imagem ia para a area de transferencia por um processo do PowerShell, que custava uns 2 segundos e piscava uma janela de console. Agora o plugin usa primeiro o clipboard nativo da propria janela; se o Windows recusar, ele cai sozinho no caminho antigo, entao o copiar funciona de qualquer jeito. Nada muda no formato do texto nem da imagem."
 }
