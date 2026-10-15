@@ -42,6 +42,40 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
   automaticamente — você enquadra e salva a cena do seu jeito
 - Um Ctrl+Z desfaz tudo
 
+### Planta — projeções, grid, elétrica e DXF (aba Apresentação)
+Seção **Planta · cenas de topo**, no mesmo fluxo do export. O EVA lê a câmera de cada cena:
+topo paralelo = planta; vista paralela horizontal = elevação; isométrica e perspectiva são
+ignoradas por essas funções. Cena inclinada mais de 2° avisa em vez de gerar torto.
+- **Projeções acima do corte:** contorno tracejado só da tag **ESTRUTURAS** que fica inteira
+  acima do plano de corte (testeira, travessas). Mobiliário, equipamentos e comunicação visual
+  não entram. Cor configurável
+- **Grid 1 m:** só dentro do perímetro do piso (achado na tag ESTRUTURAS), alinhado ao canto e
+  à orientação do piso. Cor configurável
+- **Elétrica + legenda:** simbologia ABNT (NBR 5444) — refletor = arandela, dicroica = ponto de
+  luz no teto, plafon = luminária no teto, tomadas baixa/média/dupla/220 V, ponto de rede, quadro
+  e caixa de passagem (fita
+  LED em traço e ponto, com cor própria) e legenda com quantidades. A fita é lida pelo material
+  (como no Memorial), em metros pela mesma conta (área ÷ largura configurada lá). Símbolos com
+  miolo branco, todos na mesma escala
+- **No export, a planta fica por cima de tudo** (inclusive das paredes cortadas): o corte é
+  isolado num grupo temporário, desfeito logo após gravar o PNG. No "Aplicar na cena" ela fica
+  logo abaixo do corte (sobre móveis e piso)
+- **Pontos elétricos (botão do raio na toolbar, ou ＋ Tomada no painel):** liga/desliga a
+  ferramenta sem abrir o EVA. Clique no piso solta um ponto; clique numa tomada existente marca
+  para editar (trocar o tipo pela lista/↑↓, girar com ←→, tamanho com + / − ou PgUp / PgDn; F8 liga o ortogonal). O
+  componente é o próprio símbolo ABNT, na cor da elétrica do projeto. Seletor visual no canto da
+  tela, clique direito com os tipos, Esc sai. Guia de
+  distância até a tomada vizinha e ponto equidistante com imã; cria
+  componentes na tag ELÉTRICA que o Memorial já conta
+- **Exportar DXF:** marcado, grava um `.dxf` por cena de topo/vista, em mm e 1:1, com camadas
+  `ESTRUTURA`, `PROJECAO` (tracejada), `GRID`, `ELETRICA`, `FITA_LED` (traço e ponto) e `LEGENDA`
+- **Legenda em tabela:** símbolo | nome | QTD, símbolos no mesmo tamanho, fonte Barlow (se
+  instalada; senão Arial) e cor do texto configurável
+- **Aplicar na cena / Limpar:** mostra o resultado na cena atual e deixa selecionadas as peças
+  que geraram projeção
+- **Ignorar seleção:** tira (ou devolve) da planta e do DXF as peças selecionadas no SketchUp
+- As opções ficam salvas por projeto. Nada roda na abertura do plugin
+
 ---
 
 ## Instalação
@@ -51,8 +85,9 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 3. Selecione o `.rbz` e reinicie o SketchUp
 4. Menu: **Plugins → STAND1 → EVA Stand1** (ou o botão na toolbar)
 
-Na toolbar há dois botões: **EVA Stand1** (abre o diálogo) e **Mapa de Artes**
-(varredura automática, ícone com as cores invertidas para diferenciar).
+Na toolbar há três botões: **EVA Stand1** (abre o diálogo), **Mapa de Artes**
+(varredura automática, ícone com as cores invertidas para diferenciar) e **Pontos elétricos**
+(ícone branco com raio; fica aceso enquanto a ferramenta está ativa).
 
 O plugin checa atualizações automaticamente ao abrir (via GitHub).
 
@@ -73,6 +108,7 @@ STAND1_EVA/
     ├── exporter.rb           # export padronizado de Scenes
     ├── prompt_builder.rb     # leitura de câmera/materiais + montagem do prompt
     ├── mapa_artes.rb         # varredura, diagramação e cotas do KV
+    ├── planta.rb             # projeções, grid, elétrica, tomadas e DXF
     ├── autoupdate.rb         # checagem/instalação de update via GitHub
     ├── icons/                # ícones da toolbar (EVA e Mapa de Artes)
     └── html/

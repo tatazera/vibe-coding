@@ -11,6 +11,7 @@ require_relative 'exporter'
 require_relative 'prompt_builder'
 require_relative 'autoupdate'
 require_relative 'mapa_artes'
+require_relative 'planta'
 
 module STAND1
   module EVA
@@ -67,10 +68,57 @@ module STAND1
       @dialog.add_action_callback('mapa_diagramar')      { |_, msg| MapaArtes.diagramar_from_dialog(msg, @dialog) }
       @dialog.add_action_callback('mapa_diagramar_mats') { |_, msg| MapaArtes.diagramar_from_dialog_mats(msg, @dialog) }
       @dialog.add_action_callback('mapa_girar')          { |_, _|   MapaArtes.girar_90(@dialog) }
+      @dialog.add_action_callback('planta_get_cfg')      { |_, _|   planta_enviar_cfg }
+      @dialog.add_action_callback('planta_save_cfg')     { |_, msg| planta_salvar_cfg(msg) }
+      @dialog.add_action_callback('planta_tomada')       { |_, _|   Planta.ativar_tomada(@dialog) }
+      @dialog.add_action_callback('planta_preview')      { |_, msg| planta_preview(msg) }
+      @dialog.add_action_callback('planta_limpar')       { |_, _|   planta_limpar }
+      @dialog.add_action_callback('planta_ignorar')      { |_, _|   planta_ignorar }
+      @dialog.add_action_callback('planta_tecla')        { |_, k|   Planta.tecla_tomada(k) }
       @dialog.show
 
       # Checagem silenciosa de atualização ao abrir (não bloqueia a UI).
       UI.start_timer(2.0, false) { AutoUpdate.check(@dialog, false) } rescue nil
+    end
+
+    # ── Planta (projeções, grid, elétrica, DXF): config POR PROJETO ────────────
+
+    def self.planta_enviar_cfg
+      raw = read_project_text(Sketchup.active_model, 'planta_cfg')
+      cfg = (raw.to_s.empty? ? {} : (JSON.parse(raw) rescue {}))
+      @dialog.execute_script("window.plantaCfg(#{Planta.normalizar_cfg(cfg).to_json})")
+    end
+
+    def self.planta_salvar_cfg(msg)
+      return if msg.to_s.empty?
+      write_project_text(Sketchup.active_model, 'planta_cfg', msg.to_s)
+      Planta.atualizar_cor(Sketchup.active_model, (JSON.parse(msg.to_s) rescue {}))
+    end
+
+    def self.planta_status(txt, ok)
+      @dialog.execute_script("window.plantaStatus(#{txt.to_json}, #{(!!ok).to_json})") if @dialog && @dialog.visible?
+    end
+
+    def self.planta_preview(msg)
+      cfg = JSON.parse(msg.to_s) rescue {}
+      r = Planta.aplicar_na_cena(cfg)
+      planta_status(r[:msg], r[:ok])
+    rescue => e
+      planta_status("Falha: #{e.message}", false)
+    end
+
+    def self.planta_ignorar
+      r = Planta.alternar_ignorar(Sketchup.active_model)
+      planta_status(r[:msg], r[:ok])
+    end
+
+    def self.planta_limpar
+      n = Planta.limpar(Sketchup.active_model)
+      planta_status(n > 0 ? 'Planta removida do modelo.' : 'Não havia planta aplicada.', true)
+    end
+
+    def self.dialog_aberto
+      @dialog if @dialog && @dialog.visible?
     end
 
     # ── Envia lista de Scenes para o HTML ─────────────────────────────────────
@@ -770,16 +818,28 @@ module STAND1
       cmd_kv.small_icon = (File.exist?(icon_kv_small) ? icon_kv_small : icon_small)
       cmd_kv.large_icon = (File.exist?(icon_kv_large) ? icon_kv_large : icon_large)
 
+      # Comando: pontos elétricos (tomadas) — liga/desliga a ferramenta sem abrir o painel.
+      icon_t_small = File.join(icons_dir, 'eva_tomada_small.png')
+      icon_t_large = File.join(icons_dir, 'eva_tomada_large.png')
+      cmd_t = UI::Command.new('Pontos elétricos (tomadas)') { STAND1::EVA::Planta.ativar_tomada }
+      cmd_t.tooltip         = 'Pontos elétricos — tomadas, rede, quadro (ABNT)'
+      cmd_t.status_bar_text = 'Liga/desliga a ferramenta de pontos elétricos: clique no piso para soltar, numa tomada para editar'
+      cmd_t.small_icon = (File.exist?(icon_t_small) ? icon_t_small : icon_small)
+      cmd_t.large_icon = (File.exist?(icon_t_large) ? icon_t_large : icon_large)
+      cmd_t.set_validation_proc { STAND1::EVA::Planta.tomada_ativa ? MF_CHECKED : MF_ENABLED }
+
       # Menu
       menu = UI.menu('Plugins')
       sub  = menu.add_submenu('STAND1')
       sub.add_item(cmd)
       sub.add_item(cmd_kv)
+      sub.add_item(cmd_t)
 
       # Toolbar (barra de ícones)
       toolbar = UI::Toolbar.new('EVA Stand1')
       toolbar.add_item(cmd)
       toolbar.add_item(cmd_kv)
+      toolbar.add_item(cmd_t)
       toolbar.restore
 
       file_loaded(__FILE__)

@@ -54,6 +54,8 @@ module STAND1
           bg:         config[:background] || 'black',
           resolution: config[:resolution] || { width: 3840, height: 2160 },
           replace:    config[:replace],
+          planta:     Planta.normalizar_cfg(config[:planta]),
+          avisos:     [],
           saved:      snapshot_settings(model, view, ro),
           exported:   [],
           failed:     [],
@@ -82,11 +84,14 @@ module STAND1
           larg         = s[:resolution][:width] || 3840
           out_w, out_h = fit_resolution(s[:view], larg, s[:resolution][:height] || 2160)
 
-          s[:view].write_image(filename:    path,
-                               width:       out_w,
-                               height:      out_h,
-                               antialias:   true,
-                               transparent: (s[:bg] == 'transparent'))
+          gravar = lambda do
+            s[:view].write_image(filename:    path,
+                                 width:       out_w,
+                                 height:      out_h,
+                                 antialias:   true,
+                                 transparent: (s[:bg] == 'transparent'))
+          end
+          planta_na_cena(s, page, gravar)
           s[:exported] << page.name
         rescue => e
           erro = e.message
@@ -97,12 +102,40 @@ module STAND1
         { fim: false, feito: s[:i], total: s[:pages].length, nome: page.name, erro: erro }
       end
 
+      # Projeções/grid/elétrica só em cena de topo paralelo; o DXF também em vista
+      # paralela (frontal/lateral). Isométricas e perspectivas passam direto.
+      def self.planta_na_cena(s, page, gravar)
+        cfg  = s[:planta]
+        info = Planta.tipo_camera(s[:view].camera)
+        tipo = info[:tipo]
+        visual = Planta.cfg_ativa?(cfg)
+
+        if visual && tipo == :planta_torta
+          s[:avisos] << "#{page.name}: cena inclinada #{info[:graus]}° da vertical — ajuste para topo reto (planta ignorada)."
+        end
+        if cfg['dxf'] && tipo == :vista_torta
+          s[:avisos] << "#{page.name}: vista inclinada #{info[:graus]}° — ajuste para vista reta (DXF ignorado)."
+        end
+
+        if visual && tipo == :planta
+          Planta.com_overlay(s[:model], s[:view].camera, cfg, s[:avisos], page.name) { gravar.call }
+        else
+          gravar.call
+        end
+
+        if cfg['dxf'] && [:planta, :vista].include?(tipo)
+          nome = page.name.gsub(/[\\\/:\*\?"<>\|]/, '_')
+          Planta.exportar_dxf(s[:model], s[:view].camera, cfg, tipo,
+                              File.join(s[:folder], "#{nome}.dxf"), s[:avisos], page.name)
+        end
+      end
+
       def self.finalizar
         s = @sessao
         return { ok: false, error: 'Nenhum export em andamento.' } unless s
         restore_settings(s[:model], s[:ro], s[:saved])
         @sessao = nil
-        { ok: true, exported: s[:exported], failed: s[:failed], folder: s[:folder] }
+        { ok: true, exported: s[:exported], failed: s[:failed], folder: s[:folder], avisos: s[:avisos] }
       end
 
       # Com uma cena só e um arquivo escolhido para substituir, grava por cima

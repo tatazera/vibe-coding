@@ -1,5 +1,5 @@
 {
-    "versao":  "2.4.0",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.4.0.rbz",
-    "notas":  "v2.4.0: o print volta a sair EXATAMENTE como a cena foi criada - o enquadramento automatico das versoes 2.1.1 a 2.3.0 recentralizava e dava zoom pelo desenho, e isso mudava a cena. PASTA DE DESTINO: o seletor abre com o nome da primeira cena ja preenchido, entao Salvar funciona tambem numa pasta vazia (antes so confirmava se ja houvesse um arquivo la). Para substituir, clique num arquivo da pasta: com UMA cena marcada ela e gravada por cima dele (um .jpg sai em JPEG); com varias cenas cada uma grava com o proprio nome."
+    "versao":  "2.5.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.5.0.rbz",
+    "notas":  "v2.5.0: PLANTA na aba Apresentacao, so para cenas de topo paralelo (o DXF tambem em vistas paralelas). Projecoes tracejadas da estrutura acima do corte, grid de 1 m dentro do piso, e eletrica com simbologia ABNT e legenda em tabela, cada um com cor propria. Fita LED lida pelo material (como no Memorial), em traco e ponto. No export a planta fica por cima das paredes cortadas. Novo botao do raio na toolbar liga a ferramenta de pontos eletricos: tomadas, rede, quadro e caixa de passagem, com seletor visual, edicao das ja inseridas, giro, tamanho (+/-), ortogonal (F8) e guia de equidistancia. Exportar DXF gera ESTRUTURA, PROJECAO, GRID, ELETRICA, FITA_LED e LEGENDA em mm. Ignorar selecao tira pecas da planta."
 }

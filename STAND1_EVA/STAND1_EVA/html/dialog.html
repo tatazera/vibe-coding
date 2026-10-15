@@ -115,6 +115,10 @@
     }
 
     .btn-small:hover { border-color: var(--rosa); color: var(--rosa); }
+    .planta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:5px 0; font-size:12px; }
+    .planta-row label { display:flex; align-items:center; gap:6px; cursor:pointer; }
+    .planta-row input[type=color] { width:26px; height:20px; padding:0; border:1px solid #ccc; border-radius:4px; background:none; cursor:pointer; }
+    .planta-btns { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
 
     .scenes-list { flex: 1; overflow-y: auto; padding: 6px 0; }
 
@@ -809,6 +813,31 @@
       </div>
     </div>
 
+    <div class="section" id="plantaSec">
+      <div class="section-label">Planta · cenas de topo</div>
+      <div class="planta-row"><label><input type="checkbox" id="plProj" onchange="plantaSalvar()"> Projeções acima do corte</label>
+        <input type="color" id="plCorProj" value="#d62828" onchange="plantaSalvar()" title="Cor do tracejado"></div>
+      <div class="planta-row"><label><input type="checkbox" id="plGrid" onchange="plantaSalvar()"> Grid 1 m no piso</label>
+        <input type="color" id="plCorGrid" value="#ffffff" onchange="plantaSalvar()" title="Cor do grid"></div>
+      <div class="planta-row"><label><input type="checkbox" id="plEle" onchange="plantaSalvar()"> Elétrica + legenda</label>
+        <input type="color" id="plCorEle" value="#0a5bd6" onchange="plantaSalvar()" title="Cor dos símbolos de elétrica"></div>
+      <div class="planta-row"><span style="color:#888">Fita LED (traço e ponto)</span>
+        <input type="color" id="plCorFita" value="#ffb000" onchange="plantaSalvar()" title="Cor da linha de fita LED"></div>
+      <div class="planta-row"><span style="color:#888">Texto da legenda</span>
+        <input type="color" id="plCorTexto" value="#ffffff" onchange="plantaSalvar()" title="Cor das letras e da tabela da legenda"></div>
+      <div class="planta-row"><label><input type="checkbox" id="plDxf" onchange="plantaSalvar()"> Exportar DXF (topo e vistas)</label></div>
+      <div class="planta-btns">
+        <button class="btn-small" id="btnTomada" onclick="su('planta_tomada')" title="Clique no piso para soltar tomadas (↑↓ troca o tipo, ←→ gira, Esc sai)">＋ Tomada</button>
+        <button class="btn-small" onclick="plantaPreview()" title="Aplica na cena atual do SketchUp para conferir">Aplicar na cena</button>
+        <button class="btn-small" onclick="su('planta_limpar')">Limpar</button>
+        <button class="btn-small" onclick="su('planta_ignorar')" title="Tira (ou devolve) da planta as peças selecionadas no SketchUp">Ignorar seleção</button>
+      </div>
+      <div style="font-size:10.5px;color:#999;margin-top:6px;line-height:1.4">
+        Age só em cenas de topo paralelo (o DXF também em vistas paralelas). Estrutura e
+        elétrica seguem as tags do Memorial. Ao exportar, sai junto com o PNG.
+      </div>
+    </div>
+
     <div class="section" style="color:#999;font-size:11.5px;line-height:1.5">
       A apresentação exporta cada cena <b>exatamente como está</b> no SketchUp
       (estilo, sombras e tags da própria cena), aplicando apenas o fundo e a
@@ -1017,6 +1046,7 @@
   window.addEventListener('load', function() {
     su('get_scenes');
     su('get_settings');    // preferências salvas
+    su('planta_get_cfg');  // opções de planta (por projeto)
   });
 
   // ── Persistência de preferências ────────────────────────────────────────────
@@ -1430,7 +1460,7 @@
 
     var config = {
       mode: 'presentation', scenes: sel, folder: st.p.folder,
-      resolution: readRes('p'), background: st.p.bg,
+      resolution: readRes('p'), background: st.p.bg, planta: plantaLer(),
       // Substituir só faz sentido com uma cena: várias gravam com o próprio nome.
       replace: sel.length === 1 ? (st.p.replace || '') : ''
     };
@@ -1458,13 +1488,72 @@
     if (!result.ok) { setStatusP('Erro: ' + result.error, 'error'); return; }
 
     var msg = result.exported.length + ' cena(s) exportadas para: ' + result.folder;
+    var avisos = (result.avisos && result.avisos.length > 0);
+    if (avisos) { msg += ' | Avisos: ' + result.avisos.join(' · '); }
     if (result.failed && result.failed.length > 0) {
       msg += ' | Falhas: ' + result.failed.map(function(f){ return f.name; }).join(', ');
       setStatusP(msg, 'error');
     } else {
-      setStatusP(msg, 'ok');
+      setStatusP(msg, avisos ? 'info' : 'ok');
     }
   };
+
+  // ── Planta (projeções / grid / elétrica / DXF) ──────────────────────────────
+  function plantaLer() {
+    return {
+      proj: document.getElementById('plProj').checked,
+      grid: document.getElementById('plGrid').checked,
+      ele:  document.getElementById('plEle').checked,
+      dxf:  document.getElementById('plDxf').checked,
+      corProj: document.getElementById('plCorProj').value,
+      corGrid: document.getElementById('plCorGrid').value,
+      corEle:  document.getElementById('plCorEle').value,
+      corFita: document.getElementById('plCorFita').value,
+      corTexto: document.getElementById('plCorTexto').value
+    };
+  }
+  var _plantaCarregando = false;
+  function plantaSalvar() {
+    if (_plantaCarregando) return;
+    su('planta_save_cfg', JSON.stringify(plantaLer()));
+  }
+  window.plantaCfg = function(c) {
+    _plantaCarregando = true;
+    document.getElementById('plProj').checked = !!c.proj;
+    document.getElementById('plGrid').checked = !!c.grid;
+    document.getElementById('plEle').checked  = !!c.ele;
+    document.getElementById('plDxf').checked  = !!c.dxf;
+    if (c.corProj) document.getElementById('plCorProj').value = c.corProj;
+    if (c.corGrid) document.getElementById('plCorGrid').value = c.corGrid;
+    if (c.corEle)  document.getElementById('plCorEle').value  = c.corEle;
+    if (c.corFita) document.getElementById('plCorFita').value = c.corFita;
+    if (c.corTexto) document.getElementById('plCorTexto').value = c.corTexto;
+    _plantaCarregando = false;
+  };
+  function plantaPreview() {
+    plantaSalvar();
+    setStatusP('Aplicando planta na cena atual...', 'info');
+    su('planta_preview', JSON.stringify(plantaLer()));
+  }
+  window.plantaStatus = function(msg, ok) { setStatusP(msg, ok ? 'ok' : 'error'); };
+
+  // Ferramenta de tomadas: o foco do teclado fica neste painel depois do clique no botão,
+  // então setas e Esc são repassados para a ferramenta no SketchUp.
+  var plantaTomada = false;
+  window.plantaTomadaAtiva = function(on) {
+    plantaTomada = !!on;
+    var b = document.getElementById('btnTomada');
+    if (b) b.textContent = on ? '✕ Sair da tomada' : '＋ Tomada';
+    if (on) setStatusP('Tomada: clique no piso · ↑↓ ou clique na lista troca o tipo · + − tamanho · ←→ gira · F8 ortogonal · Esc sai', 'info');
+  };
+  document.addEventListener('keydown', function(e) {
+    if (!plantaTomada) return;
+    var mapa = { ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39, Escape: 27, Tab: 9,
+                 '+': 107, '=': 107, '-': 109, PageUp: 33, PageDown: 34, F8: 119 };
+    if (mapa[e.key] === undefined) return;
+    e.preventDefault();
+    su('planta_tecla', String(mapa[e.key]));
+  });
 
   // ── Prompts ─────────────────────────────────────────────────────────────────
   function doBuild() {
