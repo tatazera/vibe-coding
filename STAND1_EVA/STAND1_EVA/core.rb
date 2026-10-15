@@ -91,7 +91,11 @@ module STAND1
 
     def self.planta_salvar_cfg(msg)
       return if msg.to_s.empty?
-      write_project_text(Sketchup.active_model, 'planta_cfg', msg.to_s)
+      novo = (JSON.parse(msg.to_s) rescue nil)
+      return unless novo.is_a?(Hash)
+      novo['escSimb'] ||= Planta.cfg_projeto(Sketchup.active_model)['escSimb']
+      msg = novo.to_json
+      write_project_text(Sketchup.active_model, 'planta_cfg', msg)
       Planta.atualizar_cor(Sketchup.active_model, (JSON.parse(msg.to_s) rescue {}))
     end
 

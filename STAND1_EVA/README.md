@@ -62,7 +62,9 @@ ignoradas por essas funções. Cena inclinada mais de 2° avisa em vez de gerar 
   logo abaixo do corte (sobre móveis e piso)
 - **Pontos elétricos (botão do raio na toolbar, ou ＋ Tomada no painel):** liga/desliga a
   ferramenta sem abrir o EVA. Clique no piso solta um ponto; clique numa tomada existente marca
-  para editar (trocar o tipo pela lista/↑↓, girar com ←→, tamanho com + / − ou PgUp / PgDn; F8 liga o ortogonal). O
+  para editar (trocar o tipo pela lista/↑↓, girar com ←→, F8 liga o ortogonal). Tamanho: + / − (ou PgUp / PgDn) sem nada marcado muda o
+  tamanho padrão de todos os símbolos — tomadas já inseridas, próximas, refletores e dicroicas;
+  com tomadas marcadas, só elas. "Padronizar todas" no seletor desfaz as exceções. O
   componente é o próprio símbolo ABNT, na cor da elétrica do projeto. Seletor visual no canto da
   tela, clique direito com os tipos, Esc sai. Guia de
   distância até a tomada vizinha e ponto equidistante com imã; cria

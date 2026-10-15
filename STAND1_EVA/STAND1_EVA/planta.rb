@@ -27,7 +27,7 @@ module STAND1
       CFG_PADRAO = {
         'proj' => false, 'grid' => false, 'ele' => false, 'dxf' => false,
         'corProj' => '#d62828', 'corGrid' => '#ffffff', 'corEle' => '#0a5bd6', 'corFita' => '#ffb000',
-        'corTexto' => '#ffffff'
+        'corTexto' => '#ffffff', 'escSimb' => 1.0
       }.freeze
 
       FITA_AFASTAMENTO = 0.04  # m — a linha da fita sai um pouco para dentro do estande,
@@ -917,6 +917,8 @@ module STAND1
 
         if cfg['ele']
           vf = {}
+          esc_padrao = [[cfg['escSimb'].to_f, ESC_MIN].max, ESC_MAX].min
+          esc_padrao = 1.0 unless cfg['escSimb'].to_f > 0
           unless col[:ele_extra].empty?
             fora = col[:ele_extra].map { |lf| "#{lf[:nome]} (#{lf[:tag].empty? ? 'sem tag' : lf[:tag]})" }.uniq
             avisos << "#{nome}: iluminação achada pelo nome, fora da leitura do Memorial: #{fora.join(', ')}."
@@ -933,7 +935,7 @@ module STAND1
               else
                 cx, cy = centro_leaf(lf, fr)
                 rot = tipo == :refletor ? rotacao_leaf(lf, fr) : 0.0
-                esc = 1.0
+                esc = esc_padrao
               end
               r[:simbolos] << { tipo: tipo, u: cx, v: cy, rot: rot, esc: esc }
             end
@@ -1532,6 +1534,40 @@ module STAND1
         normalizar_cfg(raw.to_s.empty? ? {} : (JSON.parse(raw) rescue {}))
       end
 
+      ESC_MIN = 0.3
+      ESC_MAX = 4.0
+
+      # Tamanho padrão dos símbolos de elétrica do projeto (1,0 = 100%).
+      def self.escala_global(model)
+        e = cfg_projeto(model)['escSimb'].to_f
+        e > 0 ? [[e, ESC_MIN].max, ESC_MAX].min : 1.0
+      end
+
+      def self.escala_inst(inst)
+        Geom::Vector3d.new(1, 0, 0).transform(inst.transformation).length
+      end
+
+      # Grava o tamanho padrão e leva TODAS as tomadas do EVA já inseridas a ele (posição e giro
+      # mantidos). Refletores e dicroicas acompanham na planta/DXF pelo mesmo valor.
+      def self.definir_escala_global(model, esc)
+        esc = [[esc.to_f, ESC_MIN].max, ESC_MAX].min
+        cfg = cfg_projeto(model)
+        cfg['escSimb'] = esc.round(4)
+        STAND1::EVA.write_project_text(model, 'planta_cfg', cfg.to_json)
+        insts = TOMADAS.flat_map { |nome, *| (d = model.definitions[nome]) ? d.instances.to_a : [] }
+        return esc if insts.empty?
+        model.start_operation('EVA tamanho dos símbolos', true)
+        insts.each do |inst|
+          next unless inst.valid?
+          atual = escala_inst(inst)
+          next if atual <= 0 || (atual - esc).abs < 1e-4
+          k = esc / atual
+          inst.transformation = inst.transformation * Geom::Transformation.scaling(Geom::Point3d.new(0, 0, 0), k, k, 1.0)
+        end
+        model.commit_operation
+        esc
+      end
+
       # Cor da elétrica mudou no painel: recolore os símbolos já colocados.
       def self.atualizar_cor(model, cfg)
         m = model.materials['EVA Planta Eletrica']
@@ -1579,7 +1615,8 @@ module STAND1
       class TomadaTool
         IMA = 0.15  # m
         MENU_X = 16; MENU_Y = 16; MENU_W = 270; MENU_LH = 30; MENU_TOPO = 26
-        ATALHOS = [['↑ ↓', 'trocar o tipo'], ['← →', 'girar 90°'], ['+  −', 'tamanho (ou PgUp/PgDn)'],
+        ATALHOS = [['↑ ↓', 'trocar o tipo'], ['← →', 'girar 90°'], ['+  −', 'tamanho de todas (PgUp/PgDn)'],
+                   ['+  −', 'com marcadas: só elas'],
                    ['F8', 'ortogonal liga/desliga'], ['Clique', 'na tomada = editar'], ['Esc', 'sair']].freeze
         MENU_AT_LH = 15                                  # altura de cada linha de atalho
         TECLA_ORTO = 119                                 # F8, como no AutoCAD
@@ -1599,6 +1636,7 @@ module STAND1
           model = Sketchup.active_model
           Planta.atualizar_tomadas(model)
           @existentes = Planta.posicoes_tomadas(model)
+          @escala = Planta.escala_global(model)
           # tomadas já selecionadas no SketchUp entram marcadas para edição
           @marcadas = model.selection.select { |e| Planta.ponto_tomada?(e) }.map { |e| [e, e.transformation.origin] }
           dica
@@ -1642,9 +1680,11 @@ module STAND1
         TECLAS_MAIS  = [107, 187, 33].freeze   # + numérico, = / + , Page Up
         TECLAS_MENOS = [109, 189, 34].freeze   # − numérico, − , Page Down
 
+        # Sem nada marcado: muda o tamanho PADRÃO — todas as tomadas já inseridas, as próximas e
+        # (na planta) refletores e dicroicas. Com tomadas marcadas: só elas, como exceção.
         def redimensionar(f, view)
           if @marcadas.empty?
-            @escala = [[@escala * f, 0.3].max, 4.0].min
+            @escala = Planta.definir_escala_global(Sketchup.active_model, @escala * f)
           else
             model = Sketchup.active_model
             model.start_operation('EVA tamanho da tomada', true)
@@ -1658,7 +1698,13 @@ module STAND1
             end
             model.commit_operation
           end
-          Sketchup.status_text = "EVA Tomada: tamanho #{(@escala * 100).round}%  (+/− ou PgUp/PgDn)"
+          Sketchup.status_text = @marcadas.empty? ? "EVA: todos os símbolos em #{(@escala * 100).round}%  (+/− ou PgUp/PgDn)" : "EVA: tomadas marcadas em #{(@escala * 100).round}%"
+          view.invalidate
+        end
+
+        def padronizar(view)
+          @escala = Planta.definir_escala_global(Sketchup.active_model, Planta.escala_global(Sketchup.active_model))
+          Sketchup.status_text = "EVA: todas as tomadas no tamanho padrão (#{(@escala * 100).round}%)"
           view.invalidate
         end
 
@@ -1683,11 +1729,11 @@ module STAND1
         def linha_menu(x, y)
           return nil unless x >= MENU_X && x <= MENU_X + MENU_W
           i = ((y - MENU_Y - MENU_TOPO) / MENU_LH).floor
-          i >= 0 && i <= Planta::TOMADAS.length + 1 ? i : nil
+          i >= 0 && i <= Planta::TOMADAS.length + 2 ? i : nil
         end
 
         def altura_menu
-          MENU_TOPO + MENU_LH * (Planta::TOMADAS.length + 2) + 10 + MENU_AT_LH * ATALHOS.length + 6
+          MENU_TOPO + MENU_LH * (Planta::TOMADAS.length + 3) + 10 + MENU_AT_LH * ATALHOS.length + 6
         end
 
         def dentro_menu?(x, y)
@@ -1739,6 +1785,7 @@ module STAND1
           menu.add_item('Girar 90°') { @rot += Math::PI / 2; Sketchup.active_model.active_view.invalidate }
           menu.add_item('Aumentar (+)') { redimensionar(1.1, Sketchup.active_model.active_view) }
           menu.add_item('Diminuir (−)') { redimensionar(1 / 1.1, Sketchup.active_model.active_view) }
+          menu.add_item('Padronizar todas no tamanho atual') { padronizar(Sketchup.active_model.active_view) }
           orto = menu.add_item('Ortogonal (F8)') { alternar_orto(Sketchup.active_model.active_view) }
           menu.set_validation_proc(orto) { @orto ? MF_CHECKED : MF_ENABLED }
           menu.add_item('Sair (Esc)') { sair }
@@ -1796,6 +1843,17 @@ module STAND1
           view.draw2d(GL_LINES, [pt.call(cx - 9, cy + 6), pt.call(cx - 9, cy - 9)])
           view.draw_text(pt.call(MENU_X + 52, y0 + 8), "Ortogonal (F8):  #{@orto ? 'LIGADO' : 'desligado'}",
                          size: 10, bold: !!@orto, color: Sketchup::Color.new(@orto ? 20 : 90, @orto ? 130 : 90, @orto ? 60 : 90))
+          # tamanho padrão (clicar = padronizar todas)
+          y0 += MENU_LH
+          view.drawing_color = cinza
+          view.draw2d(GL_LINES, [pt.call(MENU_X + 8, y0), pt.call(MENU_X + MENU_W - 8, y0)])
+          view.drawing_color = Sketchup::Color.new(10, 91, 214)
+          view.line_width = 1.5
+          cx = MENU_X + 26; cy = y0 + MENU_LH / 2.0
+          view.draw2d(GL_LINES, [pt.call(cx - 8, cy + 6), pt.call(cx + 8, cy - 6), pt.call(cx + 2, cy - 6), pt.call(cx + 8, cy - 6),
+                                 pt.call(cx + 8, cy - 6), pt.call(cx + 8, cy)])
+          view.draw_text(pt.call(MENU_X + 52, y0 + 8), "Tamanho #{(@escala * 100).round}%  ·  padronizar todas",
+                         size: 10, color: Sketchup::Color.new(40, 40, 40))
           # sair
           y0 += MENU_LH
           view.drawing_color = cinza
@@ -1857,7 +1915,8 @@ module STAND1
         def onLButtonDown(_flags, x, y, view)
           if menu_visivel? && dentro_menu?(x, y)
             i = linha_menu(x, y)
-            return sair if i == Planta::TOMADAS.length + 1
+            return sair if i == Planta::TOMADAS.length + 2
+            return padronizar(view) if i == Planta::TOMADAS.length + 1
             return alternar_orto(view) if i == Planta::TOMADAS.length
             if i && i < Planta::TOMADAS.length
               @tipo = i
