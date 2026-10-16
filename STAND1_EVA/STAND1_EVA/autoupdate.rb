@@ -9,8 +9,18 @@ module STAND1
 
     module AutoUpdate
 
-      VERSION       = '2.4.0'
       URL_MANIFESTO = 'https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/latest.json'
+
+      # Versão instalada = a que o loader registra no SketchUp (fonte única). Antes havia uma
+      # constante fixa aqui que ficou em 2.4.0 enquanto o loader subia: o plugin se achava
+      # desatualizado para sempre e pedia a mesma atualização a cada abertura.
+      def self.versao_local
+        ext = (Sketchup.extensions['EVA Stand1'] rescue nil)
+        v = ext && ext.version.to_s
+        return v unless v.nil? || v.empty?
+        loader = File.join(File.dirname(__dir__), 'STAND1_EVA_loader.rb')
+        (File.read(loader)[/version\s*=\s*'([\d.]+)'/, 1] rescue nil) || '0'
+      end
 
       # Compara "a.b.c" numericamente: remota > local?
       def self.maior?(remota, local)
@@ -81,11 +91,12 @@ module STAND1
             limpo = body.to_s.dup.force_encoding('UTF-8').scrub('').sub(/\A\uFEFF/, '')
             info  = JSON.parse(limpo)
             nova  = info['versao'].to_s
-            if maior?(nova, VERSION)
+            local = versao_local
+            if maior?(nova, local)
               payload = { versao: nova, notas: info['notas'].to_s, rbz: info['rbz'].to_s }.to_json
               dialog.execute_script("mostrarUpdate(#{payload})") rescue nil
             elsif manual
-              dialog.execute_script("semUpdate(#{VERSION.to_json})") rescue nil
+              dialog.execute_script("semUpdate(#{local.to_json})") rescue nil
             end
           rescue
             dialog.execute_script('updateErro()') rescue nil if manual

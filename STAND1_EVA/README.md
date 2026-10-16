@@ -52,7 +52,7 @@ ignoradas por essas funções. Cena inclinada mais de 2° avisa em vez de gerar 
 - **Grid 1 m:** só dentro do perímetro do piso (achado na tag ESTRUTURAS), alinhado ao canto e
   à orientação do piso. Cor configurável
 - **Elétrica + legenda:** simbologia ABNT (NBR 5444) — refletor = arandela, dicroica = ponto de
-  luz no teto, plafon = luminária no teto, tomadas baixa/média/dupla/220 V, ponto de rede, quadro
+  luz no teto, plafon = luminária no teto, tomadas baixa/média/dupla/220 V, ponto de rede, ponto de TV (legenda com h = 1,60 m), quadro
   e caixa de passagem (fita
   LED em traço e ponto, com cor própria) e legenda com quantidades. A fita é lida pelo material
   (como no Memorial), em metros pela mesma conta (área ÷ largura configurada lá). Símbolos com

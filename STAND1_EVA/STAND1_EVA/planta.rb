@@ -580,6 +580,7 @@ module STAND1
         return :fita    if fita?(n)
         return :quadro  if n =~ /quadro|\bqd\b|qdc/
         return :caixa   if n =~ /caixa de passagem|cx\.? ?de passagem/
+        return :tv      if n =~ /\btv\b|televis|antena/
         return :rede    if n =~ /\brede\b|telefone|dados|internet|rj ?45|logica|lógica/
         if n.include?('tomada')
           return :tomada_220   if n =~ /220|bivolt|ar cond/
@@ -594,7 +595,7 @@ module STAND1
       end
 
       ORDEM_ELE = [:fita, :dicroica, :refletor, :plafon, :tomada, :tomada_media, :tomada_dupla,
-                   :tomada_220, :rede, :quadro, :caixa, :outro].freeze
+                   :tomada_220, :rede, :tv, :quadro, :caixa, :outro].freeze
 
       def self.arco(cx, cy, r, a0, a1, n = 12)
         (0..n).map { |i| a = a0 + (a1 - a0) * i / n.to_f; [cx + r * Math.cos(a), cy + r * Math.sin(a)] }
@@ -629,6 +630,10 @@ module STAND1
             t1 = [[-0.03, 0.0], [0.03, 0.03], [-0.03, 0.06]]
             t2 = [[-0.03, -0.06], [0.03, -0.03], [-0.03, 0.0]]
             [pern, [:l, t1, true], [:l, t2, true]]
+          when :tv         # ponto de TV (antena/cabo): barra + triângulo vazado com ponto cheio
+            [[:l, [[-0.08, 0], [-0.03, 0]], false], [:l, [[-0.03, -0.045], [-0.03, 0.045]], false],
+             [:l, [[-0.03, 0.0], [0.05, 0.04], [0.05, -0.04]], true],
+             [:f, arco(0.025, 0.0, 0.014, 0, 2 * Math::PI, 16)[0...-1]]]
           when :rede       # ponto de rede/telefone: barra + triângulo cheio
             [[:l, [[-0.08, 0], [-0.03, 0]], false], [:l, [[-0.03, -0.035], [-0.03, 0.035]], false],
              [:f, [[-0.03, 0.0], [0.05, 0.04], [0.05, -0.04]]]]
@@ -1005,6 +1010,16 @@ module STAND1
       LEG = { linha: 0.26, txt: 0.085, titulo: 0.10, col_simb: 0.40, col_qtd: 0.70,
               char: 0.055, pad: 0.10, simb: 0.17 }.freeze
 
+      # Altura de instalação mostrada na legenda (o símbolo fica no piso da planta).
+      ALTURA_PONTO = { tv: '1,60 m' }.freeze
+
+      def self.nome_legenda(r)
+        h = ALTURA_PONTO[r[:tipo]]
+        return r[:nome] unless h
+        return r[:nome] if r[:nome] =~ /\bh\s*=|\d+[,.]\d+\s*m\b/i   # o nome já traz a altura
+        "#{r[:nome]} (h = #{h})"
+      end
+
       def self.qtd_legenda(r)
         r[:tipo] == :fita ? format('%.2f m', r[:metros]).tr('.', ',') : r[:qtd].to_s
       end
@@ -1016,7 +1031,7 @@ module STAND1
       def self.layout_legenda(linhas, usar_proj)
         itens = []
         itens << { tipo: :proj, nome: 'Projeção acima do corte', qtd: '' } if usar_proj
-        linhas.each { |l| itens << { tipo: l[:tipo], nome: l[:nome], qtd: qtd_legenda(l) } }
+        linhas.each { |l| itens << { tipo: l[:tipo], nome: nome_legenda(l), qtd: qtd_legenda(l) } }
         return nil if itens.empty?
 
         rh = LEG[:linha]; pad = LEG[:pad]
@@ -1490,6 +1505,7 @@ module STAND1
         ['Tomada dupla',       :tomada_dupla, 'Tomada dupla (2 no mesmo ponto)'],
         ['Tomada 220V',        :tomada_220,   'Tomada de força 220 V'],
         ['Ponto de rede',      :rede,         'Ponto de rede / telefone'],
+        ['Ponto de TV',        :tv,           'Ponto de TV (h = 1,60 m)'],
         ['Quadro elétrico',    :quadro,       'Quadro de distribuição'],
         ['Caixa de passagem',  :caixa,        'Caixa de passagem']
       ].freeze
