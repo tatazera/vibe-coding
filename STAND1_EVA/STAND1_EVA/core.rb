@@ -244,9 +244,32 @@ module STAND1
       File.open(project_text_file(model, attr), 'w:UTF-8') { |f| f.write(val.to_s) } rescue nil
     end
 
+    # Preferências gerais (pasta, fundo, resolução...) num arquivo em %APPDATA%.
+    # O SketchUp grava no PrivatePreferences.json sem escapar as aspas internas do
+    # JSON ("{"pBg":...}"), então o que vinha do registro nunca era lido de volta e a
+    # pasta de destino sumia a cada abertura. O registro fica só como origem antiga.
+    def self.settings_file
+      File.join(backup_dir, 'settings.json')
+    end
+
+    def self.read_settings_obj
+      if File.file?(settings_file)
+        obj = (JSON.parse(File.read(settings_file, encoding: 'UTF-8')) rescue nil)
+        return obj if obj.is_a?(Hash)
+      end
+      raw = (Sketchup.read_default(SETTINGS_KEY, 'settings', '').to_s rescue '')
+      return {} if raw.empty?
+      obj = (JSON.parse(raw) rescue nil)
+      return obj if obj.is_a?(Hash)
+      # gravação antiga quebrada: recupera ao menos a pasta
+      pasta = raw[/"pFolder"\s*:\s*"([^"]*)"/, 1].to_s
+      pasta.empty? ? {} : { 'pFolder' => pasta }
+    rescue
+      {}
+    end
+
     def self.send_settings
-      raw = Sketchup.read_default(SETTINGS_KEY, 'settings', '')
-      obj = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
+      obj = read_settings_obj
       model = Sketchup.active_model
       # CRITICALs são POR-PROJETO: .skp + sidecar do projeto. Sem fallback
       # global — não vazam entre projetos e não somem sem salvar o .skp.
@@ -272,7 +295,13 @@ module STAND1
       # gravação geral disparada por outro campo). Limpar só pelo onApiKeyInput.
       api_key = parsed.delete('rbgApiKey')
       save_api_key(api_key) unless api_key.nil? || api_key.to_s.strip.empty?
-      Sketchup.write_default(SETTINGS_KEY, 'settings', parsed.to_json)
+      # Painel aberto antes de as preferências chegarem manda a pasta vazia: não
+      # apaga a última pasta boa por isso.
+      if parsed['pFolder'].to_s.empty?
+        antiga = read_settings_obj['pFolder'].to_s
+        parsed['pFolder'] = antiga unless antiga.empty?
+      end
+      File.open(settings_file, 'w:UTF-8') { |f| f.write(parsed.to_json) } rescue nil
     end
 
     # Grava a API key imediatamente. O ARQUIVO em %APPDATA% é a fonte primária
@@ -342,9 +371,7 @@ module STAND1
 
     # Reabre o painel na última pasta usada, em vez de sempre no mesmo lugar.
     def self.ultima_pasta(_target)
-      raw = Sketchup.read_default(SETTINGS_KEY, 'settings', '')
-      obj = (raw.nil? || raw.to_s.empty?) ? {} : (JSON.parse(raw) rescue {})
-      dir = obj['pFolder'].to_s
+      dir = read_settings_obj['pFolder'].to_s
       File.directory?(dir) ? dir : ''
     rescue
       ''

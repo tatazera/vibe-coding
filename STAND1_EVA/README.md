@@ -72,7 +72,11 @@ ignoradas por essas funções. Cena inclinada mais de 2° avisa em vez de gerar 
 - **Exportar DXF:** marcado, grava um `.dxf` por cena de topo/vista, em mm e 1:1, com camadas
   `ESTRUTURA`, `PROJECAO` (tracejada), `GRID`, `ELETRICA`, `FITA_LED` (traço e ponto) e `LEGENDA`
 - **Legenda em tabela:** símbolo | nome | QTD, símbolos no mesmo tamanho, fonte Barlow (se
-  instalada; senão Arial) e cor do texto configurável
+  instalada; senão Arial) e cor do texto configurável. Posição escolhida no painel: automática,
+  ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem
+- **Espessura e tamanho:** linhas, tracejados, símbolos e legenda crescem sozinhos com a altura
+  do enquadramento (1× até 4 m, no máximo 8×); o painel multiplica por cima (50% a 300%). Vale
+  só para o PNG — o DXF sai em tamanho real
 - **Aplicar na cena / Limpar:** mostra o resultado na cena atual e deixa selecionadas as peças
   que geraram projeção
 - **Ignorar seleção:** tira (ou devolve) da planta e do DXF as peças selecionadas no SketchUp

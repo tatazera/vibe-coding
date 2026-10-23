@@ -1,5 +1,5 @@
 {
-    "versao":  "2.5.2",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.5.2.rbz",
-    "notas":  "v2.5.2: CORRIGIDO o aviso de atualizacao que reaparecia a cada abertura mesmo com o plugin atualizado (a versao instalada agora vem do registro da extensao). PONTO DE TV na ferramenta de pontos eletricos (botao do raio): simbolo ABNT com barra, triangulo e ponto, reconhecido tambem por \"TV\"/\"antena\" no nome; na legenda sai com a altura \"(h = 1,60 m)\". Se esta versao ainda pedir para atualizar uma ultima vez, instale; depois o aviso some."
+    "versao":  "2.5.3",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.5.3.rbz",
+    "notas":  "v2.5.3: CORRIGIDO a pasta de destino das exportacoes, que voltava vazia a cada abertura (as preferencias agora ficam salvas num arquivo proprio). PLANTA: linhas, tracejados, simbolos de eletrica e legenda crescem sozinhos conforme o tamanho da planta, com ajuste manual em \"Espessura e tamanho\" (o DXF continua em tamanho real). Nova opcao \"Posicao da legenda\": automatica, ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem."
 }

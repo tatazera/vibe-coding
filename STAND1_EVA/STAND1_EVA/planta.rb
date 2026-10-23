@@ -27,8 +27,28 @@ module STAND1
       CFG_PADRAO = {
         'proj' => false, 'grid' => false, 'ele' => false, 'dxf' => false,
         'corProj' => '#d62828', 'corGrid' => '#ffffff', 'corEle' => '#0a5bd6', 'corFita' => '#ffb000',
-        'corTexto' => '#ffffff', 'escSimb' => 1.0
+        'corTexto' => '#ffffff', 'escSimb' => 1.0,
+        'escDesenho' => 1.0, 'posLegenda' => 'auto'
       }.freeze
+
+      # Escala do desenho: linhas, tracejados, símbolos e legenda têm medida fixa em
+      # metros, que some numa planta grande. Até ALTURA_REF de enquadramento fica 1×;
+      # acima disso cresce junto com a altura da vista, e o painel multiplica por cima.
+      ALTURA_REF = 4.0   # m
+      FATOR_MAX  = 8.0
+
+      def self.fator_auto(cam)
+        return 1.0 unless cam && !cam.perspective?
+        [[cam.height / M / ALTURA_REF, 1.0].max, FATOR_MAX].min
+      rescue
+        1.0
+      end
+
+      def self.fator_desenho(cam, cfg)
+        man = cfg['escDesenho'].to_f
+        man = 1.0 unless man > 0
+        fator_auto(cam) * [[man, 0.25].max, 4.0].min
+      end
 
       FITA_AFASTAMENTO = 0.04  # m — a linha da fita sai um pouco para dentro do estande,
                                # para não sumir sob o tracejado da peça onde ela está
@@ -878,11 +898,12 @@ module STAND1
       # ── Cálculo comum a overlay e DXF ─────────────────────────────────────────
 
       # Reúne tudo que a cena de planta precisa, em coordenadas (u, v).
-      def self.calcular_planta(model, cam, cfg, avisos, nome)
+      def self.calcular_planta(model, cam, cfg, avisos, nome, escalar = true)
         fr  = frame(cam)
         col = coletar_modelo(model)
         cut = corte_z(model)
-        r   = { fr: fr, cut: cut, est: col[:est], ele: col[:ele],
+        k   = escalar ? fator_desenho(cam, cfg) : 1.0
+        r   = { fr: fr, cut: cut, est: col[:est], ele: col[:ele], k: k,
                 vista: [], proj: [], grid: [], piso: nil, simbolos: [], fitas: [], legenda: [] }
 
         acima, vista = col[:est].partition { |lf| cut && lf[:minz] >= cut - 0.5 * MM }
@@ -942,7 +963,7 @@ module STAND1
                 rot = tipo == :refletor ? rotacao_leaf(lf, fr) : 0.0
                 esc = esc_padrao
               end
-              r[:simbolos] << { tipo: tipo, u: cx, v: cy, rot: rot, esc: esc }
+              r[:simbolos] << { tipo: tipo, u: cx, v: cy, rot: rot, esc: esc * r[:k] }
             end
           end
           r[:legenda] = legenda_linhas(col[:ele] + col[:ele_extra], fr)
@@ -975,24 +996,38 @@ module STAND1
         { umin: us.min, umax: us.max, vmin: vs.min, vmax: vs.max }
       end
 
-      # Canto superior-esquerdo da legenda (u,v): ao lado do piso, no lado com folga dentro
-      # do enquadramento; devolve também se coube.
-      def self.posicao_legenda(lim, larg_m, alt_m, visivel)
-        w = larg_m * M; h = alt_m * M; gap = 0.4 * M
+      POS_LEGENDA = %w[auto direita esquerda cima baixo sup_esq sup_dir inf_esq inf_dir].freeze
+
+      # Canto superior-esquerdo da legenda (u,v) e se coube no enquadramento.
+      # 'auto' = ao lado do piso, no primeiro lado com folga; direita/esquerda/cima/baixo =
+      # aquele lado do piso; sup_esq... = canto da imagem, por cima do que estiver lá.
+      def self.posicao_legenda(lim, larg_m, alt_m, visivel, pos = 'auto', k = 1.0)
+        pos = POS_LEGENDA.include?(pos.to_s) ? pos.to_s : 'auto'
+        w = larg_m * M; h = alt_m * M; gap = 0.4 * M * k
         return [[0.0, h], false] unless lim
-        opcoes = {
-          direita:  [lim[:umax] + gap, lim[:vmax]],
-          esquerda: [lim[:umin] - gap - w, lim[:vmax]],
-          baixo:    [lim[:umin], lim[:vmin] - gap],
-          cima:     [lim[:umin], lim[:vmax] + gap + h]
-        }
-        if visivel
-          opcoes.each do |lado, (u, v)|
-            ok = u >= visivel[:umin] && u + w <= visivel[:umax] && v <= visivel[:vmax] && v - h >= visivel[:vmin]
-            return [[u, v], true] if ok
-          end
+        cabe = lambda do |(u, v)|
+          visivel.nil? ||
+            (u >= visivel[:umin] && u + w <= visivel[:umax] && v <= visivel[:vmax] && v - h >= visivel[:vmin])
         end
-        [opcoes[:direita], visivel.nil?]
+        if pos.start_with?('sup_', 'inf_') && visivel
+          mg = (visivel[:vmax] - visivel[:vmin]) * 0.03
+          u = pos.end_with?('esq') ? visivel[:umin] + mg : visivel[:umax] - mg - w
+          v = pos.start_with?('sup') ? visivel[:vmax] - mg : visivel[:vmin] + mg + h
+          return [[u, v], cabe.call([u, v])]
+        end
+        opcoes = {
+          'direita'  => [lim[:umax] + gap, lim[:vmax]],
+          'esquerda' => [lim[:umin] - gap - w, lim[:vmax]],
+          'baixo'    => [lim[:umin], lim[:vmin] - gap],
+          'cima'     => [lim[:umin], lim[:vmax] + gap + h]
+        }
+        if (pt = opcoes[pos])
+          return [pt, cabe.call(pt)]
+        end
+        if visivel
+          opcoes.each_value { |o| return [o, true] if cabe.call(o) }
+        end
+        [opcoes['direita'], visivel.nil?]
       end
 
       def self.area_visivel(cam, view)
@@ -1028,7 +1063,7 @@ module STAND1
       # Colunas: símbolo | nome | quantidade. Todo símbolo cabe no mesmo quadrado de
       # LEG[:simb], centrado na célula — mesmo tamanho e mesmo espaçamento em todas as linhas.
       # → { w:, h:, linhas: [[a, b, :borda|:simb|:fita|:proj]], textos: [{s:, x:, cy:, h:, alinha:}] }
-      def self.layout_legenda(linhas, usar_proj)
+      def self.layout_legenda(linhas, usar_proj, k = 1.0)
         itens = []
         itens << { tipo: :proj, nome: 'Projeção acima do corte', qtd: '' } if usar_proj
         linhas.each { |l| itens << { tipo: l[:tipo], nome: nome_legenda(l), qtd: qtd_legenda(l) } }
@@ -1087,7 +1122,12 @@ module STAND1
           textos << { s: it[:nome], x: x1 + pad, cy: cy, h: LEG[:txt], alinha: :esq }
           textos << { s: it[:qtd], x: w - pad, cy: cy, h: LEG[:txt], alinha: :dir } unless it[:qtd].empty?
         end
-        { w: w, h: h, linhas: segs, textos: textos, miolos: miolos_leg, cheios: cheios_leg }
+        # monta na medida base e amplia tudo pela escala do desenho
+        q = ->(p) { [p[0] * k, p[1] * k] }
+        { w: w * k, h: h * k,
+          linhas: segs.map { |a, b, t| [q.call(a), q.call(b), t] },
+          textos: textos.map { |t| t.merge(x: t[:x] * k, cy: t[:cy] * k, h: t[:h] * k) },
+          miolos: miolos_leg.map { |pl| pl.map(&q) }, cheios: cheios_leg.map { |pl| pl.map(&q) } }
       end
 
       # ── Construção no SketchUp ────────────────────────────────────────────────
@@ -1138,6 +1178,7 @@ module STAND1
           Geom::Point3d.new(fr[:rx] * u + fr[:ux] * v, fr[:ry] * u + fr[:uy] * v, fr[:rz] * u + fr[:uz] * v + z)
         end
         cut = r[:cut]
+        k   = r[:k] || 1.0
         topo = model.bounds.max.z
         # Com o corte isolado num grupo (export), tudo vai ACIMA do corte e fica por cima
         # das paredes cortadas. Sem isso (Aplicar na cena), logo abaixo do corte: por cima
@@ -1154,12 +1195,13 @@ module STAND1
 
         if cfg['grid'] && r[:piso]
           mat = material(model, 'EVA Planta Grid', cfg['corGrid'], 0.7)
-          r[:grid].each { |s| faixa(ents, s[0], s[1], W_GRID, z_grid, mat, mp) }
+          r[:grid].each { |s| faixa(ents, s[0], s[1], W_GRID * k, z_grid, mat, mp) }
         end
 
         if cfg['proj'] && !r[:proj].empty?
           mat = material(model, 'EVA Planta Projecao', cfg['corProj'])
-          encadear(r[:proj]).each { |pl| tracejar_poli(pl).each { |d| faixa(ents, d[0], d[1], W_PROJ, z_proj, mat, mp) } }
+          traco = TRACO.map { |x| x * k }
+          encadear(r[:proj]).each { |pl| tracejar_poli(pl, traco).each { |d| faixa(ents, d[0], d[1], W_PROJ * k, z_proj, mat, mp) } }
         end
 
         if cfg['ele']
@@ -1168,8 +1210,8 @@ module STAND1
           branco = material(model, 'EVA Planta Branco', '#ffffff')
           centro = centro_ref(r)
           encadear(r[:fitas]).each do |pl|
-            tracejar_poli(afastar_poli(pl, centro, FITA_AFASTAMENTO), TRACO_PONTO).each do |d|
-              faixa(ents, d[0], d[1], W_FITA, z_fita, matf, mp)
+            tracejar_poli(afastar_poli(pl, centro, FITA_AFASTAMENTO * k), TRACO_PONTO.map { |x| x * k }).each do |d|
+              faixa(ents, d[0], d[1], W_FITA * k, z_fita, matf, mp)
             end
           end
           r[:simbolos].each do |s|
@@ -1182,7 +1224,7 @@ module STAND1
               preencher(ents, poly.map { |p| [s[:u] + p[0] * M, s[:v] + p[1] * M] }, z_fill + 0.25 * MM, mat, mp)
             end
             simbolo_segs(prims, 0, 0).each do |a, b|
-              faixa(ents, [s[:u] + a[0] * M, s[:v] + a[1] * M], [s[:u] + b[0] * M, s[:v] + b[1] * M], W_ELE, z_ele, mat, mp)
+              faixa(ents, [s[:u] + a[0] * M, s[:v] + a[1] * M], [s[:u] + b[0] * M, s[:v] + b[1] * M], W_ELE * k, z_ele, mat, mp)
             end
           end
           desenhar_legenda(model, ov, r, cfg, cam, mat, z_ele, avisos, nome)
@@ -1252,10 +1294,12 @@ module STAND1
 
       def self.desenhar_legenda(model, ov, r, cfg, cam, mat, z, avisos, nome)
         usar_proj = cfg['proj'] && !r[:proj].empty?
-        lay = layout_legenda(r[:legenda], usar_proj)
+        k = r[:k] || 1.0
+        lay = layout_legenda(r[:legenda], usar_proj, k)
         return unless lay
-        (u0, v0), coube = posicao_legenda(limites_ref(r), lay[:w], lay[:h], area_visivel(cam, model.active_view))
-        avisos << "#{nome}: a legenda não cabe no enquadramento — afaste a câmera da cena." unless coube
+        (u0, v0), coube = posicao_legenda(limites_ref(r), lay[:w], lay[:h], area_visivel(cam, model.active_view),
+                                          cfg['posLegenda'], k)
+        avisos << "#{nome}: a legenda não cabe no enquadramento — afaste a câmera ou mude a posição da legenda." unless coube
 
         g = ov.entities.add_group
         g.name = 'Legenda'
@@ -1268,7 +1312,7 @@ module STAND1
           fita:  material(model, 'EVA Planta Fita', cfg['corFita']),
           proj:  material(model, 'EVA Planta Projecao', cfg['corProj'])
         }
-        larg = { borda: 0.004, simb: W_ELE, fita: W_FITA, proj: W_PROJ }
+        larg = { borda: 0.004 * k, simb: W_ELE * k, fita: W_FITA * k, proj: W_PROJ * k }
         branco = material(model, 'EVA Planta Branco', '#ffffff')
         lay[:miolos].each { |poly| preencher(ents, poly.map { |q| [q[0] * M, q[1] * M] }, z - 0.5 * MM, branco, ident) }
         lay[:cheios].each { |poly| preencher(ents, poly.map { |q| [q[0] * M, q[1] * M] }, z - 0.25 * MM, mat, ident) }
@@ -1431,7 +1475,9 @@ module STAND1
         fr  = frame(cam)
         out = []
         if tipo == :planta
-          r = calcular_planta(model, cam, cfg, avisos, nome)
+          # DXF é vetor: a escala do desenho (espessura/tamanho para o PNG) não vale aqui;
+          # símbolos e legenda saem no tamanho real.
+          r = calcular_planta(model, cam, cfg, avisos, nome, false)
           r[:vista].each { |s| out << [:linha, 'ESTRUTURA', s[0], s[1]] }
           r[:proj].each  { |s| out << [:linha, 'PROJECAO', s[0], s[1]] }
           r[:grid].each  { |s| out << [:linha, 'GRID', s[0], s[1]] }
@@ -1445,11 +1491,10 @@ module STAND1
               out << [:solido, 'ELETRICA', poly.map { |q| [s[:u] + q[0] * M, s[:v] + q[1] * M] }]
             end
           end
-          lay = cfg['ele'] ? layout_legenda(r[:legenda], cfg['proj'] && !r[:proj].empty?) : nil
+          lay = cfg['ele'] ? layout_legenda(r[:legenda], cfg['proj'] && !r[:proj].empty?, r[:k]) : nil
           if lay
-            lim = limites_ref(r)
-            u0 = lim ? lim[:umax] + 1.0 * M : 0.0
-            v0 = lim ? lim[:vmax] : 0.0
+            (u0, v0), = posicao_legenda(limites_ref(r), lay[:w], lay[:h], area_visivel(cam, model.active_view),
+                                        cfg['posLegenda'], r[:k])
             camada = { borda: 'LEGENDA', simb: 'ELETRICA', fita: 'FITA_LED', proj: 'PROJECAO' }
             lay[:linhas].each do |a, b, k|
               out << [:linha, camada[k], [u0 + a[0] * M, v0 + a[1] * M], [u0 + b[0] * M, v0 + b[1] * M]]
