@@ -341,8 +341,11 @@ def parse_objetos(dados, com_nivel):
                     valor = r.f32()
                 elif tipo == 3:
                     valor = r.cstr()
+                elif tipo == 4:  # booleano
+                    valor = r.i32()
                 else:
-                    raise ValueError("tipo de campo desconhecido: %d" % tipo)
+                    raise ValueError("tipo de campo desconhecido: %d (posicao %d, campo %s)"
+                                     % (tipo, r.p, campo))
                 r.u32()  # marcador de fim da modificacao
                 chave = campo + ("/%d" % ptr if ptr else "")
                 if com_nivel:
@@ -444,6 +447,10 @@ def extrair(fonte, saida, log):
             erros.append("%s: %s" % (n, e))
             continue
         brutos[n.lower().replace("/", "\\")] = dados
+        if ext in (".w3u", ".w3t", ".w3a", ".w3h", ".w3q", ".w3b", ".w3d", ".w3i") \
+                and len(dados) <= LIMITE_TEXTO:
+            (saida / "brutos").mkdir(exist_ok=True)
+            (saida / "brutos" / n.replace("\\", "__").replace("/", "__")).write_bytes(dados)
         if ext in (".j", ".lua", ".txt", ".slk", ".wts", ".wtg", ".wct", ".imp",
                    ".ini", ".json", ".fdf", ".toc") and len(dados) <= LIMITE_TEXTO:
             destino = saida / "scripts" / n.replace("\\", "__").replace("/", "__")
