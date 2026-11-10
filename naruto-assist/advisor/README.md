@@ -57,3 +57,9 @@ Se passar das vagas, sai primeiro o Extra e depois a Jade (`ordem_corte`); core 
 Aba Build: cabecalho do heroi, checkpoints a esquerda, ORDEM DAS SKILLS no topo do centro (com atributos abaixo) e itens por checkpoint + situacionais
 a direita (detalhe do item embaixo). A aba "Itens por nivel" concentra o quadro por checkpoints, linhas de evolucao, arvores de como fazer, lista de compras e kit de farm.
 Linhas de evolucao incluem as formas intermediarias (ex.: Jounin -> Anbu -> Sannin -> Kage Robe; Shippu -> Super Boots Lv1 -> Lv2 -> Lv3).
+
+## Regra de exibicao: mostrar tudo
+O sugestor nao esconde informacao: todas as skills do heroi aparecem (faixa "Skills do heroi", grade de ordem e aba Skills), inclusive as fixas
+(sem pontos para distribuir, linhas apagadas) e as sem hotkey definida no mapa (a tecla e inferida pelo tooltip ou pela primeira letra livre Q/W/E/R/T e marcada "tecla inferida").
+Skills tecnicas (unidades de treino de atributos: Taijutsu, Armor, Damage...) sao marcadas `tecnica` e nao aparecem.
+O catalogo lista todos os itens (armas de outra familia ficam marcadas "outra familia"); so entradas tecnicas de loja (Upgrade/Combine/Recipe/Mission) ficam fora, e aparecem nas arvores de "Como fazer".

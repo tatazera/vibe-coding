@@ -521,6 +521,9 @@ def parse_skill(aid, jogo, skin):
     if not nome:
         return None
     tecla = primeiro(s.get("ahky")) or ""
+    if not tecla:   # hotkey nao definida: tenta a do tooltip, ex.: "Skill [Q] - [Level 1]"
+        mt = re.search(r"\[([A-Z])\]", limpar(primeiro(s.get("atp1"))))
+        tecla = mt.group(1) if mt else ""
     ub = limpar(primeiro(s.get("aub1")))
     niveis = primeiro(c.get("alev")) or 1
     dano = linha(ub, "Damage")
@@ -557,6 +560,15 @@ def montar(pasta):
                 skills.append(x)
         if not any(sk["tecla"] for sk in skills):
             continue  # unidade auxiliar do mapa (sem skills jogaveis)
+        # skill heroica sem hotkey definida: usa a primeira tecla livre entre Q W E R T; skills de atributo (Taijutsu, Armor...) sao tecnicas
+        usadas = {sk["tecla"] for sk in skills if sk["tecla"]}
+        livres = [k for k in ("Q", "W", "E", "R", "T") if k not in usadas]
+        for sk in skills:
+            if sk["heroica"] and not sk["tecla"]:
+                if re.fullmatch(r"Taijutsu|Ninjutsu|Genjutsu|Armor|Damage|HP|Life Steal|Damage Reduction \d*", sk["nome"]) or not livres:
+                    sk["tecnica"] = True
+                else:
+                    sk["tecla"], sk["teclaInferida"] = livres.pop(0), True
         primario = ATRIB.get(c.get("upra", "STR"), "tai")
         herois.append({
             "id": uid, "nome": nome, "primario": primario,

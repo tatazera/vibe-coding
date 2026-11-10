@@ -299,7 +299,7 @@ function avaliar(expr, L, T, N, G){
 const reqNivel = (s, r) => (s.req.arlv ?? 1) + (r-1) * (s.req.alsk ?? 2);
 function atributosBase(h, nivel){ const o = {}; for(const k of ["tai","nin","gen"]) o[k] = h.base[k] + h.cresc[k]*(nivel-1); return o; }
 function ordemSkills(h, nivelMax){
-  const hs = h.skills.filter(s => s.heroica && s.tecla);
+  const hs = h.skills.filter(s => s.heroica && s.tecla && !s.tecnica);
   const rank = Object.fromEntries(hs.map(s => [s.id, 0]));
   const passos = []; let faseTroca = null;
   const cheio = (s, r, b) => avaliar(s.dano, r, b.tai, b.nin, b.gen) ?? 0;
@@ -334,6 +334,13 @@ function maxSequencia(o){
   }).filter(x => x.r > 0);
   feitos.sort((a,b) => (a.L - b.L) || (b.r - a.r));
   return feitos;
+}
+const ORDEM_TECLAS = ["Q","W","E","R","T","Y","A","S","D","F","Z","X","C","V"];
+const skillVisivel = s => !s.tecnica && (s.tecla || s.descricao || s.dano);
+function todasSkills(h){
+  return h.skills.filter(skillVisivel).map((s,i) => ({s,i}))
+    .sort((a,b) => { const ka = ORDEM_TECLAS.indexOf(a.s.tecla), kb = ORDEM_TECLAS.indexOf(b.s.tecla);
+      return ((ka<0?99:ka) - (kb<0?99:kb)) || (a.i - b.i); }).map(x => x.s);
 }
 const nivelSkill = s => Math.max(1, S.niveisSkill[s.id] ?? S.ranks[s.id] ?? 1);
 /* checkpoints de poder: niveis em que as skills com nivel minimo (ultimates) sobem */
@@ -552,7 +559,8 @@ function situacionais(h, set){
   const lista = D.itens.filter(i => i.tipo && comprável(i) && !set.includes(i) && !S.banidos.has(i.id) && armaCompativel(i,h));
   const el = elementoPadrao(h), fam = {tai:"tai", nin:"nin", gen:"gen"}[h.primario];
   const destaque = i => (i.categoria === "arma_elemental" && ELEM(i.nome) === el && i.familia === fam && !/\(/.test(i.nome)) ? 0 : 1;
-  const pol = lista.filter(i => isSit(i, h)).sort((a,b)=> destaque(a)-destaque(b) || (a.ouro||0)-(b.ouro||0)).slice(0,14);
+  const ninjas = D.itens.filter(i => i.ativa && !set.includes(i) && comprável(i));       // as outras Ninja Weapons (outras familias, Bomb, tags...)
+  const pol = lista.filter(i => isSit(i, h)).sort((a,b)=> destaque(a)-destaque(b) || (a.ouro||0)-(b.ouro||0)).concat(ninjas.filter(i => !lista.includes(i)));
   const grupos = SIT.map(g => ({t:g.t, d:g.d, itens: lista.filter(i => !isSit(i, h) && i.categoria !== "espirito" && g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
   return {pol, grupos};
 }
@@ -700,18 +708,23 @@ function linhasEvolucaoHtml(plano){
   }).join("");
 }
 function ordemSkillsHtml(X){
-  const o = X.ordem, hs = o.hs, maxSeq = maxSequencia(o), cps = checkpoints(X.h, X.nivel), nivelCp = new Set(cps.map(c => c.L));
+  const o = X.ordem, maxSeq = maxSequencia(o), cps = checkpoints(X.h, X.nivel), nivelCp = new Set(cps.map(c => c.L));
   const plano = planoMarcos(X), fimNivel = plano[plano.length-1].nivel;
   const colunas = Math.min(Math.max(X.nivel, fimNivel), 60);
-  return `<div class="caixa"><h2>Ordem das skills</h2>
+  const todas = todasSkills(X.h), sobem = new Set(o.hs.map(s => s.id));
+  return `<div class="caixa"><h2>Skills do herói</h2>
+    <div class="fila" style="gap:8px;margin-bottom:10px">${todas.map(s => `<div style="display:flex;gap:6px;align-items:center;background:var(--painel2);border:1px solid var(--borda);border-radius:10px;padding:3px 8px 3px 3px;${sobem.has(s.id)?"":"opacity:.8"}" title="${esc(s.descricao||"")}">
+      ${ico(s.icone, s.nome, s.atributos[0]?"a-"+s.atributos[0]:"", 34, s.tecla)}<span style="font-size:12px;line-height:1.15;max-width:150px">${esc(s.nome)}<br><small class="mudo">${sobem.has(s.id) ? (s.niveis||1)+" nív." : "fixa, sem pontos"}${s.teclaInferida?" · tecla inferida":""}</small></span></div>`).join("")}</div></div>
+  <div class="caixa"><h2>Ordem das skills</h2>
     ${maxSeq.length?`<p style="margin:0 0 8px">Máximo: ${maxSeq.map(x=>`<b style="color:var(--laranja2);font-size:16px">${esc(x.s.tecla)}</b>`).join(" → ")}
-      <span class="mudo" style="font-size:12px"> · pico de poder: ${cps.slice(0,3).map(c => "nível "+c.L+" ("+esc(c.txt)+")").join(", ")}</span></p>`:""}
+      <span class="mudo" style="font-size:12px"> · picos de poder: ${cps.map(c => "nível "+c.L+" ("+esc(c.txt)+")").join(", ")}</span></p>`:""}
     <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th class="${nivelCp.has(i+1)?"pico":""}">${i+1}</th>`).join("")}</tr>
-    ${hs.map(s=>`<tr><th class="l">${ico(s.icone, s.nome, "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
+    ${todas.map(s=>`<tr><th class="l" style="${sobem.has(s.id)?"":"opacity:.55"}">${ico(s.icone, s.nome+(sobem.has(s.id)?"":" (fixa, não sobe de nível)"), "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
       const p = o.passos.find(x => x.s===s && x.L===i+1);
       return p?`<td class="c on f-${p.fase}">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
     <p class="mudo" style="font-size:12px;margin:6px 0 0"><span class="lg" style="background:var(--laranja)"></span>farm: primeiro as skills com maior dano base inicial
-      ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>escala (a partir do nível ${o.faseTroca}): as que escalam com Tai/Nin/Gen`:""}</p></div>`;
+      ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>escala (a partir do nível ${o.faseTroca}): as que escalam com Tai/Nin/Gen`:""}
+      · linhas apagadas = skills fixas, sem pontos para distribuir</p></div>`;
 }
 function itensPorNivelHtml(plano, ativo, X){
   return plano.map((p,i) => {
@@ -747,7 +760,7 @@ function abaBuild(X){
   const direita = `<div class="caixa"><h2>Itens por checkpoint</h2>${itensPorNivelHtml(plano, ativo, X)}
       <p class="mudo" style="font-size:11px;margin:6px 0 0">Passe o mouse para ver nome e preço. Última linha = formas finais, com as orbs da combinação. Receitas na aba "Itens por nível".</p></div>
     <div class="caixa"><h2>Situacionais</h2>
-      <div class="fila">${sit.pol.slice(0,10).map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,38)}</button>`).join("")||'<span class="mudo">—</span>'}</div>
+      <div class="fila" style="max-height:230px;overflow:auto">${sit.pol.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,38)}</button>`).join("")||'<span class="mudo">—</span>'}</div>
       <div style="margin-top:10px">${detalheItem(X, set, r)}</div></div>`;
   return `${topo}<div class="grade3"><div>${esq}</div><div>${centro}</div><div>${direita}</div></div>`;
 }
@@ -770,7 +783,7 @@ function abaSkills(X){
   const r = calcular(X.h, X.nivel, []);
   return `<div class="caixa"><h2>Skills de ${esc(X.h.nome)} no nível ${X.nivel}</h2>
     <div class="rolavel"><table class="t"><tr><th></th><th>Skill</th><th>Nível</th><th>Dano (texto do jogo)</th><th>Dano calc.</th><th>Recarga</th><th>Chakra</th><th>Escala com</th></tr>
-    ${r.skills.filter(x => x.s.tecla || x.dano != null).map(x => `<tr><td>${ico(x.s.icone, x.s.nome, x.s.atributos[0]?"a-"+x.s.atributos[0]:"", 40, x.s.tecla)}</td>
+    ${r.skills.filter(x => skillVisivel(x.s)).map(x => `<tr><td>${ico(x.s.icone, x.s.nome, x.s.atributos[0]?"a-"+x.s.atributos[0]:"", 40, x.s.tecla)}</td>
       <td><b>${esc(x.s.nome)}</b>${x.s.heroica?"":' <span class="tag">fixa</span>'}<details><summary class="mudo">descrição</summary><div class="mudo" style="white-space:pre-line;font-size:12px">${esc(x.s.descricao)}</div></details></td>
       <td>${x.s.heroica?`<input style="width:64px" type="number" min="1" max="${x.s.niveis||1}" value="${x.L}" data-skill="${x.s.id}"> / ${x.s.niveis||1}`:"—"}</td>
       <td class="mudo">${esc(x.s.dano_txt||"—")}</td>
@@ -909,12 +922,12 @@ function filtrarCatalogo(){
   const q = $("filtroItem").value.trim().toLowerCase(), tp = $("filtroTipo").value;
   const plano = planoMarcos(X), set = plano[plano.length-1].set;
   const base = pontuacao(calcular(X.h, X.nivel, set), "equil", X.w);
-  const linhas = D.itens.filter(i => i.tipo && (!tp || i.tipo===tp) && (!q || (i.nome+" "+i.descricao).toLowerCase().includes(q)) && armaCompativel(i, X.h))
+  const linhas = D.itens.filter(i => !/^(Upgrade |Combine:|Recipe:|Mission:)/.test(i.nome) && (!tp || i.tipo===tp) && (!q || (i.nome+" "+i.descricao).toLowerCase().includes(q)))
     .map(i => ({i, g: (set.includes(i) || !comprável(i)) ? 0 : pontuacao(calcular(X.h, X.nivel, set.concat(i)), "equil", X.w) - base}))
-    .sort((a,b)=>b.g-a.g).slice(0,100);
+    .sort((a,b)=>b.g-a.g);
   $("tabCat").innerHTML = `<tr><th></th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar à build final</th><th></th></tr>` +
-    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i, X.h)?' <span class="tag">situacional</span>':""}</td>
-      <td><span class="tag t-${i.tipo}">${esc(i.tipo)}</span></td><td class="ouro">${i.ouro==null?"?":preco(i)}</td>
+    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i, X.h)?' <span class="tag">situacional</span>':""}${armaCompativel(i, X.h)?"":' <span class="tag" title="arma de outra família de atributo">outra família</span>'}</td>
+      <td>${i.tipo?`<span class="tag t-${i.tipo}">${esc(i.tipo)}</span>`:'<span class="tag">consumível/componente</span>'}</td><td class="ouro">${i.ouro==null?"?":preco(i)}</td>
       <td>${esc(resumoStats(i))}<div class="mudo" style="font-size:12px">${esc(i.extras.slice(0,3).join(" | "))}</div></td>
       <td>${set.includes(i)?"—":(g>0?'<span class="verde">'+sinal(g)+"</span>":'<span class="mudo">'+fmt(g)+"</span>")}</td>
       <td><button class="pilula" data-receita="${i.id}">como fazer</button></td></tr>`).join("");
