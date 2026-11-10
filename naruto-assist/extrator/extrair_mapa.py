@@ -174,11 +174,16 @@ class MPQ:
         blk = self._achar(nome)
         if blk is None:
             raise KeyError(nome)
+        return self.ler_bloco(blk, nome)
+
+    def ler_bloco(self, blk, nome=None):
         pos, csize, fsize, flags = self.block[blk]
         if not (flags & F_EXISTS) or (flags & F_DELETE):
-            raise KeyError(nome)
+            raise KeyError(nome or blk)
         chave = 0
         if flags & F_ENC:
+            if nome is None:
+                raise ValueError("arquivo cifrado sem nome")
             base = nome.replace("/", "\\").split("\\")[-1]
             chave = hash_str(base, 3)
             if flags & F_FIXKEY:
@@ -571,6 +576,65 @@ def extrair(fonte, saida, log):
     return erros
 
 
+MAGICAS = {b"MDLX": "modelo mdx", b"BLP1": "textura blp", b"BLP2": "textura blp",
+           b"RIFF": "audio wav", b"ID3": "audio mp3", b"HM3W": "mapa", b"\x89PNG": "png",
+           b"DDS ": "dds", b"MPQ\x1a": "mpq", b"W3do": "w3do"}
+
+
+def parece_texto(dados):
+    amostra = dados[:4000]
+    if not amostra:
+        return False
+    imprimiveis = sum(1 for b in amostra if b in (9, 10, 13) or 32 <= b < 127 or b >= 0xC2)
+    return imprimiveis / len(amostra) > 0.97 and b"\x00" not in amostra
+
+
+def varrer_blocos(mpq, saida, log, limite_bytes=60 * 1024 * 1024):
+    """Le TODOS os blocos do MPQ pelo conteudo (para mapas sem (listfile))."""
+    pasta = saida / "blocos"
+    indice, salvos, total = [], 0, 0
+    contagem = {}
+    for i, (pos, csize, fsize, flags) in enumerate(mpq.block):
+        if not (flags & F_EXISTS) or (flags & F_DELETE):
+            continue
+        tipo, previa = "?", ""
+        if fsize > 16 * 1024 * 1024:
+            tipo = "grande (nao lido)"
+        elif flags & F_ENC:
+            tipo = "cifrado (sem nome)"
+        else:
+            try:
+                dados = mpq.ler_bloco(i)
+                tipo = None
+                for magia, nome in MAGICAS.items():
+                    if dados.startswith(magia):
+                        tipo = nome
+                        break
+                if tipo is None:
+                    if parece_texto(dados):
+                        txt = decodificar(dados)
+                        primeira = txt.lstrip()[:60].replace("\n", " ").replace("\r", "")
+                        ext = ".slk" if txt.startswith("ID;") else ".txt"
+                        tipo = "texto" + ext
+                        previa = primeira
+                        if total + len(dados) <= limite_bytes:
+                            pasta.mkdir(exist_ok=True)
+                            (pasta / ("bloco_%05d%s" % (i, ext))).write_bytes(dados)
+                            total += len(dados)
+                            salvos += 1
+                    else:
+                        tipo = "binario"
+                        previa = dados[:8].hex()
+            except Exception as e:  # noqa: BLE001
+                tipo = "erro: %s" % str(e)[:60]
+        contagem[tipo.split(":")[0]] = contagem.get(tipo.split(":")[0], 0) + 1
+        indice.append("%05d\t%9d\t%s\t%s" % (i, fsize, tipo, previa))
+    saida.mkdir(parents=True, exist_ok=True)
+    (saida / "blocos_indice.txt").write_text("\n".join(indice), encoding="utf-8")
+    log("Varredura de blocos: %d blocos; %d textos salvos. Tipos: %s" % (
+        len(indice), salvos, ", ".join("%s=%d" % kv for kv in sorted(contagem.items()))))
+
+
 def zipar(saida, destino):
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for p in sorted(saida.rglob("*")):
@@ -597,6 +661,11 @@ def main():
             fonte = FonteMapa(MPQ(caminho))
         saida = Path(args.saida)
         extrair(fonte, saida, log)
+        if isinstance(fonte, FonteMapa):
+            try:
+                varrer_blocos(fonte.mpq, saida, log)
+            except Exception as e:  # noqa: BLE001
+                log("Varredura de blocos falhou: %s" % e)
         zip_path = saida.with_suffix(".zip") if saida.suffix == "" else Path(str(saida) + ".zip")
         zipar(saida, zip_path)
         print("\nPronto! Envie este arquivo no chat: %s (%.1f KB)" % (

@@ -152,6 +152,10 @@ def main():
         assert ha[0]["campos"]["Hbz1"] == {"1": 1.5, "2": 2.5} and ha[0]["nome"] == "Rasengan"
         assert (saida / "pistas_atributos.txt").exists()
         assert (saida / "scripts" / "war3map.j").exists()
+        # varredura por conteudo (sem nomes)
+        X.varrer_blocos(mpq, saida, lambda *_: None)
+        indice = (saida / "blocos_indice.txt").read_text(encoding="utf-8")
+        assert "texto.txt" in indice and list((saida / "blocos").glob("*.txt")), indice
         # modo pasta
         saida2 = Path(tmp) / "saida2"
         X.extrair(X.FontePasta(saida / "scripts"), saida2, lambda *_: None)
