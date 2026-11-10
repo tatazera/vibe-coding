@@ -52,3 +52,8 @@ Os hotkeys de cada item na loja (ex.: Upgrade Weapon = R) aparecem no detalhe do
 `nucleo` (politica.json) = itens core: Jade of Susano'o, The Heaven Mirror e as Ninja Weapons (Explosive Kunai / Fuuma Shuriken / Senbons Dance).
 Todas as Ninja Weapons, inclusive o Oil, ocupam vaga (linha "Ninja Weapon": Oil no nivel 1 -> arma core do heroi no nivel 10).
 Se passar das vagas, sai primeiro o Extra e depois a Jade (`ordem_corte`); core nao sai antes. O Extra nunca e core nem Ninja Weapon.
+
+## Layout (estilo Mobalytics)
+Aba Build: cabecalho do heroi, checkpoints a esquerda, ORDEM DAS SKILLS no topo do centro (com atributos abaixo) e itens por checkpoint + situacionais
+a direita (detalhe do item embaixo). A aba "Itens por nivel" concentra o quadro por checkpoints, linhas de evolucao, arvores de como fazer, lista de compras e kit de farm.
+Linhas de evolucao incluem as formas intermediarias (ex.: Jounin -> Anbu -> Sannin -> Kage Robe; Shippu -> Super Boots Lv1 -> Lv2 -> Lv3).

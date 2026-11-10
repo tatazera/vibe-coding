@@ -24,7 +24,7 @@
   .topo h1{font-size:18px;margin:0}.topo h1 span{color:var(--laranja)}
   .topo small{color:var(--mudo)}
   .tema{margin-left:auto}
-  .filtros{display:grid;grid-template-columns:2.4fr 100px 1.3fr;gap:10px;padding:14px 0;align-items:end}
+  .filtros{display:grid;grid-template-columns:3fr 110px;gap:10px;padding:14px 0;align-items:end}
   .filtros label{display:block;font-size:11px;color:var(--mudo);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
   @media(max-width:1000px){.filtros{grid-template-columns:1fr 1fr}}
   details.regras{background:var(--painel);border:1px solid var(--borda);border-radius:10px;padding:8px 12px;margin-bottom:12px}
@@ -83,11 +83,13 @@
   .num small{display:block;color:var(--mudo);font-size:11px}.num b{font-size:16px}
   .num .d{font-size:11px;color:var(--verde);margin-left:4px}
   .ordem{overflow:auto;padding-bottom:6px}
-  .ordem table{border-collapse:separate;border-spacing:3px;width:auto}
+  .ordem table{border-collapse:separate;border-spacing:2px;width:auto}
   .ordem td,.ordem th{padding:0;text-align:center;font-size:11px;color:var(--mudo)}
-  .ordem td.c{width:26px;height:26px;border-radius:5px;background:var(--painel2)}
+  .ordem td.c{width:21px;height:21px;border-radius:4px;background:var(--painel2);font-size:10px}
   .ordem td.c.on{background:var(--laranja);color:#101010;font-weight:800}
-  .ordem th.l{text-align:left;padding-right:8px;white-space:nowrap}
+  .ordem th.l{text-align:left;padding-right:8px;white-space:nowrap;height:30px;vertical-align:middle}
+  .ordem td{vertical-align:middle}
+  .ordem th{vertical-align:bottom}
   .ordem th.pico{color:var(--laranja2);font-weight:800}
   table.t{width:100%;border-collapse:collapse}
   .t th,.t td{padding:7px 8px;border-bottom:1px solid var(--borda);text-align:left;vertical-align:top;font-size:13px}
@@ -146,7 +148,7 @@
   .gcell.sel,.gcell:hover{border-color:var(--laranja);background:var(--painel3)}
   .grade2{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start}
   @media(max-width:1000px){.grade2{grid-template-columns:1fr}}
-  .ordem td.c.on.escala{background:var(--roxo);color:#101010}
+  .ordem td.c.on.f-escala{background:var(--roxo);color:#101010}
   .marcos{border-collapse:separate;border-spacing:0 0;width:100%}
   .marcos th,.marcos td{border-bottom:1px solid var(--borda);padding:8px 6px;vertical-align:top;text-align:center;font-size:12px}
   .marcos th.l{text-align:left;color:var(--mudo);font-size:11px;text-transform:uppercase;letter-spacing:.5px;min-width:110px}
@@ -167,6 +169,14 @@
   .evo .pt i{font-style:normal;font-size:10px;background:var(--laranja);color:#101010;border-radius:99px;padding:0 6px;font-weight:800}
   .evo .pt span.n{font-size:10px;color:var(--mudo);max-width:84px;text-align:center;line-height:1.1}
   .evo .pt.menor{opacity:.75}
+  .rowN{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-radius:10px;border:1px solid transparent;margin-bottom:4px}
+  .rowN.ativo{background:var(--painel3);border-color:var(--laranja)}
+  .rowN .rl{line-height:1.2}.rowN .rl small{color:var(--mudo);font-size:11px;margin-left:6px}
+  .rowN .item{padding:0}
+  .hdr{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+  .hdr h2{margin:0;font-size:22px;text-transform:none;letter-spacing:0;color:var(--texto)}
+  .hdr p{margin:2px 0 0;color:var(--mudo)}
+  .compacto .num b{font-size:15px}
   .lg{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 </style>
 </head>
@@ -187,13 +197,13 @@
       </div>
     </div>
     <div><label for="nivel">Nível</label><input id="nivel" type="number" min="1" max="200" value="20"></div>
-    <div><label for="peso">Peso da defesa: <span id="pesoTxt">25</span>%</label><input id="peso" type="range" min="0" max="100" value="25" style="padding:0"></div>
   </div>
   <details class="regras"><summary>Regras e política de compra (editável)</summary>
     <div class="linha">
       <div><label for="slots">Vagas de item</label><input id="slots" type="number" min="1" max="12" value="6"></div>
       <div><label class="check"><input id="elementalCedo" type="checkbox"> Fazer a arma elemental cedo (Weapon Lv1 + Spirit do elemento): para quem precisa de dano com escala de status rápido</label></div>
       <div><label class="check"><input id="incluirSit" type="checkbox"> Permitir itens situacionais no slot "Extra"</label></div>
+      <div><label for="peso">Peso da defesa na escolha do Extra e da bota: <span id="pesoTxt">25</span>%</label><input id="peso" type="range" min="0" max="100" value="25" style="padding:0"></div>
     </div>
     <details style="margin-top:10px"><summary>Editar o plano por checkpoints (marcos de nível, linhas de itens, situacionais, heróis)</summary>
       <p class="nota" style="margin:8px 0">Em <b>marcos</b> ficam os níveis dos checkpoints; em <b>linhas</b>, a forma de cada item em cada checkpoint. Use os nomes dos itens exatamente como no jogo. O que você salvar fica guardado neste navegador.</p>
@@ -205,6 +215,7 @@
 
   <div class="abas" id="abas">
     <button class="aba ativa" data-tab="build">Build</button>
+    <button class="aba" data-tab="evolucao">Itens por nível</button>
     <button class="aba" data-tab="skills">Skills</button>
     <button class="aba" data-tab="receitas">Como fazer</button>
     <button class="aba" data-tab="catalogo">Catálogo</button>
@@ -494,9 +505,19 @@ function passoTexto(prev, it){
   if(r.m === "combinar") return "combinar";
   return "trocar";
 }
-function etapasEntre(a, b){   // formas intermediarias de uma cadeia de upgrades (ex.: Lv5 -> Lv6..Lv9 -> MAX)
-  const mid = []; let id = b.id;
-  while(id && CR[id] && CR[id].m === "upgrade"){ id = CR[id].base; if(id === a.id) return mid.reverse(); if(id) mid.push(ITEM[id]); }
+function anterior(id){   // forma imediatamente anterior na mesma linha (upgrade, ou combinar com um componente da mesma categoria)
+  const r = CR[id]; if(!r) return null;
+  if(r.m === "upgrade") return r.base || null;
+  if(r.m === "combinar"){
+    const fam = i => i.categoria.startsWith("arma") ? "arma" : i.categoria, it = ITEM[id];
+    const c = (r.comps||[]).find(c => c.id && c.id !== id && ITEM[c.id] && fam(ITEM[c.id]) === fam(it));
+    return c ? c.id : null;
+  }
+  return null;
+}
+function etapasEntre(a, b){   // formas intermediarias entre duas formas da mesma linha (ex.: Jounin -> Anbu -> Sannin -> Kage Robe)
+  const mid = []; let id = anterior(b.id), guard = 0;
+  while(id && guard++ < 30){ if(id === a.id) return mid.reverse(); mid.push(ITEM[id]); id = anterior(id); }
   return [];
 }
 function chipsOrbs(it){
@@ -602,6 +623,7 @@ function atualizar(){
   const X = contexto(); if(!X) return;
   const el = $("conteudo");
   if(S.tab === "build") el.innerHTML = abaBuild(X);
+  else if(S.tab === "evolucao") el.innerHTML = abaEvolucao(X);
   else if(S.tab === "skills"){
     el.innerHTML = abaSkills(X);
     el.querySelectorAll("[data-skill]").forEach(inp => inp.addEventListener("change", e => { S.niveisSkill[e.target.dataset.skill] = Math.max(1, +e.target.value || 1); atualizar(); }));
@@ -677,75 +699,70 @@ function linhasEvolucaoHtml(plano){
         ${s.niveis.length ? `<i>Nív ${s.niveis[0]}${s.niveis.length > 1 ? "+" : ""}</i>` : ""}${icoItem(s.it, s.niveis.length ? 46 : 32)}<span class="n">${esc(s.it.nome)}</span>${s.niveis.length ? chipsOrbs(s.it) : ""}</span>`).join("")}</div></div>`;
   }).join("");
 }
+function ordemSkillsHtml(X){
+  const o = X.ordem, hs = o.hs, maxSeq = maxSequencia(o), cps = checkpoints(X.h, X.nivel), nivelCp = new Set(cps.map(c => c.L));
+  const plano = planoMarcos(X), fimNivel = plano[plano.length-1].nivel;
+  const colunas = Math.min(Math.max(X.nivel, fimNivel), 60);
+  return `<div class="caixa"><h2>Ordem das skills</h2>
+    ${maxSeq.length?`<p style="margin:0 0 8px">Máximo: ${maxSeq.map(x=>`<b style="color:var(--laranja2);font-size:16px">${esc(x.s.tecla)}</b>`).join(" → ")}
+      <span class="mudo" style="font-size:12px"> · pico de poder: ${cps.slice(0,3).map(c => "nível "+c.L+" ("+esc(c.txt)+")").join(", ")}</span></p>`:""}
+    <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th class="${nivelCp.has(i+1)?"pico":""}">${i+1}</th>`).join("")}</tr>
+    ${hs.map(s=>`<tr><th class="l">${ico(s.icone, s.nome, "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
+      const p = o.passos.find(x => x.s===s && x.L===i+1);
+      return p?`<td class="c on f-${p.fase}">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
+    <p class="mudo" style="font-size:12px;margin:6px 0 0"><span class="lg" style="background:var(--laranja)"></span>farm: primeiro as skills com maior dano base inicial
+      ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>escala (a partir do nível ${o.faseTroca}): as que escalam com Tai/Nin/Gen`:""}</p></div>`;
+}
+function itensPorNivelHtml(plano, ativo, X){
+  return plano.map((p,i) => {
+    const orbs = i === plano.length-1 ? p.set.map(it => chipsOrbs(it)).join("") : "";
+    return `<div class="rowN ${i===ativo?"ativo":""}"><div class="rl"><b>Nível ${p.nivel}</b><small>${esc(p.titulo)}</small></div>
+      <div class="fila" style="gap:3px">${p.set.map(it => `<button class="item ${S.itemSel===it.id?"sel":""}" data-item="${it.id}" title="${esc(it.nome)} · ${preco(it)}">${icoItem(it,38)}</button>`).join("")}</div>
+      ${orbs ? `<div class="orbs" style="justify-content:flex-start;flex-wrap:wrap">${orbs.replace(/<div class="orbs">|<\/div>/g,"")}</div>` : ""}</div>`; }).join("");
+}
 function abaBuild(X){
   const plano = planoMarcos(X), ativo = marcoAtivo(plano, X), cur = plano[ativo], fim = plano[plano.length-1];
   const set = cur.set, base = calcular(X.h, X.nivel, []), r = calcular(X.h, X.nivel, set), pf = X.pf;
-  const o = X.ordem, hs = o.hs, maxSeq = maxSequencia(o);
-  const colunas = Math.min(Math.max(X.nivel, fim.nivel), 60);
   const sit = situacionais(X.h, set);
-  const cps = checkpoints(X.h, X.nivel);
-  const nivelCp = new Set(cps.map(c => c.L));
-  if(!S.itemSel || !ITEM[S.itemSel]) S.itemSel = (set[0]||{}).id || null;
+  if(!S.itemSel || !ITEM[S.itemSel]) S.itemSel = (fim.set[0]||{}).id || null;
 
   const esq = `<div class="caixa"><h2>Checkpoints de nível</h2>${plano.map((p,i) => { const rr = calcular(X.h, X.nivel, p.set); return `
-      <button class="preset ${i===ativo?"ativa":""}" data-marco="${p.nivel}"><b>Nível ${p.nivel}</b><small> ${esc([p.titulo, ...p.skills].filter(Boolean).join(" · "))}</small>
-        <div class="mini" style="margin-top:6px">${p.set.map(it => icoItem(it,28)).join("")}</div>
-        <small>Dano ${fmt(rr.potencial)} · Vida ef. ${fmt(rr.ehp)}</small></button>`; }).join("")}
-      <button class="pilula" data-marco="auto">Automático pelo meu nível (${X.nivel})</button></div>`;
+      <button class="preset ${i===ativo?"ativa":""}" data-marco="${p.nivel}"><b>Nível ${p.nivel}</b><small> ${esc(p.titulo)}</small>
+        <div><small>${esc(p.skills.join(" · "))}</small></div><small>Dano ${fmt(rr.potencial)} · Vida ef. ${fmt(rr.ehp)}</small></button>`; }).join("")}
+      <button class="pilula" data-marco="auto">Automático (nível ${X.nivel})</button></div>`;
 
-  const chips = [
-    pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
-    `<span class="tag motivo">arma: Battle até MAX → lendária (${esc(pf.elemento)})</span>`,
-    pf.indicaElementalCedo ? `<span class="tag motivo" title="${fmt(pf.escalaCedo*100)}% do dano das skills escala com atributos no nível 15">indicado: arma elemental cedo (${esc(pf.elemento)})</span>` : "",
-    `<span class="tag">skills escalam ${fmt(pf.pesoNin*100)}% com Ninjutsu</span>`].join(" ");
-  const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
-  const centro = `<div class="caixa"><div class="heroi">${icoHeroi(X.h, 64)}
-      <div><h2>${esc(X.h.nome)}</h2><p>Nível ${X.nivel} · atributo principal: ${NOME[X.h.primario]}${rotuloForma(X.h)?" · "+rotuloForma(X.h):""}</p><p style="margin-top:6px">${chips}</p></div></div>
-      ${pf.nota?`<p class="nota" style="margin:10px 0 0">${esc(pf.nota)}</p>`:""}</div>
+  const chips = [pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
+                 `<span class="tag motivo">arma: Battle até MAX → lendária (${esc(pf.elemento)})</span>`,
+                 pf.indicaElementalCedo ? `<span class="tag motivo">indicado: elemental cedo</span>` : ""].join(" ");
+  const topo = `<div class="hdr">${icoHeroi(X.h, 64)}<div><h2>${esc(X.h.nome)}</h2><p>Nível ${X.nivel} · ${NOME[X.h.primario]}${rotuloForma(X.h)?" · "+rotuloForma(X.h):""}</p><p style="margin-top:4px">${chips}</p>
+      ${pf.nota?`<p style="font-size:12px;margin-top:4px">${esc(pf.nota)}</p>`:""}</div></div>`;
 
-    <div class="caixa"><h2>Build no checkpoint do nível ${cur.nivel}</h2>
-      <div class="fila">${slotsHtml(cur.set, X.vagas)}</div>
-      <h3>Build completa — formas finais (nível ${fim.nivel})</h3>
-      <div class="fila">${slotsHtml(fim.set, X.vagas)}</div>
-      <p class="mudo" style="font-size:12px;margin:8px 0 0">Valor de tabela da build completa: <span class="ouro">${fmt(somaPreco(fim.set))}</span>. As orbs mostram o que entra na combinação (Pedra = Soul Absorb Stone).</p></div>
-
-    <div class="caixa"><h2>Plano por checkpoints (itens na forma de cada nível)</h2>${tabelaMarcos(plano, ativo, X)}
-      <p class="mudo" style="font-size:12px;margin:8px 0 0">A build não depende de ouro: cada coluna é o checkpoint de nível. Clique no cabeçalho para ver os atributos daquele checkpoint. "→ incluído em" mostra itens que viram parte de uma forma maior.</p></div>
-
-    <div class="caixa"><h2>Linhas de evolução até a forma final</h2>${linhasEvolucaoHtml(plano)}
-      <p class="mudo" style="font-size:12px;margin:4px 0 0">Os ícones grandes são as formas dos checkpoints; os pequenos são formas intermediárias (upgrades). Clique para ver como fazer.</p></div>
-
-    <div class="caixa"><h2>Kit de farm inicial (consumíveis)</h2>
-      <p class="nota" style="margin:0 0 8px">O Oil é uma Ninja Weapon e <b>ocupa vaga</b>: ele está na linha da Ninja Weapon no nível 1 e é trocado pela Ninja Weapon core do seu herói no nível 10. Bomb e Edo Tensei Scroll também ocupam vaga se você carregar.</p>
-      ${kit.map(({c,it}) => `<div class="farm"><button class="item" data-item="${it.id}">${icoItem(it,44)}<span class="preco">${preco(it)}</span></button><div><b>${esc(it.nome)}</b><p>${esc(c.motivo)}</p></div></div>`).join("")}
-      ${(P.dicas_farm||[]).length?`<p class="nota" style="margin:8px 0 0">${(P.dicas_farm||[]).map(esc).join("<br>")}</p>`:""}</div>
-
-    ${comoFazerPlano(fim.set)}
-
-    <div class="caixa"><h2>Ordem das skills e checkpoints</h2>
-      <div class="cp" style="margin-bottom:8px">${cps.map(c=>`<span style="${c.ativo?"":"opacity:.5"}"><b>Nível ${c.L}</b> · ${esc(c.txt)}</span>`).join("")}</div>
-      ${maxSeq.length?`<p style="margin:0 0 8px">Máximo: ${maxSeq.map(x=>`<b style="color:var(--laranja2)">${esc(x.s.tecla)}</b>`).join(" → ")}</p>`:""}
-      <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th class="${nivelCp.has(i+1)?"pico":""}">${i+1}</th>`).join("")}</tr>
-      ${hs.map(s=>`<tr><th class="l">${ico(s.icone, s.nome, "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
-        const p = o.passos.find(x => x.s===s && x.L===i+1);
-        return p?`<td class="c on ${p.fase}">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
-      <p class="mudo" style="font-size:12px;margin:6px 0 0"><span class="lg" style="background:var(--laranja)"></span>fase de farm: sobem primeiro as skills com maior dano base inicial (vitais para o farm)
-        ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>fase de escala (a partir do nível ${o.faseTroca}): sobem as skills que escalam com Tai/Nin/Gen`:" · neste nível ainda não há fase de escala"}.
-        Os checkpoints vêm das skills com nível mínimo (ultimates).</p></div>`;
-
-  const direita = `<div class="caixa"><h2>Atributos no checkpoint do nível ${cur.nivel}</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
+  const centro = ordemSkillsHtml(X) + `<div class="caixa compacto"><h2>Atributos no checkpoint do nível ${cur.nivel}</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
       const v = {tai:r.T,nin:r.N,gen:r.G}[k], v0 = {tai:base.T,nin:base.N,gen:base.G}[k];
       return `<div class="atr a-${k}"><b>${fmt(v)}</b><span>${NOME[k]}</span><i>${v-v0?sinal(v-v0)+" itens":""}</i></div>`;}).join("")}</div>
       <div class="nums">${[["Vida",base.hp,r.hp,0],["Chakra máx.",base.chakra,r.chakra,0],["Armadura",base.armadura,r.armadura,1],
         ["Dano do ataque",(base.danoMin+base.danoMax)/2,(r.danoMin+r.danoMax)/2,0],["Vida efetiva",base.ehp,r.ehp,0],["Dano potencial",base.potencial,r.potencial,0]]
-        .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div>
-      <p class="mudo" style="font-size:11px;margin:8px 0 0">Atributos do herói no nível ${X.nivel} com os itens deste checkpoint.</p></div>
-    <div class="caixa"><h2>Item selecionado</h2>${detalheItem(X, set, r)}</div>
-    <div class="caixa"><h2>Situacionais por personagem</h2><p class="mudo" style="font-size:12px;margin:0 0 8px">${esc(P.situacional_motivo||"")}</p>
-      <p class="nota" style="margin:0 0 8px">A primeira arma é a <b>elemental cedo</b> do seu herói (${esc(elementoPadrao(X.h))}): vale para quem precisa de dano que escala com status rápido.</p>
-      <div class="fila">${sit.pol.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")||'<span class="mudo">—</span>'}</div></div>
-    <div class="caixa"><h2>Itens por necessidade</h2>${sit.grupos.map(x=>`<div class="sit"><b>${x.t}</b><div class="fila" style="margin-top:4px">${x.itens.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")}</div><p>${x.d}</p></div>`).join("")||'<p class="mudo">Nenhum item encontrado.</p>'}</div>`;
-  return `<div class="grade3"><div>${esq}</div><div>${centro}</div><div>${direita}</div></div>`;
+        .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div></div>`;
+
+  const direita = `<div class="caixa"><h2>Itens por checkpoint</h2>${itensPorNivelHtml(plano, ativo, X)}
+      <p class="mudo" style="font-size:11px;margin:6px 0 0">Passe o mouse para ver nome e preço. Última linha = formas finais, com as orbs da combinação. Receitas na aba "Itens por nível".</p></div>
+    <div class="caixa"><h2>Situacionais</h2>
+      <div class="fila">${sit.pol.slice(0,10).map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,38)}</button>`).join("")||'<span class="mudo">—</span>'}</div>
+      <div style="margin-top:10px">${detalheItem(X, set, r)}</div></div>`;
+  return `${topo}<div class="grade3"><div>${esq}</div><div>${centro}</div><div>${direita}</div></div>`;
+}
+function abaEvolucao(X){
+  const plano = planoMarcos(X), ativo = marcoAtivo(plano, X), fim = plano[plano.length-1];
+  const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
+  return `<div class="caixa"><h2>Plano por checkpoints (itens na forma de cada nível)</h2>${tabelaMarcos(plano, ativo, X)}
+      <p class="mudo" style="font-size:12px;margin:8px 0 0">Clique no cabeçalho para ver os atributos daquele checkpoint na aba Build. "→ incluído em" mostra itens que viram parte de uma forma maior.</p></div>
+    <div class="caixa"><h2>Linhas de evolução até a forma final</h2>${linhasEvolucaoHtml(plano)}
+      <p class="mudo" style="font-size:12px;margin:4px 0 0">Ícones grandes = formas dos checkpoints; pequenos = formas intermediárias (upgrades). Clique para ver como fazer.</p></div>
+    ${comoFazerPlano(fim.set)}
+    <div class="caixa"><h2>Kit de farm inicial</h2>
+      <p class="nota" style="margin:0 0 8px">O Oil é uma Ninja Weapon e <b>ocupa vaga</b>: ele está na linha da Ninja Weapon no nível 1 e é trocado pela Ninja Weapon core do seu herói no nível 10. Bomb e Edo Tensei Scroll também ocupam vaga se você carregar.</p>
+      ${kit.map(({c,it}) => `<div class="farm"><button class="item" data-item="${it.id}">${icoItem(it,44)}<span class="preco">${preco(it)}</span></button><div><b>${esc(it.nome)}</b><p>${esc(c.motivo)}</p></div></div>`).join("")}
+      ${(P.dicas_farm||[]).length?`<p class="nota" style="margin:8px 0 0">${(P.dicas_farm||[]).map(esc).join("<br>")}</p>`:""}</div>`;
 }
 
 /* ---------- aba Skills ---------- */
