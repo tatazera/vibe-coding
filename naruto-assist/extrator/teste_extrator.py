@@ -132,6 +132,7 @@ def main():
         "war3map.w3a": (w3a, "bz2"),
         "war3map.wts": (wts.encode(), "plain"),
         "war3map.j": (script, "zlib"),
+        "Units\\ItemStrings.txt": (b"[I001]\r\nName=TRIGSTR_002\r\nTip=Comprar\r\n", "plain"),
     }
     with tempfile.TemporaryDirectory() as tmp:
         mapa = Path(tmp) / "teste.w3x"
@@ -142,10 +143,11 @@ def main():
         saida = Path(tmp) / "saida"
         erros = X.extrair(X.FonteMapa(mpq), saida, lambda *_: None)
         assert not erros, erros
+        assert json.loads((saida / "textos_objetos.json").read_text(encoding="utf-8"))["I001"]["Name"] == "Outro texto"
         un = json.loads((saida / "unidades.json").read_text(encoding="utf-8"))
         assert un[0]["id"] == "H001" and un[0]["nome"] == "Yamato" and un[0]["campos"]["ustr"] == 20
         it = json.loads((saida / "itens.json").read_text(encoding="utf-8"))
-        assert it[0]["nome"] == "Kunai" and it[0]["campos"]["igol"] == 350
+        assert it[0]["nome"] == "Kunai" and it[0]["textos"]["Tip"] == "Comprar" and it[0]["campos"]["igol"] == 350
         ha = json.loads((saida / "habilidades.json").read_text(encoding="utf-8"))
         assert ha[0]["campos"]["Hbz1"] == {"1": 1.5, "2": 2.5} and ha[0]["nome"] == "Rasengan"
         assert (saida / "pistas_atributos.txt").exists()

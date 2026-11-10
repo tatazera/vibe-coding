@@ -326,35 +326,56 @@ def parse_objetos(dados, com_nivel):
         for _ in range(qtd):
             base = r.id4()
             novo = r.id4()
-            n_mods = r.u32()
+            # Versao 3+ (Reforged): cada objeto tem "sets" de modificacoes.
+            sets = r.u32() if versao >= 3 else 1
             campos = {}
-            for _ in range(n_mods):
-                campo = r.id4()
-                tipo = r.u32()
-                nivel = ptr = 0
-                if com_nivel:
-                    nivel = r.u32()
-                    ptr = r.u32()
-                if tipo == 0:
-                    valor = r.i32()
-                elif tipo in (1, 2):
-                    valor = r.f32()
-                elif tipo == 3:
-                    valor = r.cstr()
-                elif tipo == 4:  # booleano
-                    valor = r.i32()
-                else:
-                    raise ValueError("tipo de campo desconhecido: %d (posicao %d, campo %s)"
-                                     % (tipo, r.p, campo))
-                r.u32()  # marcador de fim da modificacao
-                chave = campo + ("/%d" % ptr if ptr else "")
-                if com_nivel:
-                    campos.setdefault(chave, {})[str(nivel)] = valor
-                else:
-                    campos[chave] = valor
+            for s_i in range(sets):
+                flag = r.u32() if versao >= 3 else 0
+                n_mods = r.u32()
+                prefixo = "" if flag == 0 else "set%d:" % flag
+                for _ in range(n_mods):
+                    campo = r.id4()
+                    tipo = r.u32()
+                    nivel = ptr = 0
+                    if com_nivel:
+                        nivel = r.u32()
+                        ptr = r.u32()
+                    if tipo == 0:
+                        valor = r.i32()
+                    elif tipo in (1, 2):
+                        valor = r.f32()
+                    elif tipo == 3:
+                        valor = r.cstr()
+                    elif tipo == 4:  # booleano
+                        valor = r.i32()
+                    else:
+                        raise ValueError("tipo de campo desconhecido: %d (posicao %d, campo %s)"
+                                         % (tipo, r.p, campo))
+                    r.u32()  # marcador de fim da modificacao
+                    chave = prefixo + campo + ("/%d" % ptr if ptr else "")
+                    if com_nivel:
+                        campos.setdefault(chave, {})[str(nivel)] = valor
+                    else:
+                        campos[chave] = valor
             objetos.append({"id": novo or base, "base": base if novo else None,
                             "origem": origem, "campos": campos})
     return versao, objetos, len(dados) - r.p
+
+
+def parse_secoes_txt(texto):
+    """Le arquivos .txt de perfil: [ID] / Chave=Valor."""
+    secoes, atual = {}, None
+    for linha in texto.splitlines():
+        l = linha.strip()
+        if not l or l.startswith("//"):
+            continue
+        m = re.fullmatch(r"\[(.+?)\]", l)
+        if m:
+            atual = secoes.setdefault(m.group(1), {})
+        elif atual is not None and "=" in l:
+            k, v = l.split("=", 1)
+            atual[k.strip()] = v.strip()
+    return secoes
 
 
 def resolver_strings(valor, wts):
@@ -395,6 +416,18 @@ CANDIDATOS = [
     "war3mapExtra.txt", "war3campaign.w3u", "war3map.w3s", "war3map.w3r",
     "war3map.w3c", "war3map.shd", "war3map.mmp",
 ] + [a[0] for a in ARQUIVOS_OBJETOS]
+
+_RACAS = ["Campaign", "Common", "Human", "NightElf", "Orc", "Undead", "Neutral", "Item"]
+_TIPOS = ["AbilityFunc", "AbilityStrings", "UnitFunc", "UnitStrings", "UpgradeFunc",
+          "UpgradeStrings", "Func", "Strings", "AbilityProfile"]
+CANDIDATOS += ["Units\\%s%s.txt" % (r, t) for r in _RACAS for t in _TIPOS]
+CANDIDATOS += ["Units\\CommandFunc.txt", "Units\\CommandStrings.txt",
+               "Units\\UnitGlobalStrings.txt", "Units\\ItemFunc.txt", "Units\\ItemStrings.txt",
+               "Units\\ItemAbilityFunc.txt", "Units\\ItemAbilityStrings.txt"]
+CANDIDATOS += ["Units\\%s.slk" % n for n in (
+    "UnitData", "UnitBalance", "UnitUI", "UnitAbilities", "UnitWeapons", "ItemData",
+    "AbilityData", "UpgradeData", "UnitMetaData", "AbilityMetaData")]
+CANDIDATOS += ["Doodads\\Doodads.slk", "Units\\DestructableData.slk"]
 
 EXT_TEXTO = {".j", ".lua", ".txt", ".slk", ".wts", ".wtg", ".wct", ".w3i", ".imp",
              ".ini", ".json", ".fdf", ".toc", ".w3u", ".w3t", ".w3a", ".w3h", ".w3q",
@@ -466,6 +499,17 @@ def extrair(fonte, saida, log):
         salvar_json(saida / "strings.json", {str(k): v for k, v in wts.items()})
         log("Textos (wts): %d" % len(wts))
 
+    # textos dos objetos (nomes, tooltips, icones) em arquivos Units\\*.txt
+    textos_obj = {}
+    for nome, dados in brutos.items():
+        if nome.startswith("units\\") and nome.endswith(".txt"):
+            for oid, campos in parse_secoes_txt(decodificar(dados)).items():
+                textos_obj.setdefault(oid, {}).update(
+                    {k: resolver_strings(v, wts) for k, v in campos.items()})
+    if textos_obj:
+        salvar_json(saida / "textos_objetos.json", textos_obj)
+        log("Textos de objetos (Units\\*.txt): %d ids" % len(textos_obj))
+
     # objetos
     contagens = {}
     for arq, saida_json, tipo, com_nivel in ARQUIVOS_OBJETOS:
@@ -480,8 +524,12 @@ def extrair(fonte, saida, log):
         for o in objs:
             o["campos"] = {k: resolver_strings(v, wts) for k, v in o["campos"].items()}
             nome = primeiro_valor(o["campos"].get(NOME_CAMPO[tipo]))
+            if not nome:
+                nome = textos_obj.get(o["id"], {}).get("Name")
             if nome:
                 o["nome"] = nome
+            if o["id"] in textos_obj:
+                o["textos"] = textos_obj[o["id"]]
         salvar_json(saida / saida_json, objs)
         contagens[saida_json] = len(objs)
         log("%s: %d objetos (versao %d)%s" % (
@@ -507,6 +555,7 @@ def extrair(fonte, saida, log):
               "Objetos: " + (", ".join("%s=%d" % kv for kv in contagens.items()) or "nenhum"),
               "Scripts: " + (", ".join(scripts) or "NENHUM (mapa protegido?)"),
               "Textos (wts): %d" % len(wts),
+              "Textos de objetos: %d" % len(textos_obj),
               "Pistas de atributos: %d" % len(pistas), ""]
     if faltaram:
         resumo.append("Nao encontrados (normal se o mapa nao usa): " + ", ".join(faltaram))
