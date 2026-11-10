@@ -176,18 +176,49 @@ class MPQ:
             raise KeyError(nome)
         return self.ler_bloco(blk, nome)
 
-    def ler_bloco(self, blk, nome=None):
+    def adivinhar_chaves(self, blk):
+        """Recupera a chave de um arquivo cifrado SEM saber o nome.
+        Funciona para arquivos comprimidos em setores: a 1a entrada da tabela de
+        setores e sempre (n+1)*4 (conhecida), o que permite achar a chave."""
+        pos, csize, fsize, flags = self.block[blk]
+        if (flags & F_SINGLE) or not (flags & F_COMPRESS) or not (flags & F_ENC):
+            return []
+        n = (fsize + self.setor - 1) // self.setor
+        conhecido = (n + 1 + (1 if flags & F_CRC else 0)) * 4
+        self.f.seek(self.off + pos)
+        cab = self.f.read(8)
+        if len(cab) < 8:
+            return []
+        e0, e1 = struct.unpack("<II", cab)
+        candidatas = []
+        for b in range(256):
+            s2 = (0xEEEEEEEE + CRYPT[0x400 + b]) & M
+            k1 = ((e0 ^ conhecido) - s2) & M
+            if (k1 & 0xFF) != b:
+                continue
+            k2 = (((((~k1) & M) << 21) + 0x11111111) & M) | (k1 >> 11)
+            s2b = (conhecido + s2 + (s2 << 5) + 3) & M
+            s2c = (s2b + CRYPT[0x400 + (k2 & 0xFF)]) & M
+            p1 = e1 ^ ((k2 + s2c) & M)
+            if conhecido < p1 <= csize:
+                candidatas.append((k1 + 1) & M)
+        return candidatas
+
+    def ler_bloco(self, blk, nome=None, chave_dada=None, max_setores=None):
         pos, csize, fsize, flags = self.block[blk]
         if not (flags & F_EXISTS) or (flags & F_DELETE):
             raise KeyError(nome or blk)
         chave = 0
         if flags & F_ENC:
-            if nome is None:
+            if chave_dada is not None:
+                chave = chave_dada
+            elif nome is None:
                 raise ValueError("arquivo cifrado sem nome")
-            base = nome.replace("/", "\\").split("\\")[-1]
-            chave = hash_str(base, 3)
-            if flags & F_FIXKEY:
-                chave = (((chave + pos) & M) ^ fsize) & M
+            else:
+                base = nome.replace("/", "\\").split("\\")[-1]
+                chave = hash_str(base, 3)
+                if flags & F_FIXKEY:
+                    chave = (((chave + pos) & M) ^ fsize) & M
         comprimido = bool(flags & (F_COMPRESS | F_IMPLODE))
         self.f.seek(self.off + pos)
         if flags & F_SINGLE:
@@ -205,7 +236,7 @@ class MPQ:
             if flags & F_ENC:
                 tab = decifrar(tab, (chave - 1) & M)
             offs = struct.unpack("<%dI" % (n + 1 + extra), tab)[: n + 1]
-            for i in range(n):
+            for i in range(n if max_setores is None else min(n, max_setores)):
                 self.f.seek(self.off + pos + offs[i])
                 raw = self.f.read(offs[i + 1] - offs[i])
                 esperado = min(self.setor, fsize - i * self.setor)
@@ -589,49 +620,72 @@ def parece_texto(dados):
     return imprimiveis / len(amostra) > 0.97 and b"\x00" not in amostra
 
 
+def classificar(dados):
+    """Devolve (tipo, previa) olhando so o conteudo."""
+    for magia, nome in MAGICAS.items():
+        if dados.startswith(magia):
+            return nome, ""
+    if parece_texto(dados):
+        txt = decodificar(dados[:4000])
+        previa = txt.lstrip()[:70].replace("\n", " ").replace("\r", "")
+        return ("texto.slk" if txt.startswith("ID;") else "texto.txt"), previa
+    return "binario", dados[:8].hex()
+
+
 def varrer_blocos(mpq, saida, log, limite_bytes=60 * 1024 * 1024):
-    """Le TODOS os blocos do MPQ pelo conteudo (para mapas sem (listfile))."""
+    """Le TODOS os blocos do MPQ pelo conteudo (mapas sem (listfile)).
+    Arquivos cifrados tem a chave recuperada pela estrutura do MPQ."""
     pasta = saida / "blocos"
     indice, salvos, total = [], 0, 0
     contagem = {}
     for i, (pos, csize, fsize, flags) in enumerate(mpq.block):
         if not (flags & F_EXISTS) or (flags & F_DELETE):
             continue
-        tipo, previa = "?", ""
-        if fsize > 16 * 1024 * 1024:
-            tipo = "grande (nao lido)"
-        elif flags & F_ENC:
-            tipo = "cifrado (sem nome)"
-        else:
-            try:
-                dados = mpq.ler_bloco(i)
-                tipo = None
-                for magia, nome in MAGICAS.items():
-                    if dados.startswith(magia):
-                        tipo = nome
-                        break
-                if tipo is None:
-                    if parece_texto(dados):
-                        txt = decodificar(dados)
-                        primeira = txt.lstrip()[:60].replace("\n", " ").replace("\r", "")
-                        ext = ".slk" if txt.startswith("ID;") else ".txt"
-                        tipo = "texto" + ext
-                        previa = primeira
+        tipo, previa, chave = "?", "", None
+        try:
+            if fsize > 16 * 1024 * 1024 and not (flags & F_ENC):
+                tipo = "grande (nao lido)"
+            else:
+                amostra = None
+                if flags & F_ENC:
+                    for c in mpq.adivinhar_chaves(i):
+                        try:
+                            amostra = mpq.ler_bloco(i, chave_dada=c, max_setores=1)
+                            chave = c
+                            break
+                        except Exception:  # noqa: BLE001
+                            continue
+                    if amostra is None:
+                        tipo = "cifrado (chave nao recuperada)"
+                else:
+                    amostra = mpq.ler_bloco(i, max_setores=1)
+                if amostra is not None:
+                    tipo, previa = classificar(amostra)
+                    if tipo.startswith("texto") and fsize <= 16 * 1024 * 1024:
+                        dados = mpq.ler_bloco(i, chave_dada=chave)
                         if total + len(dados) <= limite_bytes:
-                            pasta.mkdir(exist_ok=True)
+                            pasta.mkdir(parents=True, exist_ok=True)
+                            ext = ".slk" if tipo.endswith("slk") else ".txt"
                             (pasta / ("bloco_%05d%s" % (i, ext))).write_bytes(dados)
                             total += len(dados)
                             salvos += 1
-                    else:
-                        tipo = "binario"
-                        previa = dados[:8].hex()
-            except Exception as e:  # noqa: BLE001
-                tipo = "erro: %s" % str(e)[:60]
-        contagem[tipo.split(":")[0]] = contagem.get(tipo.split(":")[0], 0) + 1
-        indice.append("%05d\t%9d\t%s\t%s" % (i, fsize, tipo, previa))
+                    elif tipo == "binario" and fsize <= 4 * 1024 * 1024:
+                        # dados de objetos do editor (w3u/w3t/...) comecam com versao 1..3
+                        dados = mpq.ler_bloco(i, chave_dada=chave)
+                        if len(dados) >= 12 and dados[:4] in (b"\x03\x00\x00\x00", b"\x02\x00\x00\x00",
+                                                            b"\x01\x00\x00\x00") and len(dados) < 3 * 1024 * 1024:
+                            if total + len(dados) <= limite_bytes:
+                                pasta.mkdir(parents=True, exist_ok=True)
+                                (pasta / ("bloco_%05d.bin" % i)).write_bytes(dados)
+                                total += len(dados)
+        except Exception as e:  # noqa: BLE001
+            tipo = "erro: %s" % str(e)[:60]
+        chave_txt = tipo.split(":")[0].split(" (")[0]
+        contagem[chave_txt] = contagem.get(chave_txt, 0) + 1
+        indice.append("%05d\t%9d\t0x%08X\t%s\t%s" % (i, fsize, flags, tipo, previa))
     saida.mkdir(parents=True, exist_ok=True)
     (saida / "blocos_indice.txt").write_text("\n".join(indice), encoding="utf-8")
-    log("Varredura de blocos: %d blocos; %d textos salvos. Tipos: %s" % (
+    log("Varredura de blocos: %d blocos; %d arquivos salvos. Tipos: %s" % (
         len(indice), salvos, ", ".join("%s=%d" % kv for kv in sorted(contagem.items()))))
 
 

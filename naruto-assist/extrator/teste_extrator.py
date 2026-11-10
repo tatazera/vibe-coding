@@ -156,6 +156,18 @@ def main():
         X.varrer_blocos(mpq, saida, lambda *_: None)
         indice = (saida / "blocos_indice.txt").read_text(encoding="utf-8")
         assert "texto.txt" in indice and list((saida / "blocos").glob("*.txt")), indice
+        # arquivos cifrados SEM nome: a chave e recuperada pela estrutura
+        arq2 = {"(listfile)": (b"x\r\n", "plain"),
+                "Units\\ItemStrings.txt": (("[I001]\r\nName=Kunai\r\n" * 300).encode(), "zlib_enc"),
+                "a\\b.mdx": (b"MDLX" + bytes(range(256)) * 30, "bz2_enc")}
+        mapa2 = Path(tmp) / "t2.w3x"
+        mapa2.write_bytes(construir_mpq(arq2))
+        mpq2 = X.MPQ(str(mapa2))
+        assert X.hash_str("ItemStrings.txt", 3) in mpq2.adivinhar_chaves(1)
+        X.varrer_blocos(mpq2, Path(tmp) / "o2", lambda *_: None)
+        achados = list((Path(tmp) / "o2" / "blocos").glob("*.txt"))
+        assert any(b"Name=Kunai" in a.read_bytes() for a in achados), achados
+        assert "modelo mdx" in (Path(tmp) / "o2" / "blocos_indice.txt").read_text(encoding="utf-8")
         # modo pasta
         saida2 = Path(tmp) / "saida2"
         X.extrair(X.FontePasta(saida / "scripts"), saida2, lambda *_: None)
