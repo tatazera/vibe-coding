@@ -57,7 +57,6 @@
     "Edo Tensei Scroll no inicio ressuscita os NPCs ANBU do mapa e ajuda no farm.",
     "O leveling e parecido para quem nao tem dificuldade de farm no inicio; ajuste se o seu personagem tiver."
   ],
-  "gpm_padrao": 500,
   "lojas": {
     "Legendary Equipment Shop": [
       "Sanbi's Skin",
@@ -88,12 +87,109 @@
     "nin": "Thunder",
     "gen": "Water"
   },
-  "arma_teto_pct": 0.6,
   "arma_comentario": "Caminho padrao da arma: Battle Level 1 ate o Level MAX; depois Soul Absorb Stone + Spirit do elemento (orb) fazem a arma lendaria. 'arma_teto_pct' e a fracao maxima do ouro que a arma pode consumir. A arma elemental feita cedo (Weapon Lv1 + Spirit) e um item SITUACIONAL, para qualquer heroi que precise de dano com escala de status rapido; o elemento vem do atributo (tai = Fire, nin = Thunder, gen = Water).",
   "legendaria_padrao": {
     "tai": "Legendary Weapon: Kyuubi's Chakra Cloak",
     "nin": "Legendary Weapon: Raijin no Ken",
     "gen": "Legendary Weapon: Haku's Senbons"
   },
-  "elemental_cedo_escala_min": 0.5
+  "elemental_cedo_escala_min": 0.5,
+  "marcos": [
+    {
+      "nivel": 1,
+      "titulo": "Farm inicial"
+    },
+    {
+      "nivel": 10,
+      "titulo": "1º pico de poder"
+    },
+    {
+      "nivel": 15,
+      "titulo": "2º pico de poder"
+    },
+    {
+      "nivel": 35,
+      "titulo": "Build final"
+    }
+  ],
+  "linhas": [
+    {
+      "id": "arma",
+      "nome": "Arma",
+      "formas": {
+        "1": "arma:1",
+        "10": "arma:5",
+        "15": "arma:MAX",
+        "35": "arma:lendaria"
+      },
+      "se_elemental_cedo": {
+        "1": "arma:1",
+        "10": "arma:elemental",
+        "15": "arma:elemental",
+        "35": "arma:elemental+"
+      }
+    },
+    {
+      "id": "roupa",
+      "nome": "Roupa",
+      "formas": {
+        "1": "Genin Cloth",
+        "10": "Chunnin Cloth",
+        "15": "Jounin Cloth",
+        "35": "Kage Robe"
+      }
+    },
+    {
+      "id": "bota",
+      "nome": "Botas",
+      "formas": {
+        "1": "Ninja Shoes",
+        "10": "Ninja Shippu Boots",
+        "15": "bota:1",
+        "35": "bota:3"
+      },
+      "se_nao_bota_essencial": {
+        "1": "Ninja Shoes",
+        "10": "Ninja Shippu Boots",
+        "15": "Ninja Shippu Boots",
+        "35": "Ninja Shippu Boots"
+      }
+    },
+    {
+      "id": "espelho",
+      "nome": "Heaven Mirror",
+      "formas": {
+        "1": "Bingo Book",
+        "10": "Anbu Mask",
+        "15": "The Heaven Mirror",
+        "35": "The Heaven Mirror"
+      }
+    },
+    {
+      "id": "headband",
+      "nome": "Ninja Headband",
+      "formas": {
+        "1": "Ninja Headband",
+        "10": "=Anbu Mask"
+      }
+    },
+    {
+      "id": "jade",
+      "nome": "Jade of Susano'o",
+      "formas": {
+        "1": "",
+        "10": "Jade of Susano'o"
+      }
+    },
+    {
+      "id": "extra",
+      "nome": "Extra (melhor para o herói)",
+      "formas": {
+        "1": "",
+        "35": "@extra"
+      }
+    }
+  ],
+  "extra_preco_max": 20000,
+  "marcos_comentario": "RASCUNHO a validar: cada linha tem a forma do item em cada checkpoint de nivel. Formas: 'arma:N' (Battle nivel N ou MAX), 'arma:lendaria', 'arma:elemental' / 'arma:elemental+', 'bota:N' (Super Boots nivel N, variante escolhida pelo heroi), '=X' (item ja incluido em X) e '@extra' (melhor item restante para o heroi). Se um nivel nao aparece, a forma anterior continua."
 }

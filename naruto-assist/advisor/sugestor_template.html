@@ -24,7 +24,7 @@
   .topo h1{font-size:18px;margin:0}.topo h1 span{color:var(--laranja)}
   .topo small{color:var(--mudo)}
   .tema{margin-left:auto}
-  .filtros{display:grid;grid-template-columns:2.2fr 80px 100px 80px 90px 1.2fr;gap:10px;padding:14px 0;align-items:end}
+  .filtros{display:grid;grid-template-columns:2.4fr 100px 1.3fr;gap:10px;padding:14px 0;align-items:end}
   .filtros label{display:block;font-size:11px;color:var(--mudo);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
   @media(max-width:1000px){.filtros{grid-template-columns:1fr 1fr}}
   details.regras{background:var(--painel);border:1px solid var(--borda);border-radius:10px;padding:8px 12px;margin-bottom:12px}
@@ -147,6 +147,26 @@
   .grade2{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start}
   @media(max-width:1000px){.grade2{grid-template-columns:1fr}}
   .ordem td.c.on.escala{background:var(--roxo);color:#101010}
+  .marcos{border-collapse:separate;border-spacing:0 0;width:100%}
+  .marcos th,.marcos td{border-bottom:1px solid var(--borda);padding:8px 6px;vertical-align:top;text-align:center;font-size:12px}
+  .marcos th.l{text-align:left;color:var(--mudo);font-size:11px;text-transform:uppercase;letter-spacing:.5px;min-width:110px}
+  .marcos .mativo{background:var(--painel3)}
+  .mhead{background:none;border:none;width:100%;color:var(--texto);font-weight:700;line-height:1.25}
+  .mhead small{display:block;color:var(--mudo);font-weight:400;font-size:11px}
+  .aqui{display:inline-block;margin-top:3px;background:var(--laranja);color:#101010;border-radius:99px;padding:0 8px;font-size:10px;font-weight:800}
+  .marcos .nm{display:block;font-size:11px;line-height:1.15;max-width:110px}
+  .passo{font-size:10px;color:var(--laranja2)}
+  .cons{color:var(--mudo);font-size:11px;font-style:italic}
+  .orbs{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;margin-top:3px}
+  .orb{display:inline-flex;align-items:center;gap:3px;background:var(--painel2);border:1px solid var(--laranja);border-radius:99px;padding:1px 6px 1px 2px;font-size:10px;color:var(--laranja2)}
+  .orb small{font-size:10px}
+  .icomorb{display:flex;flex-direction:column;align-items:center}
+  .evo{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:6px 0 12px}
+  .evo .seta{color:var(--mudo);font-size:14px}
+  .evo .pt{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+  .evo .pt i{font-style:normal;font-size:10px;background:var(--laranja);color:#101010;border-radius:99px;padding:0 6px;font-weight:800}
+  .evo .pt span.n{font-size:10px;color:var(--mudo);max-width:84px;text-align:center;line-height:1.1}
+  .evo .pt.menor{opacity:.75}
   .lg{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 </style>
 </head>
@@ -167,31 +187,20 @@
       </div>
     </div>
     <div><label for="nivel">Nível</label><input id="nivel" type="number" min="1" max="200" value="20"></div>
-    <div><label for="ouro">Ouro</label><input id="ouro" type="number" min="0" step="100" value="20000"></div>
-    <div><label for="cristais">Cristais</label><input id="cristais" type="number" min="0" value="0"></div>
-    <div><label for="gpm" title="Ouro por minuto: usado só para estimar em que minuto cada compra acontece">Ouro/min</label><input id="gpm" type="number" min="50" step="50" value="500"></div>
     <div><label for="peso">Peso da defesa: <span id="pesoTxt">25</span>%</label><input id="peso" type="range" min="0" max="100" value="25" style="padding:0"></div>
   </div>
-  <details class="regras"><summary>Regras de itens (suposições editáveis)</summary>
+  <details class="regras"><summary>Regras e política de compra (editável)</summary>
     <div class="linha">
       <div><label for="slots">Vagas de item</label><input id="slots" type="number" min="1" max="12" value="6"></div>
-      <div><label for="maxArma">Máx. armas</label><input id="maxArma" type="number" min="0" max="12" value="1"></div>
-      <div><label for="maxRoupa">Máx. roupas</label><input id="maxRoupa" type="number" min="0" max="12" value="1"></div>
-      <div><label for="maxBota">Máx. botas</label><input id="maxBota" type="number" min="0" max="12" value="1"></div>
-      <div style="align-self:end"><button id="limpar" type="button">Limpar fixados/banidos</button></div>
+      <div><label class="check"><input id="elementalCedo" type="checkbox"> Fazer a arma elemental cedo (Weapon Lv1 + Spirit do elemento): para quem precisa de dano com escala de status rápido</label></div>
+      <div><label class="check"><input id="incluirSit" type="checkbox"> Permitir itens situacionais no slot "Extra"</label></div>
     </div>
-    <div class="linha">
-      <div><label class="check"><input id="usarIniciais" type="checkbox" checked> Começar com os itens iniciais padrão (Ninja Headband, Bingo Book)</label></div>
-      <div><label class="check"><input id="usarNucleo" type="checkbox" checked> Plano padrão inclui o núcleo (Jade of Susano'o, Heaven Mirror) quando couber</label></div>
-      <div><label class="check"><input id="incluirSit" type="checkbox"> Permitir itens situacionais na sugestão automática</label></div>
-      <div><label class="check"><input id="elementalCedo" type="checkbox"> Fazer a arma elemental cedo (Weapon Lv1 + Spirit do elemento do herói): para quem precisa de dano com escala de status rápido</label></div>
-    </div>
-    <details style="margin-top:10px"><summary>Editar a política de compra (itens iniciais, núcleo, situacionais, heróis com bota/arma elemental)</summary>
-      <p class="nota" style="margin:8px 0">Use os nomes dos itens exatamente como aparecem no jogo. O que você salvar fica guardado neste navegador.</p>
-      <textarea id="polTxt" rows="16" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--painel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:8px"></textarea>
+    <details style="margin-top:10px"><summary>Editar o plano por checkpoints (marcos de nível, linhas de itens, situacionais, heróis)</summary>
+      <p class="nota" style="margin:8px 0">Em <b>marcos</b> ficam os níveis dos checkpoints; em <b>linhas</b>, a forma de cada item em cada checkpoint. Use os nomes dos itens exatamente como no jogo. O que você salvar fica guardado neste navegador.</p>
+      <textarea id="polTxt" rows="18" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--painel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:8px"></textarea>
       <p style="margin:8px 0 0"><button id="polAplicar" type="button">Aplicar e salvar</button> <button id="polPadrao" type="button">Restaurar padrão</button> <span id="polMsg" class="mudo"></span></p>
     </details>
-    <p class="nota" style="margin:10px 0 0">Armas só entram se forem da família do atributo principal do herói (kunai = Taijutsu, shuriken = Ninjutsu, senbons = Genjutsu). As listas de itens iniciais, núcleo e situacionais vêm do arquivo <b>politica.json</b>.</p>
+    <p class="nota" style="margin:10px 0 0">Armas só entram se forem da família do atributo principal do herói (kunai = Taijutsu, shuriken = Ninjutsu, senbons = Genjutsu). A build não depende de ouro: ela segue os checkpoints de nível (1, 10, 15, 35).</p>
   </details>
 
   <div class="abas" id="abas">
@@ -217,7 +226,7 @@ const sinal = (n, d=0) => (n>0?"+":"") + fmt(n, d);
 const norm = n => String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 
 /* ---------- estado ---------- */
-const S = { heroiId:null, fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", preset:"padrao", itemSel:null, arvoreSel:null, cat:"todas", soMontados:false };
+const S = { heroiId:null, fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", marcoSel:null, itemSel:null, arvoreSel:null, cat:"todas", soMontados:false };
 D.receitas = D.receitas.filter(r => r.tipoReceita !== "Mission");
 const CR = D.criacao || {};
 const ITEM = Object.fromEntries(D.itens.map(i => [i.id, i]));
@@ -385,110 +394,103 @@ function perfil(h, nivel){
   };
 }
 
-/* ---------- otimizador (com a politica de compra) ---------- */
+/* ---------- plano por checkpoints de nivel (sem ouro) ---------- */
 const armaCompativel = (it, h) => it.tipo !== "Weapon" || !it.familia || it.familia === h.primario;
-function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
-  const h = X.h, nivel = X.nivel, w = X.w;
-  const score = set => pontuacao(calcular(h, nivel, set), obj, w);
-  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h) && (X.incluirSit || !isSit(i, h)));
-  const cont = (set, f) => set.filter(f).length;
-  const custo = set => set.reduce((a,i)=>a+(i.ouro||0), 0), custoCr = set => set.reduce((a,i)=>a+(i.cristais||0), 0);
-  const valido = (set, it) => !set.includes(it) && set.length < X.vagas && custo(set)+(it.ouro||0) <= ouro && custoCr(set)+(it.cristais||0) <= cristais &&
-    (it.tipo !== "Weapon" || cont(set,i=>i.tipo==="Weapon") < X.maxArma) && (it.tipo !== "Cloth" || cont(set,i=>i.tipo==="Cloth") < X.maxRoupa) &&
-    (it.categoria !== "bota" || cont(set,i=>i.categoria==="bota") < X.maxBota);
-
-  // 1) itens fixados pelo usuario + iniciais padrao
-  let fixos = [...S.fixos].map(id => ITEM[id]).filter(Boolean);
-  const motivos = new Map(fixos.map(i => [i.id, "fixado"]));
-  if(X.usarIniciais) for(const it of INICIAIS){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "inicial"); } }
-  // 2) melhor de uma classe, dentro do que cabe (usado para bota essencial, arma elemental e nucleo)
-  const poolTodos = CANDIDATOS.filter(i => !S.banidos.has(i.id) && armaCompativel(i, h));
-  const melhorDe = (set, pred, pool = cand.concat(NUCLEO)) => { let m = null, ms = -Infinity;
-    for(const it of pool) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
-      if(sc > ms + 1e-9 || (Math.abs(sc-ms) <= 1e-9 && (it.nivelItem||0) > ((m||{}).nivelItem||0))){ ms = sc; m = it; } } return m; };
-  if(pf.botaEssencial && X.maxBota > 0){ const m = melhorDe(fixos, i => i.categoria === "bota"); if(m){ fixos.push(m); motivos.set(m.id, "bota essencial"); } }
-  if(X.elementalCedo && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome), poolTodos); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental cedo ("+pf.elemento+")"); } }
-  // caminho padrao da arma: Battle ate o Level MAX; depois a lendaria do elemento padrao (Spirit/orb). Teto = fracao do ouro.
-  if(X.maxArma > 0 && !fixos.some(i => i.tipo === "Weapon")){
-    const teto = (P.arma_teto_pct ?? 0.6) * ouro, leg = pf.legendaria;
-    const m = melhorDe(fixos, i => (i.categoria === "arma_batalha" || (leg && i === leg)) && (i.ouro||0) <= teto);
-    if(m){ fixos.push(m); motivos.set(m.id, m === leg ? "arma lendária" : "arma base (Battle até o MAX)"); }
-  }
-  if(usarNucleo) for(const it of NUCLEO){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "núcleo"); } }
-  const travados = new Set(fixos.map(i => i.id));
-
-  function guloso(porOuro){
-    let set = fixos.slice();
-    for(;;){
-      const s0 = score(set); let melhor = null, mg = 1e-9;
-      for(const it of cand){
-        if(travados.has(it.id) || !valido(set, it)) continue;
-        let g = score(set.concat(it)) - s0; if(porOuro) g /= Math.max(it.ouro||0, 50);
-        if(g > mg){ mg = g; melhor = it; }
-      }
-      if(!melhor) return set; set = set.concat(melhor);
-    }
-  }
-  function refinar(set){
-    for(let r=0; r<4; r++){
-      let atual = score(set), mudou = false;
-      for(let i=0; i<set.length; i++){
-        if(travados.has(set[i].id)) continue;
-        const sem = set.filter((_,k)=>k!==i); let melhor = null, ms = atual;
-        for(const it of cand){ if(travados.has(it.id) || it === set[i] || !valido(sem, it)) continue; const sc = score(sem.concat(it)); if(sc > ms + 1e-9){ ms = sc; melhor = it; } }
-        if(melhor){ set = sem.concat(melhor); atual = ms; mudou = true; }
-      }
-      let mAdd = null, ms = atual;
-      for(const it of cand){ if(travados.has(it.id) || !valido(set, it)) continue; const sc = score(set.concat(it)); if(sc > ms + 1e-9){ ms = sc; mAdd = it; } }
-      if(mAdd){ set = set.concat(mAdd); mudou = true; }
-      if(!mudou) break;
-    }
-    return set;
-  }
-  const a = refinar(guloso(false)), b = refinar(guloso(true));
-  const set = score(a) >= score(b) ? a : b;
-  return {set, motivos};
+const FAM = {tai:"Kunai", nin:"Shuriken", gen:"Senbons"};
+const SUF = {Kunai:"Explosive", Shuriken:"Fuuma", Senbons:"Dance"};
+const BOTAS_SUPER = ["Boots of Teleportation","Anbu Shoes","Cloning Boots","Healing Boots","Invisibility Boots"];
+function descendentes(id, acc = new Set(), prof = 0){
+  const r = CR[id]; if(!r || prof > 8) return acc;
+  const refs = r.m === "upgrade" ? [r.base] : (r.comps||[]).map(c => c.id);
+  for(const x of refs.filter(Boolean)) if(!acc.has(x)){ acc.add(x); descendentes(x, acc, prof+1); }
+  return acc;
 }
-
-/* ordem de compra do plano: iniciais -> arma -> bota essencial -> roupa -> nucleo -> resto (mais barato primeiro) */
-function ordemPlano(set, motivos, pf){
-  const grupo = it => {
-    const m = motivos.get(it.id);
-    if(m === "inicial") return 0;
-    if(it.categoria.startsWith("arma")) return 1;
-    if(it.categoria === "bota") return pf.botaEssencial ? 2 : 5;
-    if(it.categoria === "roupa") return 3;
-    if(m === "núcleo" || NUCLEO.includes(it)) return 4;
-    return 6;
-  };
-  return set.slice().sort((a,b) => (grupo(a)-grupo(b)) || ((a.ouro||0)-(b.ouro||0)));
+function varianteBota(X){
+  if(X._vb) return X._vb;
+  let best = null, bs = -Infinity;
+  for(const v of BOTAS_SUPER){ const it = porNome(v+" - Level 3"); if(!it) continue;
+    const sc = pontuacao(calcular(X.h, X.nivel, [it]), "equil", X.w); if(sc > bs){ bs = sc; best = v; } }
+  return X._vb = best || BOTAS_SUPER[0];
 }
-function motivoDe(it, motivos, pf){
-  const m = motivos.get(it.id); if(m) return m;
-  if(it.categoria === "arma_batalha") return "arma base";
-  if(it.categoria.startsWith("arma")) return "arma";
-  if(it.categoria === "roupa") return "roupa";
-  if(it.categoria === "bota") return "bota";
-  return "ganho de poder";
-}
-function evolucao(it){
-  if(it.categoria === "arma_batalha" && it.nivelItem > 1)
-    return `Lv 1 + ${it.nivelItem-1}× Upgrade Weapon (${fmt(taxaUpgrade("Upgrade Weapon"))} cada)`;
-  if(it.categoria === "roupa"){
-    const i = (P.evolucao_roupa||[]).findIndex(n => norm(n) === norm(it.nome));
-    if(i > 0) return `Genin Cloth + ${i}× Upgrade Cloth (${fmt(taxaUpgrade("Upgrade Cloth"))} cada)`;
+function resolverForma(tok, X){
+  const pf = X.pf, fam = FAM[X.h.primario]; let m;
+  if(!tok) return {item:null};
+  if(tok[0] === "=") return {item:null, consumidoPor:tok.slice(1)};
+  if(tok === "@extra") return {extra:true, item:null};
+  if((m = /^arma:(.+)$/.exec(tok))){
+    const a = m[1];
+    if(a === "lendaria") return {item: pf.legendaria};
+    if(a === "elemental") return {item: porNome(pf.elemento+" "+fam)};
+    if(a === "elemental+") return {item: porNome(pf.elemento+" "+fam+" ("+SUF[fam]+")")};
+    return {item: porNome("Battle "+fam+" - Level "+a)};
   }
-  if(it.categoria === "bota" && it.nivelItem > 1) return `Nível 1 + ${it.nivelItem-1}× Upgrade Super Boots (${fmt(taxaUpgrade("Upgrade Super Boots"))} cada)`;
-  return "";
+  if((m = /^bota:(\d)$/.exec(tok))) return {item: porNome(varianteBota(X)+" - Level "+m[1])};
+  return {item: porNome(tok)};
 }
-function estagios(ordem){
-  const total = ordem.reduce((a,i)=>a+(i.ouro||0),0) || 1; let cum = 0; const ini = [], core = [];
-  for(const it of ordem){
-    cum += it.ouro||0;
-    if(!ini.length || (cum <= total*0.3 && core.length === 0)) ini.push(it);
-    else if(cum <= total*0.7 || !core.length) core.push(it);
+const CAT_FORA_EXTRA = ["arma_batalha","arma_elemental","arma_lendaria","arma_situacional","roupa","bota","espirito"];
+function melhorExtra(X, base){
+  const excl = new Set(); base.forEach(b => { excl.add(b.id); descendentes(b.id).forEach(x => excl.add(x)); });
+  const max = P.extra_preco_max ?? 20000;
+  let m = null, ms = -Infinity;
+  for(const it of CANDIDATOS){
+    if(excl.has(it.id) || !armaCompativel(it, X.h) || (!X.incluirSit && isSit(it, X.h)) || CAT_FORA_EXTRA.includes(it.categoria)) continue;
+    if((it.ouro||0) > max || it.cristais) continue;
+    if([...descendentes(it.id)].some(d => excl.has(d) && base.some(b => b.id === d))) continue;   // nao consome itens ja na build
+    const sc = pontuacao(calcular(X.h, X.nivel, base.concat(it)), "equil", X.w);
+    if(sc > ms){ ms = sc; m = it; }
   }
-  return {inicio:ini, core};
+  return m;
+}
+function planoMarcos(X){
+  const marcos = (P.marcos||[{nivel:1,titulo:"Início"}]).slice().sort((a,b) => a.nivel - b.nivel);
+  const linhas = P.linhas || [];
+  const cps = checkpoints(X.h, 999);
+  const out = marcos.map(m => ({nivel:m.nivel, titulo:m.titulo||"", skills:cps.filter(c => c.L === m.nivel).map(c => c.txt), cel:[], set:[]}));
+  linhas.forEach((ln, li) => {
+    let f = ln.formas || {};
+    if(X.elementalCedo && ln.se_elemental_cedo) f = ln.se_elemental_cedo;
+    if(!X.pf.botaEssencial && ln.se_nao_bota_essencial) f = ln.se_nao_bota_essencial;
+    let tok = "", prev = null;
+    out.forEach(o => {
+      if(Object.prototype.hasOwnProperty.call(f, String(o.nivel))) tok = f[String(o.nivel)];
+      const r = resolverForma(tok, X);
+      o.cel[li] = Object.assign({ln, tok, prev}, r);
+      if(r.item) prev = r.item;
+    });
+  });
+  out.forEach(o => {
+    const base = o.cel.filter(c => c.item).map(c => c.item);
+    const ex = o.cel.find(c => c.extra);
+    if(ex){ const it = melhorExtra(X, base); ex.item = it; if(it) base.push(it); }
+    o.set = base.filter(it => !base.some(o2 => o2 !== it && descendentes(o2.id).has(it.id)));
+    o.cel.forEach(c => { if(c.item && !o.set.includes(c.item)) c.consumidoAuto = true; });
+  });
+  return out;
+}
+function marcoAtivo(plano, X){
+  if(S.marcoSel != null){ const i = plano.findIndex(p => p.nivel === S.marcoSel); if(i >= 0) return i; }
+  let idx = 0; plano.forEach((p,i) => { if(p.nivel <= X.nivel) idx = i; }); return idx;
+}
+function passoTexto(prev, it){
+  if(!it || (prev && prev.id === it.id)) return "";
+  const r = CR[it.id] || {m:"compra"};
+  if(!prev) return r.m === "compra" ? "comprar" : "montar";
+  if(r.m === "upgrade"){ let n = 0, id = it.id; while(id && id !== prev.id && CR[id] && CR[id].m === "upgrade"){ n++; id = CR[id].base; }
+    if(id === prev.id) return "upgrade ×"+n; }
+  if(r.m === "combinar") return "combinar";
+  return "trocar";
+}
+function etapasEntre(a, b){   // formas intermediarias de uma cadeia de upgrades (ex.: Lv5 -> Lv6..Lv9 -> MAX)
+  const mid = []; let id = b.id;
+  while(id && CR[id] && CR[id].m === "upgrade"){ id = CR[id].base; if(id === a.id) return mid.reverse(); if(id) mid.push(ITEM[id]); }
+  return [];
+}
+function chipsOrbs(it){
+  const r = CR[it.id]; if(!r || r.m !== "combinar") return "";
+  const orbs = (r.comps||[]).filter(c => /^(Spirit|Soul Absorb)/.test(c.nome));
+  if(!orbs.length) return "";
+  return `<div class="orbs">${orbs.map(c => { const x = c.id ? ITEM[c.id] : null;
+    return `<span class="orb" title="${esc(c.nome)}${c.nota ? " ("+esc(c.nota)+")" : ""}">${x ? icoItem(x,20) : ico("", c.nome, "", 20)}<small>${esc(c.nome.replace(/^Spirit of /,"Orb ").replace("Soul Absorb Stone","Pedra"))}</small></span>`; }).join("")}</div>`;
 }
 
 /* ---------- textos ---------- */
@@ -523,15 +525,14 @@ function situacionais(h, set){
 /* ---------- interface ---------- */
 function iniciar(){
   $("resumoDados").textContent = D.herois.length + " heróis · " + D.itens.length + " itens · " + D.receitas.length + " receitas" + (Object.keys(ICONES).length ? "" : " · ícones: modo simples");
-  $("gpm").value = P.gpm_padrao || 500;
   S.heroiId = (D.herois.find(h => h.nome === "Yamato") || D.herois[0]).id;
   desenharPicker();
   $("btnHeroi").addEventListener("click", () => { const p = $("painelHeroi"); p.hidden = !p.hidden; if(!p.hidden){ $("busca").value = ""; desenharPicker(); $("busca").focus(); } });
   $("busca").addEventListener("input", desenharGrade);
   document.addEventListener("click", e => { if(!e.target.closest(".picker")) $("painelHeroi").hidden = true; });
   $("gradeHerois").addEventListener("click", e => { const b = e.target.closest("[data-heroi]"); if(!b) return;
-    S.heroiId = b.dataset.heroi; S.niveisSkill = {}; $("painelHeroi").hidden = true; desenharPicker(); atualizar(); });
-  for(const id of ["nivel","ouro","cristais","gpm","slots","maxArma","maxRoupa","maxBota","peso","usarIniciais","usarNucleo","incluirSit","elementalCedo"])
+    S.heroiId = b.dataset.heroi; S.niveisSkill = {}; S.itemSel = null; S.marcoSel = null; $("painelHeroi").hidden = true; desenharPicker(); atualizar(); });
+  for(const id of ["nivel","slots","peso","incluirSit","elementalCedo"])
     $(id).addEventListener("input", () => { if(id==="peso") $("pesoTxt").textContent = $("peso").value; atualizar(); });
   const mostrarPol = () => { $("polTxt").value = JSON.stringify(P, null, 2); };
   mostrarPol();
@@ -544,12 +545,11 @@ function iniciar(){
     P = JSON.parse(JSON.stringify(P_PADRAO)); recalcPolitica(); try{ localStorage.removeItem("politica_naruto"); }catch(e){}
     mostrarPol(); $("polMsg").textContent = "Padrão restaurado."; atualizar();
   });
-  $("limpar").addEventListener("click", () => { S.fixos.clear(); S.banidos.clear(); atualizar(); });
   $("btnTema").addEventListener("click", () => { const r = document.documentElement; r.dataset.tema = r.dataset.tema === "claro" ? "" : "claro"; });
   $("abas").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b){ S.tab = b.dataset.tab; atualizar(); } });
   document.addEventListener("click", ev => {
-    const b = ev.target.closest("[data-acao],[data-item],[data-preset],[data-receita],[data-arv],[data-cat]"); if(!b) return;
-    if(b.dataset.preset){ S.preset = b.dataset.preset; return atualizar(); }
+    const b = ev.target.closest("[data-acao],[data-item],[data-marco],[data-receita],[data-arv],[data-cat]"); if(!b) return;
+    if(b.dataset.marco){ S.marcoSel = b.dataset.marco === "auto" ? null : +b.dataset.marco; return atualizar(); }
     if(b.dataset.receita){ S.arvoreSel = b.dataset.receita; S.tab = "receitas"; return atualizar(); }
     if(b.dataset.arv){ S.arvoreSel = b.dataset.arv; if(S.tab !== "receitas") S.tab = "receitas"; atualizar(); const m = $("arvoreMain"); if(m) m.scrollIntoView({block:"start", behavior:"smooth"}); return; }
     if(b.dataset.cat){ if(b.dataset.cat === "_montados") S.soMontados = !S.soMontados; else S.cat = b.dataset.cat; return atualizar(); }
@@ -580,9 +580,7 @@ function contexto(){
   const nivel = Math.max(1, +$("nivel").value || 1);
   const o = ordemSkills(h, nivel);
   S.ranks = o.rank;
-  return { h, nivel, ouro: Math.max(0, +$("ouro").value || 0), cristais: Math.max(0, +$("cristais").value || 0), gpm: Math.max(50, +$("gpm").value || 500),
-           vagas: Math.max(1, +$("slots").value || 6), maxArma: +$("maxArma").value, maxRoupa: +$("maxRoupa").value, maxBota: +$("maxBota").value,
-           usarIniciais: $("usarIniciais").checked, elementalCedo: $("elementalCedo").checked, usarNucleo: $("usarNucleo").checked, incluirSit: $("incluirSit").checked,
+  return { h, nivel, vagas: Math.max(1, +$("slots").value || 6), elementalCedo: $("elementalCedo").checked, incluirSit: $("incluirSit").checked,
            w: (+$("peso").value || 0)/100, ordem: o, pf: perfil(h, nivel) };
 }
 function atualizar(){
@@ -605,22 +603,11 @@ function atualizar(){
 }
 
 /* ---------- aba Build ---------- */
-const PRESETS = [
-  {id:"padrao", nome:"Plano padrão", obj:"equil", f:1, nucleo:true, desc:"iniciais + núcleo + o que mais ajuda"},
-  {id:"dano", nome:"Foco em dano", obj:"dano", f:1, nucleo:false},
-  {id:"resist", nome:"Foco em defesa", obj:"resist", f:1, nucleo:false},
-  {id:"eco", nome:"Econômica (60% do ouro)", obj:"equil", f:0.6, nucleo:false},
-];
-function montarPreset(X, p){
-  const r0 = otimizar(X, X.pf, Math.floor(X.ouro*p.f), Math.floor(X.cristais*p.f), p.obj, p.nucleo && X.usarNucleo);
-  const ordem = ordemPlano(r0.set, r0.motivos, X.pf);
-  return {p, set:r0.set, motivos:r0.motivos, ordem, r: calcular(X.h, X.nivel, r0.set)};
-}
 function slotsHtml(lista, vagas){
   let h = "";
   for(let i=0;i<vagas;i++){
     const it = lista[i];
-    h += it ? `<button class="item ${S.itemSel===it.id?"sel":""}" data-item="${it.id}" title="${esc(it.nome)}">${icoItem(it)}<span class="preco">${preco(it)}</span></button>`
+    h += it ? `<div class="icomorb"><button class="item ${S.itemSel===it.id?"sel":""}" data-item="${it.id}" title="${esc(it.nome)}">${icoItem(it)}<span class="preco">${preco(it)}</span></button>${chipsOrbs(it)}</div>`
             : `<span class="item vazio">${ico("", "", "", 46, "·")}<span class="preco">&nbsp;</span></span>`;
   }
   return h;
@@ -629,34 +616,65 @@ function detalheItem(X, set, base){
   const it = ITEM[S.itemSel]; if(!it) return `<p class="mudo">Clique em um item para ver os detalhes.</p>`;
   const com = calcular(X.h, X.nivel, set.includes(it) ? set : set.concat(it));
   const g = set.includes(it) ? null : pontuacao(com, "equil", X.w) - pontuacao(base, "equil", X.w);
-    return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
+  return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
       <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}${isSit(it, X.h)?' · <span class="tag">situacional</span>':""}</p></div></div>
     <p style="margin:8px 0 0"><b>${esc(resumoStats(it))||"Sem bônus numéricos"}</b></p>
     <div class="linhas">${esc(it.descricao)}</div>
-    ${g!=null?`<p class="nota">Se somado à build: ${g>0?'<span class="verde">'+sinal(g)+'</span>':fmt(g)} pontos de pontuação.</p>`:""}
-    <p style="margin:8px 0 0"><button class="pilula" data-acao="fixar" data-id="${it.id}">${S.fixos.has(it.id)?"desafixar":"fixar na build"}</button>
-      <button class="pilula" data-acao="banir" data-id="${it.id}">${S.banidos.has(it.id)?"liberar":"banir"}</button>
-      <button class="pilula" data-receita="${it.id}">como fazer</button></p></div>`;
+    ${g!=null?`<p class="nota">Se somado ao checkpoint atual: ${g>0?'<span class="verde">'+sinal(g)+'</span>':fmt(g)} pontos de pontuação.</p>`:""}
+    <p style="margin:8px 0 0"><button class="pilula" data-receita="${it.id}">como fazer</button></p></div>`;
+}
+const somaPreco = lista => lista.reduce((a,i) => a + (i.ouro||0), 0);
+function tabelaMarcos(plano, ativo, X){
+  const linhas = P.linhas || [];
+  const aqui = i => X.nivel >= plano[i].nivel && (i === plano.length-1 || X.nivel < plano[i+1].nivel);
+  const th = plano.map((p,i) => `<th class="${i===ativo?"mativo":""}"><button class="mhead" data-marco="${p.nivel}">Nível ${p.nivel}<small>${esc([p.titulo, ...p.skills].filter(Boolean).join(" · "))}</small>${aqui(i)?'<span class="aqui">você está aqui</span>':""}</button></th>`).join("");
+  const rows = linhas.map((ln, li) => {
+    const tds = plano.map((p, i) => {
+      const c = p.cel[li], cls = i === ativo ? "mativo" : "";
+      if(c.item && !c.consumidoAuto){
+        const ps = passoTexto(c.prev, c.item);
+        return `<td class="${cls}"><button class="item ${S.itemSel===c.item.id?"sel":""}" data-item="${c.item.id}" title="${esc(c.item.nome)}">${icoItem(c.item,44)}<b class="nm">${esc(c.item.nome)}</b><span class="preco">${preco(c.item)}</span>${ps?`<span class="passo">${ps}</span>`:""}</button>${chipsOrbs(c.item)}</td>`;
+      }
+      const alvo = c.consumidoPor || ((c.consumidoAuto && c.item) ? "outro item" : "");
+      return `<td class="${cls}">${alvo ? `<span class="cons">→ incluído em ${esc(alvo)}</span>` : '<span class="mudo">—</span>'}</td>`;
+    }).join("");
+    return `<tr><th class="l">${esc(ln.nome)}</th>${tds}</tr>`;
+  }).join("");
+  const tot = plano.map(p => somaPreco(p.set));
+  const rodape = `<tr><th class="l">Valor de tabela</th>${tot.map((v,i) => `<td class="${i===ativo?"mativo":""} ouro">${fmt(v)}</td>`).join("")}</tr>
+    <tr><th class="l">Investimento da etapa</th>${tot.map((v,i) => `<td class="${i===ativo?"mativo":""} mudo">${i===0 ? fmt(v) : sinal(v - tot[i-1])}</td>`).join("")}</tr>`;
+  return `<div class="rolavel" style="max-height:none"><table class="marcos"><tr><th class="l"></th>${th}</tr>${rows}${rodape}</table></div>`;
+}
+function linhasEvolucaoHtml(plano){
+  const linhas = P.linhas || [];
+  return linhas.map((ln, li) => {
+    const passos = []; let ant = null;
+    plano.forEach(p => {
+      const c = p.cel[li]; if(!c.item || c.consumidoAuto) return;
+      if(ant && ant.id === c.item.id){ passos[passos.length-1].niveis.push(p.nivel); return; }
+      if(ant) etapasEntre(ant, c.item).forEach(x => passos.push({it:x, niveis:[]}));
+      passos.push({it:c.item, niveis:[p.nivel]}); ant = c.item;
+    });
+    if(!passos.length) return "";
+    return `<div><b>${esc(ln.nome)}</b><div class="evo">${passos.map((s,k) => `${k ? '<span class="seta">▶</span>' : ""}<span class="pt ${s.niveis.length ? "" : "menor"}" data-arv="${s.it.id}" style="cursor:pointer">
+        ${s.niveis.length ? `<i>Nív ${s.niveis[0]}${s.niveis.length > 1 ? "+" : ""}</i>` : ""}${icoItem(s.it, s.niveis.length ? 46 : 32)}<span class="n">${esc(s.it.nome)}</span>${s.niveis.length ? chipsOrbs(s.it) : ""}</span>`).join("")}</div></div>`;
+  }).join("");
 }
 function abaBuild(X){
-  const todos = PRESETS.map(p => montarPreset(X, p));
-  const atual = todos.find(t => t.p.id === S.preset) || todos[0];
-  const base = calcular(X.h, X.nivel, []);
-  const {set, ordem, r, motivos} = atual, est = estagios(ordem), pf = X.pf;
-  const gasto = set.reduce((a,i)=>a+(i.ouro||0),0), gastoCr = set.reduce((a,i)=>a+(i.cristais||0),0);
+  const plano = planoMarcos(X), ativo = marcoAtivo(plano, X), cur = plano[ativo], fim = plano[plano.length-1];
+  const set = cur.set, base = calcular(X.h, X.nivel, []), r = calcular(X.h, X.nivel, set), pf = X.pf;
   const o = X.ordem, hs = o.hs, maxSeq = maxSequencia(o);
-  const colunas = Math.min(X.nivel, 60);
+  const colunas = Math.min(Math.max(X.nivel, fim.nivel), 60);
   const sit = situacionais(X.h, set);
   const cps = checkpoints(X.h, X.nivel);
   const nivelCp = new Set(cps.map(c => c.L));
-  if(!S.itemSel || !ITEM[S.itemSel]) S.itemSel = (ordem[0]||{}).id || null;
-  let cum = 0;
+  if(!S.itemSel || !ITEM[S.itemSel]) S.itemSel = (set[0]||{}).id || null;
 
-  const esq = `<div class="caixa"><h2>Builds recomendadas</h2>${todos.map(t => `
-      <button class="preset ${t.p.id===atual.p.id?"ativa":""}" data-preset="${t.p.id}"><b>${t.p.nome}</b>
-        <div class="mini">${t.ordem.slice(0,4).map(i=>icoItem(i,30)).join("")}</div>
-        <small>Dano ${fmt(t.r.potencial)} · Vida ef. ${fmt(t.r.ehp)}</small></button>`).join("")}</div>
-    ${S.fixos.size||S.banidos.size?`<div class="caixa"><h2>Seus ajustes</h2><p class="mudo" style="margin:0;font-size:12px">${[...S.fixos].map(i=>"📌 "+esc(ITEM[i]?.nome)).join("<br>")}${S.fixos.size&&S.banidos.size?"<br>":""}${[...S.banidos].map(i=>"🚫 "+esc(ITEM[i]?.nome)).join("<br>")}</p></div>`:""}`;
+  const esq = `<div class="caixa"><h2>Checkpoints de nível</h2>${plano.map((p,i) => { const rr = calcular(X.h, X.nivel, p.set); return `
+      <button class="preset ${i===ativo?"ativa":""}" data-marco="${p.nivel}"><b>Nível ${p.nivel}</b><small> ${esc([p.titulo, ...p.skills].filter(Boolean).join(" · "))}</small>
+        <div class="mini" style="margin-top:6px">${p.set.map(it => icoItem(it,28)).join("")}</div>
+        <small>Dano ${fmt(rr.potencial)} · Vida ef. ${fmt(rr.ehp)}</small></button>`; }).join("")}
+      <button class="pilula" data-marco="auto">Automático pelo meu nível (${X.nivel})</button></div>`;
 
   const chips = [
     pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
@@ -668,24 +686,23 @@ function abaBuild(X){
       <div><h2>${esc(X.h.nome)}</h2><p>Nível ${X.nivel} · atributo principal: ${NOME[X.h.primario]}${rotuloForma(X.h)?" · "+rotuloForma(X.h):""}</p><p style="margin-top:6px">${chips}</p></div></div>
       ${pf.nota?`<p class="nota" style="margin:10px 0 0">${esc(pf.nota)}</p>`:""}</div>
 
+    <div class="caixa"><h2>Build no checkpoint do nível ${cur.nivel}</h2>
+      <div class="fila">${slotsHtml(cur.set, X.vagas)}</div>
+      <h3>Build completa — formas finais (nível ${fim.nivel})</h3>
+      <div class="fila">${slotsHtml(fim.set, X.vagas)}</div>
+      <p class="mudo" style="font-size:12px;margin:8px 0 0">Valor de tabela da build completa: <span class="ouro">${fmt(somaPreco(fim.set))}</span>. As orbs mostram o que entra na combinação (Pedra = Soul Absorb Stone).</p></div>
+
+    <div class="caixa"><h2>Plano por checkpoints (itens na forma de cada nível)</h2>${tabelaMarcos(plano, ativo, X)}
+      <p class="mudo" style="font-size:12px;margin:8px 0 0">A build não depende de ouro: cada coluna é o checkpoint de nível. Clique no cabeçalho para ver os atributos daquele checkpoint. "→ incluído em" mostra itens que viram parte de uma forma maior.</p></div>
+
+    <div class="caixa"><h2>Linhas de evolução até a forma final</h2>${linhasEvolucaoHtml(plano)}
+      <p class="mudo" style="font-size:12px;margin:4px 0 0">Os ícones grandes são as formas dos checkpoints; os pequenos são formas intermediárias (upgrades). Clique para ver como fazer.</p></div>
+
     <div class="caixa"><h2>Kit de farm inicial (consumíveis)</h2>
       ${kit.map(({c,it}) => `<div class="farm"><button class="item" data-item="${it.id}">${icoItem(it,44)}<span class="preco">${preco(it)}</span></button><div><b>${esc(it.nome)}</b><p>${esc(c.motivo)}</p></div></div>`).join("")}
       ${(P.dicas_farm||[]).length?`<p class="nota" style="margin:8px 0 0">${(P.dicas_farm||[]).map(esc).join("<br>")}</p>`:""}</div>
 
-    <div class="caixa"><h2>Itens</h2>
-      <p style="margin:0 0 6px"><span class="ouro">${fmt(gasto)}</span> de ${fmt(X.ouro)} de ouro${X.cristais||gastoCr?` · <span class="ouro">${gastoCr}</span> de ${X.cristais} cristais`:""} · ${set.length}/${X.vagas} vagas${r.fatorChakra<1?` · <span class="aprox">chakra cobre ${fmt(r.fatorChakra*100)}% do combo</span>`:""}</p>
-      <h3>Início</h3><div class="fila">${slotsHtml(est.inicio, est.inicio.length) || '<span class="mudo">—</span>'}</div>
-      <h3>Essencial</h3><div class="fila">${slotsHtml(est.core, est.core.length) || '<span class="mudo">—</span>'}</div>
-      <h3>Build completa</h3><div class="fila">${slotsHtml(ordem, X.vagas)}</div></div>
-
-    <div class="caixa"><h2>Plano de compra (ordem sugerida)</h2>
-      <table class="t"><tr><th>#</th><th>Item</th><th>Preço</th><th>Acumulado</th><th title="estimativa com o ouro por minuto informado">~Minuto</th><th>Por quê</th></tr>
-      ${ordem.map((it,i)=>{ cum += it.ouro||0; const ev = evolucao(it); return `<tr><td>${i+1}</td>
-        <td><button class="item" data-item="${it.id}" style="flex-direction:row;gap:8px;text-align:left">${icoItem(it,34)}<span><b>${esc(it.nome)}</b>${ev?`<br><small class="mudo">${esc(ev)}</small>`:""}</span></button></td>
-        <td class="ouro">${preco(it)}</td><td>${fmt(cum)}</td><td>${fmt(cum/X.gpm,0)} min</td><td><span class="tag motivo">${esc(motivoDe(it, motivos, pf))}</span></td></tr>`; }).join("") || '<tr><td colspan="6" class="mudo">Nenhum item cabe nesse ouro.</td></tr>'}</table>
-      <p class="mudo" style="font-size:12px;margin:8px 0 0">Ordem: iniciais → arma → bota (se essencial) → roupa → núcleo → resto. O minuto é só uma estimativa com ${fmt(X.gpm)} de ouro por minuto.</p></div>
-
-    ${comoFazerPlano(ordem)}
+    ${comoFazerPlano(fim.set)}
 
     <div class="caixa"><h2>Ordem das skills e checkpoints</h2>
       <div class="cp" style="margin-bottom:8px">${cps.map(c=>`<span style="${c.ativo?"":"opacity:.5"}"><b>Nível ${c.L}</b> · ${esc(c.txt)}</span>`).join("")}</div>
@@ -698,12 +715,13 @@ function abaBuild(X){
         ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>fase de escala (a partir do nível ${o.faseTroca}): sobem as skills que escalam com Tai/Nin/Gen`:" · neste nível ainda não há fase de escala"}.
         Os checkpoints vêm das skills com nível mínimo (ultimates).</p></div>`;
 
-  const direita = `<div class="caixa"><h2>Atributos com a build</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
+  const direita = `<div class="caixa"><h2>Atributos no checkpoint do nível ${cur.nivel}</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
       const v = {tai:r.T,nin:r.N,gen:r.G}[k], v0 = {tai:base.T,nin:base.N,gen:base.G}[k];
       return `<div class="atr a-${k}"><b>${fmt(v)}</b><span>${NOME[k]}</span><i>${v-v0?sinal(v-v0)+" itens":""}</i></div>`;}).join("")}</div>
       <div class="nums">${[["Vida",base.hp,r.hp,0],["Chakra máx.",base.chakra,r.chakra,0],["Armadura",base.armadura,r.armadura,1],
         ["Dano do ataque",(base.danoMin+base.danoMax)/2,(r.danoMin+r.danoMax)/2,0],["Vida efetiva",base.ehp,r.ehp,0],["Dano potencial",base.potencial,r.potencial,0]]
-        .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div></div>
+        .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div>
+      <p class="mudo" style="font-size:11px;margin:8px 0 0">Atributos do herói no nível ${X.nivel} com os itens deste checkpoint.</p></div>
     <div class="caixa"><h2>Item selecionado</h2>${detalheItem(X, set, r)}</div>
     <div class="caixa"><h2>Situacionais por personagem</h2><p class="mudo" style="font-size:12px;margin:0 0 8px">${esc(P.situacional_motivo||"")}</p>
       <p class="nota" style="margin:0 0 8px">A primeira arma é a <b>elemental cedo</b> do seu herói (${esc(elementoPadrao(X.h))}): vale para quem precisa de dano que escala com status rápido.</p>
@@ -852,17 +870,17 @@ function abaCatalogo(){
 function filtrarCatalogo(){
   const X = contexto(); if(!X) return;
   const q = $("filtroItem").value.trim().toLowerCase(), tp = $("filtroTipo").value;
-  const principal = montarPreset(X, PRESETS[0]), set = principal.set;
+  const plano = planoMarcos(X), set = plano[plano.length-1].set;
   const base = pontuacao(calcular(X.h, X.nivel, set), "equil", X.w);
   const linhas = D.itens.filter(i => i.tipo && (!tp || i.tipo===tp) && (!q || (i.nome+" "+i.descricao).toLowerCase().includes(q)) && armaCompativel(i, X.h))
     .map(i => ({i, g: (set.includes(i) || !comprável(i)) ? 0 : pontuacao(calcular(X.h, X.nivel, set.concat(i)), "equil", X.w) - base}))
     .sort((a,b)=>b.g-a.g).slice(0,100);
-  $("tabCat").innerHTML = `<tr><th></th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar</th><th></th></tr>` +
+  $("tabCat").innerHTML = `<tr><th></th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar à build final</th><th></th></tr>` +
     linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i, X.h)?' <span class="tag">situacional</span>':""}</td>
       <td><span class="tag t-${i.tipo}">${esc(i.tipo)}</span></td><td class="ouro">${i.ouro==null?"?":preco(i)}</td>
       <td>${esc(resumoStats(i))}<div class="mudo" style="font-size:12px">${esc(i.extras.slice(0,3).join(" | "))}</div></td>
       <td>${set.includes(i)?"—":(g>0?'<span class="verde">'+sinal(g)+"</span>":'<span class="mudo">'+fmt(g)+"</span>")}</td>
-      <td><button class="pilula" data-acao="fixar" data-id="${i.id}">${S.fixos.has(i.id)?"desafixar":"fixar"}</button> <button class="pilula" data-acao="banir" data-id="${i.id}">${S.banidos.has(i.id)?"liberar":"banir"}</button></td></tr>`).join("");
+      <td><button class="pilula" data-receita="${i.id}">como fazer</button></td></tr>`).join("");
 }
 iniciar();
 </script>

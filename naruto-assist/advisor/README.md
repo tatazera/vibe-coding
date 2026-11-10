@@ -34,3 +34,10 @@ Soul Absorb Stone nao tem preco no mapa; 1000 e o valor que faz as somas fechare
 Arma: Battle Level 1 ate o MAX, depois a lendaria do elemento do heroi (tai = Fire, nin = Thunder, gen = Water). A arma elemental feita cedo (Weapon Lv1 + Spirit) e item SITUACIONAL para qualquer heroi que precise de dano com escala rapida de status (indicado na tela; interruptor nas regras forca no plano).
 Loja lendaria (situacionais): Sanbi, Mirrored Shield, Kusanagi, Sword of Totsuka, Triple-Bladed, Executioner's Blade, Samehada, Chakra Blades, Stone of Gelel.
 Ordem de skills: fase de farm (maior dano base inicial primeiro) e fase de escala (skills que escalam com Tai/Nin/Gen); ultimates assim que liberadas.
+
+## Plano por checkpoints de nivel (sem ouro)
+A build segue marcos de nivel (1, 10, 15, 35 = farm, 1o e 2o pico de poder da ult R, libera a skill T). Em `politica.json`:
+`marcos` (niveis) e `linhas` (a forma de cada item em cada marco: arma Battle Lv1 -> Lv5 -> MAX -> lendaria com a orb do elemento;
+roupa Genin -> Chunnin -> Jounin -> Kage Robe; botas; Bingo Book + Ninja Headband -> Anbu Mask -> Heaven Mirror; Jade of Susano'o; slot Extra
+escolhido pelo heroi). O quadro mostra cada item na forma do checkpoint, as linhas de evolucao (inclusive upgrades intermediarios) e as orbs
+(Soul Absorb Stone + Spirit) da combinacao. Os niveis e formas sao um RASCUNHO e podem ser editados no proprio site.
