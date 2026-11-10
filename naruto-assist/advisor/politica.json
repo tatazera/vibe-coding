@@ -182,6 +182,19 @@
       }
     },
     {
+      "id": "ninja",
+      "nome": "Ninja Weapon (ativa)",
+      "formas": {
+        "1": "",
+        "10": "ninja:ativa"
+      },
+      "se_elemental_cedo": {
+        "1": "",
+        "10": "ninja:ativa",
+        "35": "=arma:elemental+"
+      }
+    },
+    {
       "id": "extra",
       "nome": "Extra (melhor para o herói)",
       "formas": {
@@ -191,5 +204,5 @@
     }
   ],
   "extra_preco_max": 20000,
-  "marcos_comentario": "RASCUNHO a validar: cada linha tem a forma do item em cada checkpoint de nivel. Formas: 'arma:N' (Battle nivel N ou MAX), 'arma:lendaria', 'arma:elemental' / 'arma:elemental+', 'bota:N' (Super Boots nivel N, variante escolhida pelo heroi), '=X' (item ja incluido em X) e '@extra' (melhor item restante para o heroi). Se um nivel nao aparece, a forma anterior continua."
+  "marcos_comentario": "RASCUNHO a validar: cada linha tem a forma do item em cada checkpoint de nivel. Formas: 'arma:N' (Battle nivel N ou MAX), 'arma:lendaria', 'arma:elemental' / 'arma:elemental+', 'bota:N' (Super Boots nivel N, variante escolhida pelo heroi), '=X' (item ja incluido em X) e '@extra' (melhor item restante para o heroi). Se um nivel nao aparece, a forma anterior continua. 'ninja:ativa' = Explosive Kunai (Tai), Fuuma Shuriken (Nin) ou Senbons Dance (Gen), item ativo com dano 7 x atributo (50s de recarga). O slot Extra so aparece se sobrar vaga."
 }

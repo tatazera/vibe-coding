@@ -360,10 +360,14 @@ function calcular(h, nivel, itens){
     skills.push({s, L, dano, cd, custo});
   }
   const fatorChakra = custoCombo > 0 ? Math.min(1, chakra/custoCombo) : 1;
-  const potencial = dpsSkills*fatorChakra + dpsAtaque;
+  let dpsItens = 0; const ativos = [];
+  for(const it of itens){ if(!it.ativa) continue;
+    const dano = avaliar(it.ativa.dano, 1, T, N, G), cd = avaliar(it.ativa.cooldown, 1, T, N, G);
+    if(dano != null){ dpsItens += dano / Math.max(cd ?? 30, 1); combo += dano; ativos.push({it, dano, cd}); } }
+  const potencial = dpsSkills*fatorChakra + dpsItens + dpsAtaque;
   const red = armadura >= 0 ? 0.06*armadura/(1+0.06*armadura) : 0;
   const ehp = hp / ((1-red) * (1 - Math.min(add.reducao,90)/100) * (1 - Math.min(add.evasao,90)/100));
-  return {T,N,G,hp,chakra,armadura,danoMin,danoMax,dpsAtaque,fatorChakra,combo,custoCombo,potencial,ehp,add,skills};
+  return {T,N,G,hp,chakra,armadura,danoMin,danoMax,dpsAtaque,dpsItens,ativos,fatorChakra,combo,custoCombo,potencial,ehp,add,skills};
 }
 function pontuacao(r, obj, w){
   if(obj === "dano") return r.potencial;
@@ -415,7 +419,8 @@ function varianteBota(X){
 function resolverForma(tok, X){
   const pf = X.pf, fam = FAM[X.h.primario]; let m;
   if(!tok) return {item:null};
-  if(tok[0] === "=") return {item:null, consumidoPor:tok.slice(1)};
+  if(tok[0] === "="){ const rest = tok.slice(1), r2 = /^arma:/.test(rest) ? resolverForma(rest, X) : null;
+    return {item:null, consumidoPor: r2 && r2.item ? r2.item.nome : rest}; }
   if(tok === "@extra") return {extra:true, item:null};
   if((m = /^arma:(.+)$/.exec(tok))){
     const a = m[1];
@@ -424,6 +429,7 @@ function resolverForma(tok, X){
     if(a === "elemental+") return {item: porNome(pf.elemento+" "+fam+" ("+SUF[fam]+")")};
     return {item: porNome("Battle "+fam+" - Level "+a)};
   }
+  if(tok === "ninja:ativa") return {item: porNome({Kunai:"Explosive Kunai", Shuriken:"Fuuma Shuriken", Senbons:"Senbons Dance"}[fam])};
   if((m = /^bota:(\d)$/.exec(tok))) return {item: porNome(varianteBota(X)+" - Level "+m[1])};
   return {item: porNome(tok)};
 }
@@ -461,7 +467,7 @@ function planoMarcos(X){
   out.forEach(o => {
     const base = o.cel.filter(c => c.item).map(c => c.item);
     const ex = o.cel.find(c => c.extra);
-    if(ex){ const it = melhorExtra(X, base); ex.item = it; if(it) base.push(it); }
+    if(ex && base.length < X.vagas){ const it = melhorExtra(X, base); ex.item = it; if(it) base.push(it); }
     o.set = base.filter(it => !base.some(o2 => o2 !== it && descendentes(o2.id).has(it.id)));
     o.cel.forEach(c => { if(c.item && !o.set.includes(c.item)) c.consumidoAuto = true; });
   });
@@ -618,7 +624,8 @@ function detalheItem(X, set, base){
   const g = set.includes(it) ? null : pontuacao(com, "equil", X.w) - pontuacao(base, "equil", X.w);
   return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
       <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}${isSit(it, X.h)?' · <span class="tag">situacional</span>':""}</p></div></div>
-    <p style="margin:8px 0 0"><b>${esc(resumoStats(it))||"Sem bônus numéricos"}</b></p>
+    <p style="margin:8px 0 0"><b>${esc(resumoStats(it))||"Sem bônus numéricos"}</b>${it.hotkey?` · <span class="tag" title="tecla do botão deste item no painel da loja">hotkey na loja: ${esc(it.hotkey)}</span>`:""}</p>
+    ${it.ativa ? `<p class="nota" style="margin:8px 0 0">Item ativo: dano <b>${esc(it.ativa.dano.replace(/T/g,"Tai").replace(/N/g,"Nin").replace(/G/g,"Gen").replace(/\*/g," × "))}</b> a cada ${esc(it.ativa.cooldown)}s${it.ativa.alcance?" · alcance "+esc(it.ativa.alcance):""}${it.ativa.area?" · área "+esc(it.ativa.area):""}. Com o herói no nível ${X.nivel}: <b>${fmt(avaliar(it.ativa.dano,1,calcular(X.h,X.nivel,set).T,calcular(X.h,X.nivel,set).N,calcular(X.h,X.nivel,set).G))}</b> de dano.</p>` : ""}
     <div class="linhas">${esc(it.descricao)}</div>
     ${g!=null?`<p class="nota">Se somado ao checkpoint atual: ${g>0?'<span class="verde">'+sinal(g)+'</span>':fmt(g)} pontos de pontuação.</p>`:""}
     <p style="margin:8px 0 0"><button class="pilula" data-receita="${it.id}">como fazer</button></p></div>`;
@@ -742,6 +749,8 @@ function abaSkills(X){
       <td>${x.dano!=null?(x.s.dano_aprox?'<span class="aprox" title="a fórmula do jogo tem complementos ignorados">≈</span>':"")+fmt(x.dano):"—"}</td>
       <td>${x.cd!=null?fmt(x.cd,1)+"s":"—"}</td><td>${x.custo!=null?fmt(x.custo):"—"}</td>
       <td>${x.s.atributos.map(a=>`<span class="tag">${NOME[a]}</span>`).join(" ")||"—"}</td></tr>`).join("")}</table></div>
+    ${(() => { const plano = planoMarcos(X), fim = plano[plano.length-1], rf = calcular(X.h, X.nivel, fim.set);
+       return rf.ativos.length ? `<h3 style="margin-top:14px">Itens ativos da build final (dano na ativação)</h3><table class="t"><tr><th></th><th>Item</th><th>Dano</th><th>Recarga</th><th>Hotkey na loja</th></tr>${rf.ativos.map(a => `<tr><td>${icoItem(a.it,36)}</td><td><b>${esc(a.it.nome)}</b></td><td>${fmt(a.dano)}</td><td>${fmt(a.cd)}s</td><td>${esc(a.it.hotkey||"—")}</td></tr>`).join("")}</table>` : ""; })()}
     <p class="nota" style="margin-top:10px">Os níveis vêm da regra do jogo (nível mínimo do herói por nível da skill) e da prioridade por ganho de dano. Edite o nível de uma skill para simular outro caminho.</p></div>`;
 }
 

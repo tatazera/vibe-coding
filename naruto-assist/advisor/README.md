@@ -41,3 +41,9 @@ A build segue marcos de nivel (1, 10, 15, 35 = farm, 1o e 2o pico de poder da ul
 roupa Genin -> Chunnin -> Jounin -> Kage Robe; botas; Bingo Book + Ninja Headband -> Anbu Mask -> Heaven Mirror; Jade of Susano'o; slot Extra
 escolhido pelo heroi). O quadro mostra cada item na forma do checkpoint, as linhas de evolucao (inclusive upgrades intermediarios) e as orbs
 (Soul Absorb Stone + Spirit) da combinacao. Os niveis e formas sao um RASCUNHO e podem ser editados no proprio site.
+
+## Ninja Weapons ativas
+Explosive Kunai (Tai, hotkey A), Fuuma Shuriken (Nin, S) e Senbons Dance (Gen, D): itens ativos, dano 7 x atributo, 50s de recarga, loja Ninja Weapons.
+Entram na linha "Ninja Weapon (ativa)" da politica para todos os herois (familia pelo atributo principal) e no calculo de dano.
+Com a arma elemental cedo, a versao (Explosive/Fuuma/Dance) consome o item no nivel final. O slot Extra so aparece se sobrar vaga.
+Os hotkeys de cada item na loja (ex.: Upgrade Weapon = R) aparecem no detalhe do item.

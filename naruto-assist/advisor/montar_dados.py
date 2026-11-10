@@ -225,7 +225,19 @@ def parse_item(iid, jogo, skin, habs_item=None):
         m = re.search(r"used by (taijutsu|ninjutsu|genjutsu) heroes", d)
         if m:
             familia = {"taijutsu": "tai", "ninjutsu": "nin", "genjutsu": "gen"}[m.group(1)]
+    # item ativo com dano que escala com atributos (Ninja Weapon: Explosive Kunai, Fuuma Shuriken, Senbons Dance, Bomb)
+    ativa = None
+    dm, cdm = linha(desc, "Damage"), linha(desc, "Cooldown")
+    if dm and cdm and "Ninja Weapon" in desc:
+        fd, ap = formula(dm)
+        fc, _ = formula(cdm)
+        if fd and fc and not ap:
+            ativa = {"dano": fd, "cooldown": fc, "tipo_dano": linha(desc, "Damage Type"),
+                     "alcance": linha(desc, "Casting Range"), "area": linha(desc, "Area of Effect")}
+    hks = re.findall(r"\[([A-Z0-9])\]", re.sub(r"\|c[0-9a-fA-F]{8}|\|[rR]", "", str(s.get("utip") or "")))
+    hotkey = hks[-1] if hks else (s.get("uhot") or None)
     return {"id": iid, "nome": nome, "categoria": categoria(nome, tipo), "nivelItem": nivel_item,
+            "ativa": ativa, "hotkey": hotkey,
             "icone": s.get("iico") or "", "ouro": c.get("igol"), "cristais": c.get("ilum", 0), "tipo": tipo, "familia": familia,
             "stats": stats, "porNivel": por_nivel, "extras": extras, "descricao": desc}
 
