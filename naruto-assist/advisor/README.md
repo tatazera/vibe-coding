@@ -47,3 +47,8 @@ Explosive Kunai (Tai, hotkey A), Fuuma Shuriken (Nin, S) e Senbons Dance (Gen, D
 Entram na linha "Ninja Weapon (ativa)" da politica para todos os herois (familia pelo atributo principal) e no calculo de dano.
 Com a arma elemental cedo, a versao (Explosive/Fuuma/Dance) consome o item no nivel final. O slot Extra so aparece se sobrar vaga.
 Os hotkeys de cada item na loja (ex.: Upgrade Weapon = R) aparecem no detalhe do item.
+
+## Itens core e vagas
+`nucleo` (politica.json) = itens core: Jade of Susano'o, The Heaven Mirror e as Ninja Weapons (Explosive Kunai / Fuuma Shuriken / Senbons Dance).
+Todas as Ninja Weapons, inclusive o Oil, ocupam vaga (linha "Ninja Weapon": Oil no nivel 1 -> arma core do heroi no nivel 10).
+Se passar das vagas, sai primeiro o Extra e depois a Jade (`ordem_corte`); core nao sai antes. O Extra nunca e core nem Ninja Weapon.

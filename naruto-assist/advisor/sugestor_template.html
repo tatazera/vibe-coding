@@ -439,6 +439,7 @@ function melhorExtra(X, base){
   const max = P.extra_preco_max ?? 20000;
   let m = null, ms = -Infinity;
   for(const it of CANDIDATOS){
+    if(it.ativa || NUCLEO.includes(it)) continue;      // core e Ninja Weapons nunca entram no Extra
     if(excl.has(it.id) || !armaCompativel(it, X.h) || (!X.incluirSit && isSit(it, X.h)) || CAT_FORA_EXTRA.includes(it.categoria)) continue;
     if((it.ouro||0) > max || it.cristais) continue;
     if([...descendentes(it.id)].some(d => excl.has(d) && base.some(b => b.id === d))) continue;   // nao consome itens ja na build
@@ -470,6 +471,13 @@ function planoMarcos(X){
     if(ex && base.length < X.vagas){ const it = melhorExtra(X, base); ex.item = it; if(it) base.push(it); }
     o.set = base.filter(it => !base.some(o2 => o2 !== it && descendentes(o2.id).has(it.id)));
     o.cel.forEach(c => { if(c.item && !o.set.includes(c.item)) c.consumidoAuto = true; });
+    // passou das vagas: corta pela ordem da politica (extra, depois jade); core nunca sai antes
+    for(const id of (P.ordem_corte || ["extra","jade"])){
+      if(o.set.length <= X.vagas) break;
+      const c = o.cel.find(c => c.ln.id === id && c.item && o.set.includes(c.item));
+      if(c){ o.set = o.set.filter(x => x !== c.item); c.cortado = true; }
+    }
+    o.excedeu = o.set.length > X.vagas;
   });
   return out;
 }
@@ -634,13 +642,15 @@ const somaPreco = lista => lista.reduce((a,i) => a + (i.ouro||0), 0);
 function tabelaMarcos(plano, ativo, X){
   const linhas = P.linhas || [];
   const aqui = i => X.nivel >= plano[i].nivel && (i === plano.length-1 || X.nivel < plano[i+1].nivel);
-  const th = plano.map((p,i) => `<th class="${i===ativo?"mativo":""}"><button class="mhead" data-marco="${p.nivel}">Nível ${p.nivel}<small>${esc([p.titulo, ...p.skills].filter(Boolean).join(" · "))}</small>${aqui(i)?'<span class="aqui">você está aqui</span>':""}</button></th>`).join("");
+  const th = plano.map((p,i) => `<th class="${i===ativo?"mativo":""}"><button class="mhead" data-marco="${p.nivel}">Nível ${p.nivel}<small>${esc([p.titulo, ...p.skills].filter(Boolean).join(" · "))}</small>${aqui(i)?'<span class="aqui">você está aqui</span>':""}${p.excedeu?`<span class="aprox" style="display:block;font-size:10px">${p.set.length} itens: passa das ${X.vagas} vagas</span>`:""}</button></th>`).join("");
   const rows = linhas.map((ln, li) => {
     const tds = plano.map((p, i) => {
       const c = p.cel[li], cls = i === ativo ? "mativo" : "";
+      if(c.cortado) return `<td class="${cls}"><span class="cons">sem vaga (${X.vagas}/${X.vagas})</span></td>`;
       if(c.item && !c.consumidoAuto){
         const ps = passoTexto(c.prev, c.item);
-        return `<td class="${cls}"><button class="item ${S.itemSel===c.item.id?"sel":""}" data-item="${c.item.id}" title="${esc(c.item.nome)}">${icoItem(c.item,44)}<b class="nm">${esc(c.item.nome)}</b><span class="preco">${preco(c.item)}</span>${ps?`<span class="passo">${ps}</span>`:""}</button>${chipsOrbs(c.item)}</td>`;
+        const core = NUCLEO.includes(c.item) ? '<span class="tag motivo" title="item core da build">core</span>' : "";
+        return `<td class="${cls}"><button class="item ${S.itemSel===c.item.id?"sel":""}" data-item="${c.item.id}" title="${esc(c.item.nome)}">${icoItem(c.item,44)}<b class="nm">${esc(c.item.nome)}</b><span class="preco">${preco(c.item)}</span>${ps?`<span class="passo">${ps}</span>`:""}${core}</button>${chipsOrbs(c.item)}</td>`;
       }
       const alvo = c.consumidoPor || ((c.consumidoAuto && c.item) ? "outro item" : "");
       return `<td class="${cls}">${alvo ? `<span class="cons">→ incluído em ${esc(alvo)}</span>` : '<span class="mudo">—</span>'}</td>`;
@@ -706,6 +716,7 @@ function abaBuild(X){
       <p class="mudo" style="font-size:12px;margin:4px 0 0">Os ícones grandes são as formas dos checkpoints; os pequenos são formas intermediárias (upgrades). Clique para ver como fazer.</p></div>
 
     <div class="caixa"><h2>Kit de farm inicial (consumíveis)</h2>
+      <p class="nota" style="margin:0 0 8px">O Oil é uma Ninja Weapon e <b>ocupa vaga</b>: ele está na linha da Ninja Weapon no nível 1 e é trocado pela Ninja Weapon core do seu herói no nível 10. Bomb e Edo Tensei Scroll também ocupam vaga se você carregar.</p>
       ${kit.map(({c,it}) => `<div class="farm"><button class="item" data-item="${it.id}">${icoItem(it,44)}<span class="preco">${preco(it)}</span></button><div><b>${esc(it.nome)}</b><p>${esc(c.motivo)}</p></div></div>`).join("")}
       ${(P.dicas_farm||[]).length?`<p class="nota" style="margin:8px 0 0">${(P.dicas_farm||[]).map(esc).join("<br>")}</p>`:""}</div>
 

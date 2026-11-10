@@ -21,7 +21,10 @@
   ],
   "nucleo": [
     "Jade of Susano'o",
-    "The Heaven Mirror"
+    "The Heaven Mirror",
+    "Explosive Kunai",
+    "Fuuma Shuriken",
+    "Senbons Dance"
   ],
   "evolucao_roupa": [
     "Genin Cloth",
@@ -183,13 +186,13 @@
     },
     {
       "id": "ninja",
-      "nome": "Ninja Weapon (ativa)",
+      "nome": "Ninja Weapon (core, ativa)",
       "formas": {
-        "1": "",
+        "1": "Oil",
         "10": "ninja:ativa"
       },
       "se_elemental_cedo": {
-        "1": "",
+        "1": "Oil",
         "10": "ninja:ativa",
         "35": "=arma:elemental+"
       }
@@ -204,5 +207,11 @@
     }
   ],
   "extra_preco_max": 20000,
-  "marcos_comentario": "RASCUNHO a validar: cada linha tem a forma do item em cada checkpoint de nivel. Formas: 'arma:N' (Battle nivel N ou MAX), 'arma:lendaria', 'arma:elemental' / 'arma:elemental+', 'bota:N' (Super Boots nivel N, variante escolhida pelo heroi), '=X' (item ja incluido em X) e '@extra' (melhor item restante para o heroi). Se um nivel nao aparece, a forma anterior continua. 'ninja:ativa' = Explosive Kunai (Tai), Fuuma Shuriken (Nin) ou Senbons Dance (Gen), item ativo com dano 7 x atributo (50s de recarga). O slot Extra so aparece se sobrar vaga."
+  "marcos_comentario": "RASCUNHO a validar: cada linha tem a forma do item em cada checkpoint de nivel. Formas: 'arma:N' (Battle nivel N ou MAX), 'arma:lendaria', 'arma:elemental' / 'arma:elemental+', 'bota:N' (Super Boots nivel N, variante escolhida pelo heroi), '=X' (item ja incluido em X) e '@extra' (melhor item restante para o heroi). Se um nivel nao aparece, a forma anterior continua. 'ninja:ativa' = Explosive Kunai (Tai), Fuuma Shuriken (Nin) ou Senbons Dance (Gen), item ativo com dano 7 x atributo (50s de recarga). O slot Extra so aparece se sobrar vaga.",
+  "nucleo_comentario": "Itens CORE da build. As Ninja Weapons (Explosive Kunai = Tai, Fuuma Shuriken = Nin, Senbons Dance = Gen) sao core e nunca entram no slot Extra. Todas as Ninja Weapons (inclusive o Oil) ocupam uma das vagas.",
+  "ordem_corte": [
+    "extra",
+    "jade"
+  ],
+  "ordem_corte_comentario": "Se a build passar das vagas, os itens saem nesta ordem (ids das linhas). Itens core nao saem antes."
 }
