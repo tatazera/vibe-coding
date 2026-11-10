@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sugestor de Builds - Naruto Ninpou</title>
+<style>
+  :root{
+    --bg:#10131a; --painel:#181d28; --painel2:#1f2635; --borda:#2c3548; --texto:#e8ecf3; --mudo:#93a0b8;
+    --laranja:#ff8a1f; --laranja2:#ffb15c; --verde:#4ade80; --vermelho:#f87171; --azul:#60a5fa; --roxo:#c084fc;
+  }
+  :root[data-tema="claro"]{
+    --bg:#f3efe6; --painel:#fffaf0; --painel2:#f5ecd9; --borda:#dccfb2; --texto:#2a2418; --mudo:#7a6d52;
+    --laranja:#d9680a; --laranja2:#b85600; --verde:#15803d; --vermelho:#b91c1c; --azul:#1d4ed8; --roxo:#7e22ce;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--texto);font:15px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+  header{padding:18px 16px 10px;border-bottom:2px solid var(--laranja);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header h1{font-size:20px;margin:0;letter-spacing:.3px}
+  header h1 span{color:var(--laranja)}
+  header small{color:var(--mudo)}
+  .tema{margin-left:auto;background:var(--painel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:6px 10px;cursor:pointer}
+  main{display:grid;grid-template-columns:320px 1fr;gap:14px;padding:14px 16px;max-width:1500px;margin:auto}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .painel{background:var(--painel);border:1px solid var(--borda);border-radius:12px;padding:14px}
+  .painel h2{font-size:14px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.8px;color:var(--laranja2)}
+  label{display:block;font-size:12px;color:var(--mudo);margin:10px 0 3px}
+  input,select,button{font:inherit;color:var(--texto);background:var(--painel2);border:1px solid var(--borda);border-radius:8px;padding:7px 9px;width:100%}
+  input[type=range]{padding:0}
+  button{cursor:pointer;width:auto}
+  button.primario{background:var(--laranja);color:#1a1100;border-color:var(--laranja);font-weight:700}
+  .linha{display:flex;gap:8px}
+  .linha>*{flex:1}
+  .col{display:flex;flex-direction:column;gap:14px}
+  .atrs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .atr{background:var(--painel2);border:1px solid var(--borda);border-radius:10px;padding:8px;text-align:center}
+  .atr b{display:block;font-size:22px}
+  .atr span{font-size:11px;color:var(--mudo)}
+  .atr.tai b{color:var(--vermelho)} .atr.nin b{color:var(--azul)} .atr.gen b{color:var(--roxo)}
+  .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+  .num{background:var(--painel2);border:1px solid var(--borda);border-radius:10px;padding:8px 10px}
+  .num small{display:block;color:var(--mudo);font-size:11px}
+  .num b{font-size:17px}
+  .delta{font-size:12px;color:var(--verde);margin-left:4px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--borda);text-align:left;vertical-align:top}
+  th{color:var(--mudo);font-weight:600;font-size:12px}
+  tr:hover td{background:var(--painel2)}
+  .tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;background:var(--painel2);border:1px solid var(--borda);color:var(--mudo)}
+  .tag.Weapon{color:var(--vermelho)} .tag.Cloth{color:var(--azul)} .tag.Support{color:var(--verde)}
+  .tecla{display:inline-block;min-width:22px;text-align:center;background:var(--painel2);border:1px solid var(--borda);border-radius:6px;font-weight:700;padding:0 4px}
+  .ouro{color:#fbbf24;font-weight:700}
+  .mudo{color:var(--mudo)}
+  .aprox{color:var(--laranja2)}
+  .aviso{background:var(--painel2);border-left:3px solid var(--laranja);padding:8px 10px;border-radius:6px;font-size:12px;color:var(--mudo);margin-top:10px}
+  .pilula{cursor:pointer;border:1px solid var(--borda);background:var(--painel2);border-radius:6px;padding:1px 7px;font-size:12px;width:auto}
+  .pilula:hover{border-color:var(--laranja)}
+  .rolavel{max-height:460px;overflow:auto}
+  .extras{font-size:12px;color:var(--mudo)}
+  details summary{cursor:pointer;color:var(--mudo)}
+  .passos li{margin:3px 0}
+  .fixo{outline:2px solid var(--laranja);outline-offset:-2px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Naruto Ninpou</span> · Sugestor de Builds</h1>
+  <small id="resumoDados"></small>
+  <button class="tema" id="btnTema" type="button">Tema</button>
+</header>
+
+<main>
+  <aside class="col">
+    <section class="painel">
+      <h2>Personagem</h2>
+      <label for="busca">Buscar herói</label>
+      <input id="busca" placeholder="Digite para filtrar (ex.: Yamato)">
+      <label for="heroi">Herói</label>
+      <select id="heroi" size="1"></select>
+      <div class="linha">
+        <div><label for="nivel">Nível do herói</label><input id="nivel" type="number" min="1" max="200" value="20"></div>
+        <div><label for="ouro">Ouro</label><input id="ouro" type="number" min="0" step="100" value="20000"></div>
+        <div><label for="cristais">Cristais</label><input id="cristais" type="number" min="0" value="0"></div>
+      </div>
+      <label for="objetivo">Objetivo da build</label>
+      <select id="objetivo">
+        <option value="dano">Dano (skills + ataque)</option>
+        <option value="equil" selected>Equilibrada (dano × resistência)</option>
+        <option value="resist">Resistência (vida efetiva)</option>
+      </select>
+    </section>
+
+    <section class="painel">
+      <h2>Regras de itens</h2>
+      <div class="linha">
+        <div><label for="slots">Vagas</label><input id="slots" type="number" min="1" max="12" value="6"></div>
+        <div><label for="maxArma">Máx. armas</label><input id="maxArma" type="number" min="0" max="12" value="1"></div>
+        <div><label for="maxRoupa">Máx. roupas</label><input id="maxRoupa" type="number" min="0" max="12" value="1"></div>
+      </div>
+      <div class="aviso">As vagas e os limites por tipo são suposições; ajuste se o jogo permitir outra coisa. Armas só entram se forem da família do atributo principal do herói (kunai = Taijutsu, shuriken = Ninjutsu, senbons = Genjutsu).</div>
+      <p style="margin:10px 0 0"><button id="limpar" type="button">Limpar itens fixados/banidos</button></p>
+      <div id="fixBan" class="extras" style="margin-top:8px"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Nível das skills</h2>
+      <div id="niveisSkills"></div>
+      <p class="extras">Padrão: sobe 1 nível a cada 3 níveis do herói (até o máximo da skill). Edite se for diferente.</p>
+    </section>
+  </aside>
+
+  <section class="col">
+    <section class="painel">
+      <h2 id="tituloHeroi">Herói</h2>
+      <div class="atrs" id="atrs"></div>
+      <div class="grade" id="numeros"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Build sugerida</h2>
+      <div id="build"></div>
+    </section>
+
+    <section class="painel">
+      <h2>Skills do herói</h2>
+      <div class="rolavel"><table id="tabelaSkills"></table></div>
+    </section>
+
+    <section class="painel">
+      <h2>Catálogo de itens (impacto na build atual)</h2>
+      <div class="linha">
+        <input id="filtroItem" placeholder="Filtrar por nome ou efeito (ex.: movement, stun, cloth)">
+        <select id="filtroTipo"><option value="">Todos os tipos</option><option>Weapon</option><option>Cloth</option><option>Support</option></select>
+      </div>
+      <div class="rolavel" style="margin-top:8px"><table id="catalogo"></table></div>
+    </section>
+  </section>
+</main>
+
+<script>
+const D = /*DADOS*/null;
+const C = D.constantes;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const NOME = {tai:"Taijutsu", nin:"Ninjutsu", gen:"Genjutsu"};
+
+/* ---------- estado ---------- */
+const S = { heroi:null, fixos:new Set(), banidos:new Set(), niveisSkill:{} };
+const ITEM = Object.fromEntries(D.itens.map(i => [i.id, i]));
+const comprável = i => (i.ouro > 0 || i.cristais > 0);
+const CANDIDATOS = D.itens.filter(i => i.tipo && Object.keys(i.stats).length && comprável(i));
+
+/* ---------- formulas ---------- */
+const cacheFn = new Map();
+function avaliar(expr, L, T, N, G){
+  if(!expr) return null;
+  let f = cacheFn.get(expr);
+  if(!f){ f = new Function("L","T","N","G", "return (" + expr + ");"); cacheFn.set(expr, f); }
+  const v = f(L,T,N,G);
+  return Number.isFinite(v) ? v : null;
+}
+
+/* ---------- calculo ---------- */
+function nivelPadraoSkill(s, nivel){ return Math.min(s.niveis || 1, Math.max(1, Math.ceil(nivel/3))); }
+function nivelSkill(s, nivel){ return S.niveisSkill[s.id] ?? nivelPadraoSkill(s, nivel); }
+
+function calcular(h, nivel, itens){
+  const base = {}, add = {tai:0,nin:0,gen:0,dano:0,hp:0,chakra:0,armadura:0,mov:0,evasao:0,reducao:0,mov_pct:0};
+  for(const k of ["tai","nin","gen"]) base[k] = h.base[k] + h.cresc[k]*(nivel-1);
+  for(const it of itens){
+    for(const [k,v] of Object.entries(it.stats)) add[k] = (add[k]||0) + v;
+    for(const [k,v] of Object.entries(it.porNivel)) add[k] = (add[k]||0) + v*nivel;
+  }
+  const T = base.tai+add.tai, N = base.nin+add.nin, G = base.gen+add.gen;
+  const prim = {tai:T,nin:N,gen:G}[h.primario];
+  const hp = C.hp_base + C.hp_por_tai*T + add.hp;
+  const chakra = C.chakra_por_gen*G + add.chakra;
+  const armadura = C.armadura_base + C.armadura_por_nin*N + add.armadura;
+  const a = h.ataque || {};
+  let dmin = C.dano_base_padrao[0], dmax = C.dano_base_padrao[1];
+  if(a.base != null){ dmin = a.base + (a.dados||1); dmax = a.base + (a.dados||1)*(a.lados||1); }
+  const danoMin = dmin + prim*C.dano_por_primario + add.dano;
+  const danoMax = dmax + prim*C.dano_por_primario + add.dano;
+  const cdAtaque = a.cd || C.cd_ataque_padrao;
+  const multVel = Math.min(5, 1 + C.vel_ataque_por_nin*N);
+  const dpsAtaque = ((danoMin+danoMax)/2) * multVel / cdAtaque;
+
+  let dpsSkills = 0, combo = 0, custoCombo = 0;
+  const skills = [];
+  for(const s of h.skills){
+    const L = nivelSkill(s, nivel);
+    const dano = avaliar(s.dano, L,T,N,G);
+    const cd = avaliar(s.cooldown, L,T,N,G);
+    const custo = avaliar(s.chakra, L,T,N,G);
+    if(dano != null){
+      dpsSkills += dano / Math.max(cd ?? 20, 1);
+      combo += dano; custoCombo += custo || 0;
+    }
+    skills.push({s, L, dano, cd, custo});
+  }
+  const fatorChakra = custoCombo > 0 ? Math.min(1, chakra/custoCombo) : 1;
+  const potencial = dpsSkills*fatorChakra + dpsAtaque;
+
+  const red = armadura >= 0 ? 0.06*armadura/(1+0.06*armadura) : 0;
+  const tomado = (1-red) * (1 - Math.min(add.reducao,90)/100) * (1 - Math.min(add.evasao,90)/100);
+  const ehp = hp / tomado;
+  return {T,N,G,hp,chakra,armadura,danoMin,danoMax,dpsAtaque,dpsSkills,fatorChakra,combo,custoCombo,potencial,ehp,
+          mov:h.mov+add.mov, add, skills, red};
+}
+
+function pontuacao(r, objetivo){
+  if(objetivo === "dano") return r.potencial;
+  if(objetivo === "resist") return r.ehp;
+  return Math.sqrt(Math.max(r.potencial,1) * Math.max(r.ehp,1));
+}
+
+/* ---------- otimizador ---------- */
+function armaCompativel(it, h){ return it.tipo !== "Weapon" || !it.familia || it.familia === h.primario; }
+
+function otimizar(h, nivel, ouro, cristais, vagas, maxArma, maxRoupa, objetivo){
+  const score = set => pontuacao(calcular(h, nivel, set), objetivo);
+  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h));
+  const fixos = [...S.fixos].map(id => ITEM[id]).filter(Boolean);
+  const cont = (set, tipo) => set.filter(i => i.tipo === tipo).length;
+  const custo = set => set.reduce((a,i)=>a+i.ouro, 0);
+  const custoCr = set => set.reduce((a,i)=>a+(i.cristais||0), 0);
+  const valido = (set, it) =>
+    !set.includes(it) && set.length < vagas && custo(set)+it.ouro <= ouro && custoCr(set)+(it.cristais||0) <= cristais &&
+    (it.tipo !== "Weapon" || cont(set,"Weapon") < maxArma) &&
+    (it.tipo !== "Cloth" || cont(set,"Cloth") < maxRoupa);
+
+  function guloso(porOuro){
+    let set = fixos.slice();
+    for(;;){
+      const s0 = score(set);
+      let melhor = null, mg = 1e-9;
+      for(const it of cand){
+        if(!valido(set, it)) continue;
+        let g = score(set.concat(it)) - s0;
+        if(porOuro) g = g / Math.max(it.ouro, 50);
+        if(g > mg){ mg = g; melhor = it; }
+      }
+      if(!melhor) return set;
+      set = set.concat(melhor);
+    }
+  }
+  function refinar(set){
+    for(let r=0; r<4; r++){
+      let atual = score(set), mudou = false;
+      for(let i=0; i<set.length; i++){
+        if(S.fixos.has(set[i].id)) continue;
+        const sem = set.filter((_,k)=>k!==i);
+        let melhor = null, ms = atual;
+        for(const it of cand){
+          if(it === set[i] || !valido(sem, it)) continue;
+          const sc = score(sem.concat(it));
+          if(sc > ms + 1e-9){ ms = sc; melhor = it; }
+        }
+        if(melhor){ set = sem.concat(melhor); atual = ms; mudou = true; }
+      }
+      // tentar adicionar mais um item se sobrou ouro/vaga
+      let melhorAdd = null, ms = atual;
+      for(const it of cand){
+        if(!valido(set, it)) continue;
+        const sc = score(set.concat(it));
+        if(sc > ms + 1e-9){ ms = sc; melhorAdd = it; }
+      }
+      if(melhorAdd){ set = set.concat(melhorAdd); mudou = true; }
+      if(!mudou) break;
+    }
+    return set;
+  }
+  const a = refinar(guloso(false)), b = refinar(guloso(true));
+  return score(a) >= score(b) ? a : b;
+}
+
+/* ordem de compra: o que da mais ganho por ouro primeiro */
+function ordemCompra(h, nivel, set, objetivo){
+  const restante = set.slice(), ordem = []; let atual = [];
+  while(restante.length){
+    const s0 = pontuacao(calcular(h, nivel, atual), objetivo);
+    let melhor = null, mv = -Infinity;
+    for(const it of restante){
+      const v = (pontuacao(calcular(h, nivel, atual.concat(it)), objetivo) - s0) / Math.max(it.ouro, 50);
+      if(v > mv){ mv = v; melhor = it; }
+    }
+    ordem.push(melhor); atual = atual.concat(melhor);
+    restante.splice(restante.indexOf(melhor), 1);
+  }
+  return ordem;
+}
+
+/* ---------- interface ---------- */
+const fmt = (n, d=0) => n == null ? "—" : Number(n).toLocaleString("pt-BR", {maximumFractionDigits:d, minimumFractionDigits:d});
+const sinal = (n, d=0) => (n>0?"+":"") + fmt(n, d);
+
+function resumoStats(it){
+  const p = [];
+  const m = {tai:"Taijutsu", nin:"Ninjutsu", gen:"Genjutsu", dano:"dano", hp:"vida", chakra:"chakra", armadura:"armadura", mov:"vel. mov."};
+  const tudo = it.stats.tai && it.stats.tai===it.stats.nin && it.stats.nin===it.stats.gen;
+  if(tudo) p.push("+"+it.stats.tai+" todos os atributos");
+  for(const [k,v] of Object.entries(it.stats)){
+    if(tudo && ["tai","nin","gen"].includes(k)) continue;
+    if(k==="evasao") p.push("+"+v+"% evasão");
+    else if(k==="reducao") p.push("-"+v+"% dano recebido");
+    else if(m[k]) p.push("+"+v+" "+m[k]);
+  }
+  for(const [k,v] of Object.entries(it.porNivel)) if(m[k]) p.push("+"+v+" "+m[k]+" por nível");
+  return p.join(" · ");
+}
+
+function iniciar(){
+  $("resumoDados").textContent = D.herois.length + " heróis · " + D.itens.length + " itens · dados extraídos do mapa";
+  preencherHerois("");
+  $("busca").addEventListener("input", e => preencherHerois(e.target.value));
+  for(const id of ["heroi","nivel","ouro","cristais","objetivo","slots","maxArma","maxRoupa"])
+    $(id).addEventListener("input", () => { if(id==="heroi" || id==="nivel") { if(id==="heroi") S.niveisSkill = {}; } atualizar(); });
+  $("filtroItem").addEventListener("input", atualizar);
+  $("filtroTipo").addEventListener("input", atualizar);
+  $("limpar").addEventListener("click", () => { S.fixos.clear(); S.banidos.clear(); atualizar(); });
+  $("btnTema").addEventListener("click", () => {
+    const r = document.documentElement; r.dataset.tema = r.dataset.tema === "claro" ? "" : "claro";
+  });
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-acao]"); if(!b) return;
+    const id = b.dataset.id, ac = b.dataset.acao;
+    if(ac==="fixar"){ S.banidos.delete(id); S.fixos.has(id) ? S.fixos.delete(id) : S.fixos.add(id); }
+    if(ac==="banir"){ S.fixos.delete(id); S.banidos.has(id) ? S.banidos.delete(id) : S.banidos.add(id); }
+    atualizar();
+  });
+  atualizar();
+}
+
+function preencherHerois(filtro){
+  const f = filtro.trim().toLowerCase(), sel = $("heroi"), atual = sel.value;
+  sel.innerHTML = "";
+  const lista = D.herois.filter(h => !f || h.nome.toLowerCase().includes(f));
+  for(const h of lista){ const o = document.createElement("option"); o.value = h.id; o.textContent = h.nome + " ("+NOME[h.primario]+")"; sel.appendChild(o); }
+  const y = lista.find(h => h.id === atual) || lista.find(h => h.nome === "Yamato") || lista[0];
+  if(y) sel.value = y.id;
+  sel.size = lista.length > 1 && f ? Math.min(8, lista.length) : 1;
+  atualizar();
+}
+
+function atualizar(){
+  const h = D.herois.find(x => x.id === $("heroi").value); if(!h) return;
+  const nivel = Math.max(1, +$("nivel").value || 1), ouro = Math.max(0, +$("ouro").value || 0);
+  const vagas = Math.max(1, +$("slots").value || 6), objetivo = $("objetivo").value, cristais = Math.max(0, +$("cristais").value || 0);
+  const maxArma = +$("maxArma").value, maxRoupa = +$("maxRoupa").value;
+
+  // niveis das skills
+  const ls = h.skills.filter(s => s.dano || s.tecla);
+  $("niveisSkills").innerHTML = ls.map(s => {
+    const L = nivelSkill(s, nivel);
+    return `<div class="linha" style="align-items:center;margin:4px 0"><span style="flex:3"><span class="tecla">${esc(s.tecla||"·")}</span> ${esc(s.nome).slice(0,28)}</span>
+      <input style="flex:1" type="number" min="1" max="${s.niveis||1}" value="${L}" data-skill="${s.id}"></div>`;
+  }).join("");
+  document.querySelectorAll("[data-skill]").forEach(inp => inp.addEventListener("change", e => {
+    S.niveisSkill[e.target.dataset.skill] = Math.max(1, +e.target.value || 1); atualizar();
+  }));
+
+  const sem = calcular(h, nivel, []);
+  const set = otimizar(h, nivel, ouro, cristais, vagas, maxArma, maxRoupa, objetivo);
+  const com = calcular(h, nivel, set);
+  const ordem = ordemCompra(h, nivel, set, objetivo);
+
+  $("tituloHeroi").textContent = h.nome + " — nível " + nivel + " (atributo principal: " + NOME[h.primario] + ")";
+  $("atrs").innerHTML = ["tai","nin","gen"].map(k => {
+    const v = {tai:com.T,nin:com.N,gen:com.G}[k], v0 = {tai:sem.T,nin:sem.N,gen:sem.G}[k];
+    return `<div class="atr ${k}"><b>${fmt(v)}</b><span>${NOME[k]}</span><div class="delta">${v-v0?sinal(v-v0)+" itens":"&nbsp;"}</div></div>`;
+  }).join("");
+  const nums = [
+    ["Vida", sem.hp, com.hp, 0], ["Chakra máx.", sem.chakra, com.chakra, 0], ["Armadura", sem.armadura, com.armadura, 1],
+    ["Dano do ataque", (sem.danoMin+sem.danoMax)/2, (com.danoMin+com.danoMax)/2, 0],
+    ["Vida efetiva", sem.ehp, com.ehp, 0], ["Dano potencial", sem.potencial, com.potencial, 0],
+    ["Combo (soma das skills)", sem.combo, com.combo, 0], ["Chakra do combo", com.custoCombo, com.custoCombo, 0],
+  ];
+  $("numeros").innerHTML = nums.map(([n,a,b,d]) => `<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="delta">${sinal(b-a,d)}</span>`:""}</div>`).join("");
+
+  // build
+  const gasto = set.reduce((a,i)=>a+i.ouro,0), gastoCr = set.reduce((a,i)=>a+(i.cristais||0),0);
+  $("build").innerHTML = set.length ? `
+    <p><span class="ouro">${fmt(gasto)}</span> de ${fmt(ouro)} de ouro · <span class="ouro">${gastoCr}</span> de ${cristais} cristais · ${set.length}/${vagas} vagas ${com.fatorChakra<1?` · <span class="aprox">chakra cobre ${fmt(com.fatorChakra*100)}% do combo</span>`:""}</p>
+    <table><tr><th>#</th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus</th><th></th></tr>
+    ${ordem.map((it,i)=>`<tr class="${S.fixos.has(it.id)?"fixo":""}"><td>${i+1}</td><td><b>${esc(it.nome)}</b><div class="extras">${esc(it.extras.slice(0,2).join(" | "))}</div></td>
+      <td><span class="tag ${it.tipo}">${esc(it.tipo)}</span></td><td class="ouro">${fmt(it.ouro)}${it.cristais?" + "+it.cristais+" cr.":""}</td><td>${esc(resumoStats(it))}</td>
+      <td><button class="pilula" data-acao="fixar" data-id="${it.id}">${S.fixos.has(it.id)?"desafixar":"fixar"}</button> <button class="pilula" data-acao="banir" data-id="${it.id}">banir</button></td></tr>`).join("")}</table>
+    <p class="extras">A ordem de compra prioriza o maior ganho por ouro primeiro.</p>`
+    : `<p class="mudo">Nenhum item cabe nesse ouro ou melhora o objetivo escolhido.</p>`;
+  $("fixBan").innerHTML = (S.fixos.size ? "<b>Fixados:</b> " + [...S.fixos].map(i=>esc(ITEM[i]?.nome)).join(", ") + "<br>" : "") +
+                          (S.banidos.size ? "<b>Banidos:</b> " + [...S.banidos].map(i=>esc(ITEM[i]?.nome)).join(", ") : "");
+
+  // skills
+  $("tabelaSkills").innerHTML = `<tr><th>Tecla</th><th>Skill</th><th>Nível</th><th>Dano (texto do jogo)</th><th>Dano calc.</th><th>Recarga</th><th>Chakra</th><th>Atributo</th></tr>` +
+    com.skills.filter(x => x.s.tecla || x.dano != null).map(x => `<tr><td><span class="tecla">${esc(x.s.tecla||"·")}</span></td>
+      <td>${esc(x.s.nome)}<details><summary>descrição</summary><div class="extras" style="white-space:pre-line">${esc(x.s.descricao)}</div></details></td>
+      <td>${x.L}/${x.s.niveis||1}</td><td class="extras">${esc(x.s.dano_txt||"—")}</td>
+      <td>${x.dano!=null?(x.s.dano_aprox?'<span class="aprox" title="a fórmula do jogo tem complementos ignorados">≈</span>':"")+fmt(x.dano):"—"}</td>
+      <td>${x.cd!=null?fmt(x.cd,1)+"s":"—"}</td><td>${x.custo!=null?fmt(x.custo):"—"}</td>
+      <td>${x.s.atributos.map(a=>`<span class="tag">${NOME[a]}</span>`).join(" ")||"—"}</td></tr>`).join("");
+
+  // catalogo
+  const q = $("filtroItem").value.trim().toLowerCase(), tp = $("filtroTipo").value;
+  const baseScore = pontuacao(com, objetivo);
+  let linhas = D.itens.filter(i => i.tipo && (!tp || i.tipo===tp) && (!q || (i.nome+" "+i.descricao).toLowerCase().includes(q)))
+    .filter(i => armaCompativel(i, h)).map(i => {
+      const g = (set.includes(i) || !comprável(i)) ? 0 : pontuacao(calcular(h, nivel, set.concat(i)), objetivo) - baseScore;
+      return {i, g};
+    }).sort((a,b)=>b.g-a.g).slice(0,80);
+  $("catalogo").innerHTML = `<tr><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar</th><th></th></tr>` +
+    linhas.map(({i,g}) => `<tr class="${S.fixos.has(i.id)?"fixo":""}"><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}</td>
+      <td><span class="tag ${i.tipo}">${esc(i.tipo)}</span></td><td class="ouro">${i.ouro==null?"?":fmt(i.ouro)}${i.cristais?" + "+i.cristais+" cr.":""}</td>
+      <td>${esc(resumoStats(i))}<div class="extras">${esc(i.extras.slice(0,3).join(" | "))}</div></td>
+      <td>${set.includes(i)?"—":(g>0?'<span class="delta">'+sinal(g,0)+"</span>":'<span class="mudo">'+fmt(g,0)+"</span>")}</td>
+      <td><button class="pilula" data-acao="fixar" data-id="${i.id}">fixar</button> <button class="pilula" data-acao="banir" data-id="${i.id}">${S.banidos.has(i.id)?"liberar":"banir"}</button></td></tr>`).join("");
+}
+iniciar();
+</script>
+</body>
+</html>
