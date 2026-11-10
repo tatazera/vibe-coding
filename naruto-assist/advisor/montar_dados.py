@@ -290,6 +290,211 @@ def montar_receitas(itens):
     return receitas
 
 
+# ---------------------------------------------------------------- criacao (como fazer cada item)
+ELEMENTOS_SPIRIT = {"Fire": "Fire", "Water": "Water", "Wind": "Wind", "Earthen": "Earth", "Earth": "Earth",
+                    "Thunder": "Thunder", "Yin": "Yin", "Yang": "Yang"}
+FAMILIA_ARMA = {"tai": "Kunai", "nin": "Shuriken", "gen": "Senbons"}
+SPIRITS_LENDARIA = {"Kunai": ["Fire", "Earth", "Light"], "Shuriken": ["Thunder", "Wind", "Light"],
+                    "Senbons": ["Water", "Darkness", "Light"]}
+KAGE_ELEMENTO = {"Hokage Robe": "Fire", "Mizukage Robe": "Water", "Tsuchikage Robe": "Earth",
+                 "Raikage Robe": "Thunder", "Kazekage Robe": "Wind"}
+BOTA_VARIANTE = {"Boots of Teleportation": [], "Anbu Shoes": ["Ninja Headband"], "Cloning Boots": ["Scroll of Kage Bunshin"],
+                 "Healing Boots": ["Scroll of Healing", "Scroll of Chakra"], "Invisibility Boots": ["Scroll of Invisibility"]}
+
+
+def montar_criacao(itens, receitas, politica):
+    """Para cada item: como obter (compra / upgrade / combinar), com componentes e taxas.
+    Regras inferidas das receitas do mapa e dos precos (ver README)."""
+    por_nome = {}
+    for i in itens:
+        k = norm(i["nome"])
+        if k and (k not in por_nome or (i["tipo"] and not por_nome[k]["tipo"])):
+            por_nome[k] = i
+    idn = lambda n: por_nome[norm(n)]["id"] if norm(n) in por_nome else None
+    lojas = {}
+    for r in receitas:
+        for c in r["componentes"]:
+            if c.get("loja"):
+                lojas.setdefault(norm(c["nome"]), c["loja"])
+            for o in c["opcoes"]:
+                if o.get("loja"):
+                    lojas.setdefault(norm(o["nome"]), o["loja"])
+    for loja, nomes in (politica.get("lojas") or {}).items():
+        for n in nomes:
+            lojas[norm(n)] = loja
+    lojas.setdefault(norm("Soul Absorb Stone"), "Spirit Shop")
+
+    def comp(nome, opcoes=None, nota=None, qtd=1):
+        d = {"id": idn(nome), "nome": nome, "qtd": qtd, "loja": lojas.get(norm(nome))}
+        if opcoes:
+            d["opcoes"] = [{"id": idn(o), "nome": o, "loja": lojas.get(norm(o))} for o in opcoes]
+        if nota:
+            d["nota"] = nota
+        return d
+
+    taxa = {k: idn(n) for k, n in dict(
+        arma="Upgrade Weapon", roupa="Upgrade Cloth", bota="Upgrade Super Boots", sapato="Upgrade Shoes",
+        pedra="Upgrade Stone", sanbi="Upgrade Sanbi's Skin", lamina="Upgrade Chakra Blade",
+        elem="Combine: Elemental Weapon", elem2="Combine: Elemental Ninja Weapon", lend="Legendary weapons here!",
+        super="Combine: Super Boots", kage="Combine: Kage Robe", elemkage="Combine: Elemental Kage Robe",
+        totsuka="Upgrade Sword of Totsuka", kusanagi="Upgrade Kusanagi Sword", lamina_elem="Combine: Elemental Chakra Blades").items()}
+    cr = {}
+    spirit = lambda e: "Spirit of " + ELEMENTOS_SPIRIT.get(e, e)
+    nbat = lambda f, n: "Battle %s - Level %s" % (f, "MAX" if n >= 10 else n)
+    evol = politica.get("evolucao_roupa") or []
+
+    for i in itens:
+        nome, iid = i["nome"], i["id"]
+        # 1) armas Battle
+        m = re.match(r"^Battle (Kunai|Shuriken|Senbons) - Level (\d+|MAX)$", nome)
+        if m:
+            f, n = m.group(1), (10 if m.group(2) == "MAX" else int(m.group(2)))
+            cr[iid] = {"m": "compra", "loja": "Basic Item Shop"} if n == 1 else \
+                {"m": "upgrade", "base": idn(nbat(f, n - 1)), "taxa": taxa["arma"]}
+            continue
+        # 2) Chakra Blades
+        m = re.match(r"^Chakra Blades - Level (\d+|MAX)$", nome)
+        if m:
+            n = 4 if m.group(1) == "MAX" else int(m.group(1))
+            prev = "Chakra Blades - Level %s" % (n - 1)
+            cr[iid] = {"m": "compra", "loja": lojas.get(norm(nome)) or "Legendary Equipment Shop"} if n == 1 else \
+                {"m": "upgrade", "base": idn(prev), "taxa": taxa["lamina"]}
+            continue
+        m = re.match(r"^(Fire|Water|Wind|Earthen|Thunder|Yin|Yang) Chakra Blades$", nome)
+        if m:
+            cr[iid] = {"m": "combinar", "taxa": taxa["lamina_elem"],
+                       "comps": [comp("Chakra Blades - Level MAX"), comp("Soul Absorb Stone"), comp(spirit(m.group(1)))]}
+            continue
+        # 3) armas elementais (e suas versoes Explosive/Fuuma/Dance)
+        m = re.match(r"^(Fire|Water|Wind|Earthen|Thunder|Yin|Yang) (Kunai|Shuriken|Senbons)$", nome)
+        if m and i["tipo"] == "Weapon":
+            e, f = m.groups()
+            cr[iid] = {"m": "combinar", "taxa": taxa["elem"],
+                       "comps": [comp(nbat(f, 1)), comp("Soul Absorb Stone"), comp(spirit(e))]}
+            continue
+        m = re.match(r"^(Fire|Water|Wind|Earthen|Thunder|Yin|Yang) (Kunai|Shuriken|Senbons) \((Explosive|Fuuma|Dance)\)$", nome)
+        if m:
+            e, f, _v = m.groups()
+            acess = {"Kunai": "Explosive Kunai", "Shuriken": "Fuuma Shuriken", "Senbons": "Senbons Dance"}[f]
+            cr[iid] = {"m": "combinar", "taxa": taxa["elem2"], "comps": [comp("%s %s" % (e, f)), comp(acess)]}
+            continue
+        # 4) armas lendarias: Battle MAX + pedra + spirit
+        if i["categoria"] == "arma_lendaria":
+            st = i["stats"]
+            f = max(FAMILIA_ARMA, key=lambda k: st.get(k, 0)) if any(st.get(k) for k in FAMILIA_ARMA) else (i["familia"] or "tai")
+            fam = FAMILIA_ARMA[f]
+            cr[iid] = {"m": "combinar", "taxa": taxa["lend"],
+                       "comps": [comp(nbat(fam, 10)), comp("Soul Absorb Stone"),
+                                 comp("Spirit (escolha)", opcoes=["Spirit of " + e for e in SPIRITS_LENDARIA[fam]],
+                                      nota="o espirito escolhido define qual arma lendaria sai")]}
+            continue
+        # 5) roupas
+        if nome in evol:
+            k = evol.index(nome)
+            if nome == "Kage Robe":
+                cr[iid] = {"m": "combinar", "taxa": taxa["kage"], "comps": [comp("Sannin Cloth")]}
+            elif k == 0:
+                cr[iid] = {"m": "compra", "loja": lojas.get(norm(nome)) or "Basic Item Shop"}
+            else:
+                cr[iid] = {"m": "upgrade", "base": idn(evol[k - 1]), "taxa": taxa["roupa"]}
+            continue
+        if nome in KAGE_ELEMENTO or nome in ("Otokage Robe", "Sage Robe"):
+            sp = KAGE_ELEMENTO.get(nome)
+            c3 = comp(spirit(sp), nota="elemento provavel pelo nome do kage") if sp else \
+                comp("Spirit (escolha)", opcoes=[spirit(e) for e in ("Fire", "Water", "Earth", "Thunder", "Wind", "Yin", "Yang")])
+            cr[iid] = {"m": "combinar", "taxa": taxa["elemkage"], "comps": [comp("Kage Robe"), comp("Soul Absorb Stone"), c3]}
+            continue
+        m = re.match(r"^Sanbi's (Rough|Hardened|Impenetrable) Skin$", nome)
+        if m or nome == "Sanbi's Skin":
+            ordem = ["Sanbi's Skin", "Sanbi's Rough Skin", "Sanbi's Hardened Skin", "Sanbi's Impenetrable Skin"]
+            k = ordem.index(nome)
+            cr[iid] = {"m": "compra", "loja": lojas.get(norm(nome)) or "Legendary Equipment Shop"} if k == 0 else \
+                {"m": "upgrade", "base": idn(ordem[k - 1]), "taxa": taxa["sanbi"]}
+            continue
+        # 6) botas
+        if nome == "Ninja Shippu Boots":
+            cr[iid] = {"m": "upgrade", "base": idn("Ninja Shoes"), "taxa": taxa["sapato"]}
+            continue
+        m = re.match(r"^(Boots of Teleportation|Anbu Shoes|Cloning Boots|Healing Boots|Invisibility Boots|Blink Boots|Akatsuki Shoes) - Level (\d)$", nome)
+        if m:
+            var, n = m.group(1), int(m.group(2))
+            if n > 1:
+                cr[iid] = {"m": "upgrade", "base": idn("%s - Level %d" % (var, n - 1)), "taxa": taxa["bota"]}
+            elif var in BOTA_VARIANTE:
+                extra = [comp(x) for x in BOTA_VARIANTE[var]]
+                cr[iid] = {"m": "combinar", "taxa": taxa["super"], "comps": [comp("Ninja Shippu Boots")] + extra,
+                           "nota": "Super Boots: variante %s" % var}
+            else:
+                cr[iid] = {"m": "compra", "loja": lojas.get(norm(nome)), "nota": "receita desta variante nao esta descrita no mapa"}
+            continue
+        # 7) pedras de vida / chakra
+        for linha in (["Stone of Life", "Stone of Greater Life", "Stone of Immortality", "Ashura Essence"],
+                      ["Stone of Chakra", "Stone of Greater Chakra", "Stone of Infinite Chakra", "Indra Essence"]):
+            if nome in linha and nome != linha[0]:
+                cr[iid] = {"m": "upgrade", "base": idn(linha[linha.index(nome) - 1]), "taxa": taxa["pedra"]}
+                break
+        if iid in cr:
+            continue
+        # 8) kusanagi / totsuka elementais
+        m = re.match(r"^(Fire|Yin|Yang) Kusanagi$", nome)
+        if m:
+            cr[iid] = {"m": "combinar", "taxa": taxa["kusanagi"], "comps": [comp("Kusanagi Sword"), comp("Soul Absorb Stone"), comp(spirit(m.group(1)))]}
+            continue
+        m = re.match(r"^(Infernal|Chilling|True|Thundering|Purified) Sword of Totsuka$|^(True|Purified) Sword of Totsuka$", nome)
+        if m:
+            esp = {"Infernal": "Fire", "Chilling": "Water", "Thundering": "Thunder"}.get(m.group(1) or "")
+            c3 = comp(spirit(esp), nota="elemento provavel pelo nome") if esp else \
+                comp("Spirit (escolha)", opcoes=["Spirit of Yin", "Spirit of Yang"])
+            cr[iid] = {"m": "combinar", "taxa": taxa["totsuka"], "comps": [comp("Soul Absorb Stone"), comp("Sword of Totsuka"), c3]}
+            continue
+
+    # 9) receitas Combine descritas no mapa (Jade, Heaven Mirror, Anbu Mask...)
+    for r in receitas:
+        rid = r.get("resultadoId")
+        if rid and rid not in cr and r["tipoReceita"] == "Combine":
+            cr[rid] = {"m": "combinar", "taxa": r["id"],
+                       "comps": [{"id": c.get("id"), "nome": c["nome"], "qtd": 1, "loja": c.get("loja"),
+                                  **({"opcoes": c["opcoes"]} if c.get("opcoes") else {})} for c in r["componentes"]],
+                       **({"nota": " ".join(r["notas"])} if r["notas"] else {})}
+    # 10) todo o resto: compra direta
+    for i in itens:
+        if i["id"] not in cr:
+            cr[i["id"]] = {"m": "compra", "loja": lojas.get(norm(i["nome"]))}
+    return cr, {k: v for k, v in lojas.items()}
+
+
+def validar_criacao(itens, cr):
+    """Compara o preco de tabela com a soma dos passos (taxa + precos de tabela dos componentes).
+    Grava 'soma' e 'dif' em cada regra; 'taxaIncluida' quando o preco ja cobre so os componentes."""
+    I = {i["id"]: i for i in itens}
+
+    def preco_comp(c):
+        if c.get("opcoes") and not c.get("id"):
+            ps = [I[o["id"]]["ouro"] for o in c["opcoes"] if o.get("id") and I[o["id"]]["ouro"]]
+            return ps[0] if ps else None
+        return I[c["id"]]["ouro"] if c.get("id") and I[c["id"]]["ouro"] is not None else None
+
+    for iid, r in cr.items():
+        it = I[iid]
+        if r["m"] == "compra" or it["ouro"] is None:
+            continue
+        fee = (I[r["taxa"]]["ouro"] or 0) if r.get("taxa") else 0
+        if r["m"] == "upgrade":
+            b = I[r["base"]]["ouro"] if r.get("base") else None
+            if b is None:
+                continue
+            comps_soma = b
+        else:
+            ps = [preco_comp(c) for c in r["comps"]]
+            if any(p is None for p in ps):
+                continue
+            comps_soma = sum(ps)
+        est = comps_soma + fee
+        if fee and abs(comps_soma - it["ouro"]) <= 1 and r["m"] == "combinar":
+            r["taxaIncluida"], est = True, comps_soma
+        r["soma"], r["dif"] = est, it["ouro"] - est
+
+
 # ---------------------------------------------------------------- herois
 def parse_skill(aid, jogo, skin):
     s, c = skin.get(aid, {}), jogo.get(aid, {})
@@ -350,7 +555,14 @@ def montar(pasta):
     receitas = montar_receitas(itens)
     arq_pol = Path(__file__).resolve().parent / "politica.json"
     politica = json.loads(arq_pol.read_text(encoding="utf-8")) if arq_pol.exists() else {}
-    return {"politica": politica, "receitas": receitas, "constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
+    for it in itens:   # Soul Absorb Stone nao tem preco no mapa; 1000 e o valor que faz as somas das receitas fecharem
+        if norm(it["nome"]) == "soulabsorbstone" and it["ouro"] is None:
+            it["ouro"], it["precoInferido"] = 1000, True
+    criacao, lojas_map = montar_criacao(itens, receitas, politica)
+    validar_criacao(itens, criacao)
+    for it in itens:
+        it["loja"] = (criacao[it["id"]].get("loja") if criacao[it["id"]]["m"] == "compra" else None)
+    return {"politica": politica, "criacao": criacao, "receitas": receitas, "constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
                            "armadura_base": 2, "armadura_por_nin": 0.15, "vel_ataque_por_nin": 0.05,
                            "dano_por_primario": 1.0, "dano_base_padrao": [2, 24], "cd_ataque_padrao": 1.5,
                            "fonte": "war3mapMisc.txt do mapa; conferido com Yamato nivel 9 (964 HP, 705 chakra, armadura 7, dano 49-71)"},
@@ -368,7 +580,7 @@ def main():
     Path(a.saida).write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     sk = [s for h in d["herois"] for s in h["skills"]]
     print("herois:", len(d["herois"]), "| itens:", len(d["itens"]), "| skills:", len(sk),
-          "| receitas:", len(d["receitas"]), "| com formula de dano:", sum(1 for s in sk if s["dano"]),
+          "| receitas:", len(d["receitas"]), "| criacao:", len(d["criacao"]), "| com formula de dano:", sum(1 for s in sk if s["dano"]),
           "(aprox:", sum(1 for s in sk if s["dano"] and s["dano_aprox"]), ")",
           "| com dano em texto:", sum(1 for s in sk if s["dano_txt"]))
 

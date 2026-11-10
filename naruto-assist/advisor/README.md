@@ -22,3 +22,15 @@ Pode ser editada dentro do proprio site (caixa "Editar a politica de compra") ou
 
 ## Correcao importante
 "+10 Taijutsu x Level" nas armas Battle e o nivel DA ARMA (Level 3 = x3), nao o nivel do heroi.
+
+## Como fazer cada item (criacao)
+`montar_dados.py` gera `criacao` para os 307 itens (compra / upgrade / combinar) a partir das receitas do mapa e de regras inferidas:
+Battle Level n = Level n-1 + Upgrade Weapon; elemental = Weapon Lv1 + Soul Absorb Stone + Spirit + taxa; lendaria = Battle MAX + pedra + spirit;
+roupa = Genin + Upgrade Cloth; botas = Shippu + variante + Upgrade Super Boots. Validacao: 117 regras fecham exatamente com o preco de tabela;
+as demais divergem por valor fixo (ex.: Explosive/Fuuma/Dance -1500; Totsuka +3000) e a tela mostra as duas contas.
+Soul Absorb Stone nao tem preco no mapa; 1000 e o valor que faz as somas fecharem (marcado como inferido).
+
+## Padroes de jogo informados (politica.json)
+Arma elemental padrao: Tai = Fire, Nin = Thunder, Gen = Water (outros elementos = situacionais).
+Loja lendaria (situacionais): Sanbi, Mirrored Shield, Kusanagi, Sword of Totsuka, Triple-Bladed, Executioner's Blade, Samehada, Chakra Blades, Stone of Gelel.
+Ordem de skills: fase de farm (maior dano base inicial primeiro) e fase de escala (skills que escalam com Tai/Nin/Gen); ultimates assim que liberadas.

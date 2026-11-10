@@ -119,8 +119,35 @@
   .comp{display:flex;flex-direction:column;align-items:center;gap:3px;max-width:100px;text-align:center;font-size:11px}
   .comp .loja{color:var(--verde);font-size:10px}
   .opcoes{font-size:11px;color:var(--mudo);margin-top:3px}
-  .op{display:inline-block;background:var(--painel);border:1px solid var(--borda);border-radius:6px;padding:0 5px;margin:1px}
+  .op2{display:inline-flex;gap:3px;align-items:center;background:var(--painel);border:1px solid var(--borda);border-radius:6px;padding:0 5px;margin:1px;font-size:10px}
   .grande{font-size:22px;color:var(--mudo);align-self:center}
+  /* arvore de criacao */
+  .grade3>div,.grade2>div{min-width:0}
+  .arvore{overflow:auto;max-width:100%;padding:6px 2px 12px}
+  .no{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .filhos{display:flex;gap:10px;align-items:flex-end;justify-content:center;flex-wrap:nowrap}
+  .mais{align-self:center;font-size:22px;color:var(--mudo);padding:0 2px}
+  .op{display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--laranja2)}
+  .op span{background:var(--painel2);border:1px solid var(--laranja);border-radius:99px;padding:2px 10px}
+  .op small{color:var(--mudo)}
+  .folha{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:12px;min-width:92px;max-width:150px;padding:8px;border-radius:12px;background:var(--painel2);border:1px solid var(--borda);cursor:pointer}
+  .folha:hover{border-color:var(--laranja)}
+  .folha.inter{background:var(--painel3)}
+  .folha.topo{border:2px solid var(--laranja);background:var(--painel3);max-width:220px}
+  .folha b{font-size:12px;line-height:1.2}
+  .lojatag{font-size:10px;color:var(--verde);border:1px solid var(--borda);border-radius:6px;padding:0 5px}
+  .qtd{color:var(--laranja2);margin-left:3px}
+  .notapq{font-size:10px;color:var(--mudo)}
+  .cats{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .cats button{padding:3px 10px;font-size:12px;border-radius:99px}
+  .cats button.ativa{border-color:var(--laranja);color:var(--laranja2)}
+  .grade-itens{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;max-height:620px;overflow:auto}
+  .gcell{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 3px;text-align:center;font-size:11px;line-height:1.15;background:var(--painel2)}
+  .gcell.sel,.gcell:hover{border-color:var(--laranja);background:var(--painel3)}
+  .grade2{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:14px;align-items:start}
+  @media(max-width:1000px){.grade2{grid-template-columns:1fr}}
+  .ordem td.c.on.escala{background:var(--roxo);color:#101010}
+  .lg{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
 </style>
 </head>
 <body>
@@ -169,7 +196,7 @@
   <div class="abas" id="abas">
     <button class="aba ativa" data-tab="build">Build</button>
     <button class="aba" data-tab="skills">Skills</button>
-    <button class="aba" data-tab="receitas">Receitas de itens</button>
+    <button class="aba" data-tab="receitas">Como fazer</button>
     <button class="aba" data-tab="catalogo">Catálogo</button>
   </div>
   <main id="conteudo"></main>
@@ -189,8 +216,9 @@ const sinal = (n, d=0) => (n>0?"+":"") + fmt(n, d);
 const norm = n => String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 
 /* ---------- estado ---------- */
-const S = { heroiId:null, fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", preset:"padrao", itemSel:null, receitaSel:null };
+const S = { heroiId:null, fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", preset:"padrao", itemSel:null, arvoreSel:null, cat:"todas", soMontados:false };
 D.receitas = D.receitas.filter(r => r.tipoReceita !== "Mission");
+const CR = D.criacao || {};
 const ITEM = Object.fromEntries(D.itens.map(i => [i.id, i]));
 const RECEITA_DE = {}; for(const r of D.receitas) if(r.resultadoId) RECEITA_DE[r.resultadoId] = r;
 const ITEM_NOME = {};
@@ -198,9 +226,16 @@ for(const i of D.itens){ const k = norm(i.nome); if(!ITEM_NOME[k] || (i.tipo && 
 const porNome = n => ITEM_NOME[norm(n)] || null;
 const comprável = i => (i.ouro > 0 || i.cristais > 0);
 let EVOL_ROUPA = new Set(), INICIAIS = [], NUCLEO = [];
-const isSit = it => (it.categoria === "roupa" && EVOL_ROUPA.size && !EVOL_ROUPA.has(norm(it.nome))) ||
-                    (P.situacionais||[]).some(n => norm(n) === norm(it.nome)) || (P.situacionais_prefixos||[]).some(p => it.nome.startsWith(p)) ||
-                    (P.situacional_categorias||[]).includes(it.categoria);
+const ELEM = n => { const m = /^(Fire|Water|Wind|Earthen|Thunder|Yin|Yang) /.exec(n||""); return m ? m[1] : null; };
+function elementoPadrao(h){
+  const o = ((P.herois||{})[h.nome]||{}).elemento;
+  return o || ((P.elemento_padrao||{tai:"Fire",nin:"Thunder",gen:"Water"})[h.primario]);
+}
+const isSit = (it, h) =>
+  (it.categoria === "roupa" && EVOL_ROUPA.size && !EVOL_ROUPA.has(norm(it.nome))) ||
+  (P.situacionais||[]).some(n => norm(n) === norm(it.nome)) || (P.situacionais_prefixos||[]).some(p => it.nome.startsWith(p)) ||
+  (P.situacionais_contem||[]).some(s => it.nome.includes(s)) || (P.situacional_categorias||[]).includes(it.categoria) ||
+  (it.categoria === "arma_elemental" && h && ELEM(it.nome) !== elementoPadrao(h));
 function recalcPolitica(){
   EVOL_ROUPA = new Set((P.evolucao_roupa||[]).map(norm));
   INICIAIS = (P.iniciais||[]).map(porNome).filter(Boolean);
@@ -243,24 +278,31 @@ function atributosBase(h, nivel){ const o = {}; for(const k of ["tai","nin","gen
 function ordemSkills(h, nivelMax){
   const hs = h.skills.filter(s => s.heroica && s.tecla);
   const rank = Object.fromEntries(hs.map(s => [s.id, 0]));
-  const passos = [];
-  const valor = (s, b) => {
-    const r = rank[s.id];
-    const f = rk => { const d = avaliar(s.dano, rk, b.tai, b.nin, b.gen), cd = avaliar(s.cooldown, rk, b.tai, b.nin, b.gen);
-                      return d == null ? 0 : d / Math.max(cd ?? 20, 1); };
-    return f(r+1) - f(r);
-  };
+  const passos = []; let faseTroca = null;
+  const cheio = (s, r, b) => avaliar(s.dano, r, b.tai, b.nin, b.gen) ?? 0;
+  const base = (s, r) => avaliar(s.dano, r, 0, 0, 0) ?? 0;          // dano sem nenhum atributo
+  const cdOf = (s, r, b) => Math.max(avaliar(s.cooldown, r, b.tai, b.nin, b.gen) ?? 20, 1);
   for(let L=1; L<=nivelMax; L++){
     const b = atributosBase(h, L);
+    // fase: enquanto o dano fixo das skills domina = farm; quando a parte que escala com Tai/Nin/Gen passa, = escala
+    let pBase = 0, pEsc = 0;
+    for(const s of hs){ if(!s.dano) continue; const r = Math.max(1, rank[s.id]), c = cheio(s,r,b), bs = base(s,r), cd = cdOf(s,r,b); pBase += bs/cd; pEsc += (c-bs)/cd; }
+    const fase = pEsc > pBase ? "escala" : "farm";
     const cand = hs.filter(s => rank[s.id] < (s.niveis||1) && reqNivel(s, rank[s.id]+1) <= L);
     if(!cand.length) continue;
+    const ganhoBase = s => base(s, rank[s.id]+1) - base(s, rank[s.id]);
+    const ganhoTotal = s => (cheio(s, rank[s.id]+1, b) - cheio(s, rank[s.id], b));
+    const ganhoEsc = s => ganhoTotal(s) - ganhoBase(s);
     cand.sort((a,c) => {
-      const pa = a.req.arlv != null ? 1e9 : valor(a,b), pc = c.req.arlv != null ? 1e9 : valor(c,b);
-      return (pc - pa) || (a.tecla < c.tecla ? -1 : 1);
+      const ua = a.req.arlv != null ? 1 : 0, uc = c.req.arlv != null ? 1 : 0;       // ultimates entram assim que liberadas
+      if(ua !== uc) return uc - ua;
+      const pa = fase === "farm" ? ganhoBase(a) : ganhoEsc(a), pc = fase === "farm" ? ganhoBase(c) : ganhoEsc(c);
+      return (pc - pa) || (ganhoTotal(c) - ganhoTotal(a)) || (a.tecla < c.tecla ? -1 : 1);
     });
-    const s = cand[0]; rank[s.id]++; passos.push({L, s, r:rank[s.id]});
+    const s = cand[0]; rank[s.id]++; passos.push({L, s, r:rank[s.id], fase});
+    if(fase === "escala" && faseTroca == null) faseTroca = L;
   }
-  return {rank, passos, hs};
+  return {rank, passos, hs, faseTroca};
 }
 function maxSequencia(o){
   const feitos = o.hs.map(s => {
@@ -330,7 +372,7 @@ function perfil(h, nivel){
   return {
     pesoNin, nota: o.nota || "",
     botaEssencial: o.bota_essencial ?? (pesoNin >= (reg.bota_essencial_se_peso_nin ?? 0.4)),
-    armaElemental: o.arma_elemental ?? (reg.arma_elemental_se_primario||[]).includes(h.primario),
+    armaElemental: o.arma_elemental ?? (reg.arma_elemental_para_todos !== false), elemento: elementoPadrao(h),
     manual: !!(o.bota_essencial !== undefined || o.arma_elemental !== undefined),
   };
 }
@@ -340,7 +382,7 @@ const armaCompativel = (it, h) => it.tipo !== "Weapon" || !it.familia || it.fami
 function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
   const h = X.h, nivel = X.nivel, w = X.w;
   const score = set => pontuacao(calcular(h, nivel, set), obj, w);
-  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h) && (X.incluirSit || !isSit(i)));
+  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h) && (X.incluirSit || !isSit(i, h)));
   const cont = (set, f) => set.filter(f).length;
   const custo = set => set.reduce((a,i)=>a+(i.ouro||0), 0), custoCr = set => set.reduce((a,i)=>a+(i.cristais||0), 0);
   const valido = (set, it) => !set.includes(it) && set.length < X.vagas && custo(set)+(it.ouro||0) <= ouro && custoCr(set)+(it.cristais||0) <= cristais &&
@@ -356,10 +398,10 @@ function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
     for(const it of cand.concat(NUCLEO)) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
       if(sc > ms + 1e-9 || (Math.abs(sc-ms) <= 1e-9 && (it.nivelItem||0) > ((m||{}).nivelItem||0))){ ms = sc; m = it; } } return m; };
   if(pf.botaEssencial && X.maxBota > 0){ const m = melhorDe(fixos, i => i.categoria === "bota"); if(m){ fixos.push(m); motivos.set(m.id, "bota essencial"); } }
-  if(pf.armaElemental && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental"); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental"); } }
-  // toda a base de dano vem da arma: sempre garante uma (ate 30% do orcamento), a menos que ja haja uma
+  if(pf.armaElemental && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome)); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental ("+pf.elemento+")"); } }
+  // toda a base de dano vem da arma: se o elemental nao couber, garante a melhor arma que cabe
   if(X.maxArma > 0 && !fixos.some(i => i.tipo === "Weapon")){
-    const m = melhorDe(fixos, i => i.tipo === "Weapon" && (i.ouro||0) <= ouro*0.3);
+    const m = melhorDe(fixos, i => i.tipo === "Weapon");
     if(m){ fixos.push(m); motivos.set(m.id, m.categoria === "arma_batalha" ? "arma base" : "arma"); }
   }
   if(usarNucleo) for(const it of NUCLEO){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "núcleo"); } }
@@ -461,8 +503,8 @@ const SIT = [
 ];
 function situacionais(h, set){
   const lista = D.itens.filter(i => i.tipo && comprável(i) && !set.includes(i) && !S.banidos.has(i.id) && armaCompativel(i,h));
-  const pol = lista.filter(isSit).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,14);
-  const grupos = SIT.map(g => ({t:g.t, d:g.d, itens: lista.filter(i => !isSit(i) && i.categoria !== "espirito" && g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
+  const pol = lista.filter(i => isSit(i, h)).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,14);
+  const grupos = SIT.map(g => ({t:g.t, d:g.d, itens: lista.filter(i => !isSit(i, h) && i.categoria !== "espirito" && g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
   return {pol, grupos};
 }
 
@@ -494,9 +536,11 @@ function iniciar(){
   $("btnTema").addEventListener("click", () => { const r = document.documentElement; r.dataset.tema = r.dataset.tema === "claro" ? "" : "claro"; });
   $("abas").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b){ S.tab = b.dataset.tab; atualizar(); } });
   document.addEventListener("click", ev => {
-    const b = ev.target.closest("[data-acao],[data-item],[data-preset],[data-receita]"); if(!b) return;
+    const b = ev.target.closest("[data-acao],[data-item],[data-preset],[data-receita],[data-arv],[data-cat]"); if(!b) return;
     if(b.dataset.preset){ S.preset = b.dataset.preset; return atualizar(); }
-    if(b.dataset.receita){ S.receitaSel = b.dataset.receita; S.tab = "receitas"; return atualizar(); }
+    if(b.dataset.receita){ S.arvoreSel = b.dataset.receita; S.tab = "receitas"; return atualizar(); }
+    if(b.dataset.arv){ S.arvoreSel = b.dataset.arv; if(S.tab !== "receitas") S.tab = "receitas"; atualizar(); const m = $("arvoreMain"); if(m) m.scrollIntoView({block:"start", behavior:"smooth"}); return; }
+    if(b.dataset.cat){ if(b.dataset.cat === "_montados") S.soMontados = !S.soMontados; else S.cat = b.dataset.cat; return atualizar(); }
     if(b.dataset.item && !b.dataset.acao){ S.itemSel = b.dataset.item; return atualizar(); }
     const id = b.dataset.id, ac = b.dataset.acao;
     if(ac==="fixar"){ S.banidos.delete(id); S.fixos.has(id) ? S.fixos.delete(id) : S.fixos.add(id); }
@@ -538,9 +582,9 @@ function atualizar(){
     el.innerHTML = abaSkills(X);
     el.querySelectorAll("[data-skill]").forEach(inp => inp.addEventListener("change", e => { S.niveisSkill[e.target.dataset.skill] = Math.max(1, +e.target.value || 1); atualizar(); }));
   } else if(S.tab === "receitas"){
-    el.innerHTML = abaReceitas(X);
-    $("filtroRec").addEventListener("input", filtrarReceitas);
-    const d = el.querySelector(".destaque"); if(d) d.scrollIntoView({block:"center"});
+    el.innerHTML = abaComoFazer(X);
+    $("filtroArv").addEventListener("input", desenharGradeArv);
+    desenharGradeArv();
   } else {
     el.innerHTML = abaCatalogo(X);
     $("filtroItem").addEventListener("input", filtrarCatalogo); $("filtroTipo").addEventListener("input", filtrarCatalogo);
@@ -573,15 +617,14 @@ function detalheItem(X, set, base){
   const it = ITEM[S.itemSel]; if(!it) return `<p class="mudo">Clique em um item para ver os detalhes.</p>`;
   const com = calcular(X.h, X.nivel, set.includes(it) ? set : set.concat(it));
   const g = set.includes(it) ? null : pontuacao(com, "equil", X.w) - pontuacao(base, "equil", X.w);
-  const rec = RECEITA_DE[it.id];
-  return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
-      <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}${isSit(it)?' · <span class="tag">situacional</span>':""}</p></div></div>
+    return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
+      <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}${isSit(it, X.h)?' · <span class="tag">situacional</span>':""}</p></div></div>
     <p style="margin:8px 0 0"><b>${esc(resumoStats(it))||"Sem bônus numéricos"}</b></p>
     <div class="linhas">${esc(it.descricao)}</div>
     ${g!=null?`<p class="nota">Se somado à build: ${g>0?'<span class="verde">'+sinal(g)+'</span>':fmt(g)} pontos de pontuação.</p>`:""}
     <p style="margin:8px 0 0"><button class="pilula" data-acao="fixar" data-id="${it.id}">${S.fixos.has(it.id)?"desafixar":"fixar na build"}</button>
       <button class="pilula" data-acao="banir" data-id="${it.id}">${S.banidos.has(it.id)?"liberar":"banir"}</button>
-      ${rec?`<button class="pilula" data-receita="${rec.id}">ver receita</button>`:""}</p></div>`;
+      <button class="pilula" data-receita="${it.id}">como fazer</button></p></div>`;
 }
 function abaBuild(X){
   const todos = PRESETS.map(p => montarPreset(X, p));
@@ -605,7 +648,7 @@ function abaBuild(X){
 
   const chips = [
     pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
-    pf.armaElemental ? `<span class="tag motivo">arma elemental</span>` : "",
+    pf.armaElemental ? `<span class="tag motivo">arma elemental: ${esc(pf.elemento)}</span>` : "",
     `<span class="tag">skills escalam ${fmt(pf.pesoNin*100)}% com Ninjutsu</span>`].join(" ");
   const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
   const centro = `<div class="caixa"><div class="heroi">${icoHeroi(X.h, 64)}
@@ -629,14 +672,18 @@ function abaBuild(X){
         <td class="ouro">${preco(it)}</td><td>${fmt(cum)}</td><td>${fmt(cum/X.gpm,0)} min</td><td><span class="tag motivo">${esc(motivoDe(it, motivos, pf))}</span></td></tr>`; }).join("") || '<tr><td colspan="6" class="mudo">Nenhum item cabe nesse ouro.</td></tr>'}</table>
       <p class="mudo" style="font-size:12px;margin:8px 0 0">Ordem: iniciais → arma → bota (se essencial) → roupa → núcleo → resto. O minuto é só uma estimativa com ${fmt(X.gpm)} de ouro por minuto.</p></div>
 
+    ${comoFazerPlano(ordem)}
+
     <div class="caixa"><h2>Ordem das skills e checkpoints</h2>
       <div class="cp" style="margin-bottom:8px">${cps.map(c=>`<span style="${c.ativo?"":"opacity:.5"}"><b>Nível ${c.L}</b> · ${esc(c.txt)}</span>`).join("")}</div>
       ${maxSeq.length?`<p style="margin:0 0 8px">Máximo: ${maxSeq.map(x=>`<b style="color:var(--laranja2)">${esc(x.s.tecla)}</b>`).join(" → ")}</p>`:""}
       <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th class="${nivelCp.has(i+1)?"pico":""}">${i+1}</th>`).join("")}</tr>
       ${hs.map(s=>`<tr><th class="l">${ico(s.icone, s.nome, "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
         const p = o.passos.find(x => x.s===s && x.L===i+1);
-        return p?`<td class="c on">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
-      <p class="mudo" style="font-size:12px;margin:6px 0 0">Os checkpoints vêm das skills com nível mínimo (ultimates). A ordem segue a regra do jogo e a prioridade por ganho de dano.</p></div>`;
+        return p?`<td class="c on ${p.fase}">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
+      <p class="mudo" style="font-size:12px;margin:6px 0 0"><span class="lg" style="background:var(--laranja)"></span>fase de farm: sobem primeiro as skills com maior dano base inicial (vitais para o farm)
+        ${o.faseTroca?` · <span class="lg" style="background:var(--roxo)"></span>fase de escala (a partir do nível ${o.faseTroca}): sobem as skills que escalam com Tai/Nin/Gen`:" · neste nível ainda não há fase de escala"}.
+        Os checkpoints vêm das skills com nível mínimo (ultimates).</p></div>`;
 
   const direita = `<div class="caixa"><h2>Atributos com a build</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
       const v = {tai:r.T,nin:r.N,gen:r.G}[k], v0 = {tai:base.T,nin:base.N,gen:base.G}[k];
@@ -666,26 +713,121 @@ function abaSkills(X){
     <p class="nota" style="margin-top:10px">Os níveis vêm da regra do jogo (nível mínimo do herói por nível da skill) e da prioridade por ganho de dano. Edite o nível de uma skill para simular outro caminho.</p></div>`;
 }
 
-/* ---------- aba Receitas ---------- */
-function compHtml(c){
-  const it = c.id ? ITEM[c.id] : null;
-  const ic = it ? icoItem(it, 44) : ico("", c.nome, "", 44);
-  const ops = (c.opcoes||[]).length ? `<div class="opcoes">uma das opções:<br>${c.opcoes.map(o => `<span class="op">${esc(o.nome)}</span>`).join("")}</div>` : "";
-  return `<div class="comp" title="${esc(c.nome)}">${ic}<span>${esc(c.nome)}</span>${c.loja?`<span class="loja">${esc(c.loja)}</span>`:""}${it&&it.ouro?`<span class="ouro">${fmt(it.ouro)}</span>`:""}${ops}</div>`;
+/* ---------- como fazer: arvore de criacao de qualquer item ---------- */
+function expandir(id, prof=0){
+  const r = CR[id] || {m:"compra"}, it = ITEM[id];
+  const n = {id, it, m:r.m, loja:r.loja||null, nota:r.nota||null, filhos:[], taxa:null, qtd:1, soma:r.soma, dif:r.dif};
+  if(prof > 7) return n;
+  if(r.m === "upgrade" && r.base){
+    let vezes = 1, base = r.base;
+    while(CR[base] && CR[base].m === "upgrade" && CR[base].taxa === r.taxa && CR[base].base){ vezes++; base = CR[base].base; }
+    n.taxa = {id:r.taxa, vezes}; n.filhos = [expandir(base, prof+1)];
+  } else if(r.m === "combinar"){
+    n.taxa = r.taxa ? {id:r.taxa, vezes:1, incluida:!!r.taxaIncluida} : null;
+    n.filhos = r.comps.map(c => {
+      const f = (c.id && c.id !== id && CR[c.id]) ? expandir(c.id, prof+1)
+              : {id:c.id||null, it:c.id?ITEM[c.id]:null, nome:c.nome, m:"compra", loja:null, filhos:[], taxa:null};
+      f.qtd = c.qtd||1; f.opcoes = c.opcoes||null; f.nota = c.nota || f.nota || null; if(!f.loja) f.loja = c.loja || null;
+      return f;
+    });
+  }
+  return n;
 }
-function abaReceitas(){
-  return `<div class="caixa"><h2>Como montar cada item</h2>
-    <input id="filtroRec" placeholder="Filtrar receitas (ex.: Akatsuki, Kusanagi, Heaven)" style="max-width:420px;margin-bottom:10px">
-    <div class="cards" id="cardsRec">${D.receitas.map(r => {
-      const res = r.resultadoId ? ITEM[r.resultadoId] : null;
-      const soma = r.componentes.reduce((a,c)=>a+((c.id&&ITEM[c.id]&&ITEM[c.id].ouro)||0),0) + (r.ouro||0);
-      return `<div class="card ${S.receitaSel===r.id?"destaque":""}" data-busca="${esc((r.nome+" "+r.resultado+" "+r.componentes.map(c=>c.nome).join(" ")).toLowerCase())}">
-        <div class="cab">${res?icoItem(res,52):ico(r.icone, r.resultado, "", 52)}<div><b>${esc(r.resultado)}</b><span class="tag">${esc(r.tipoReceita)}</span> <span class="mudo">taxa:</span> <span class="ouro">${fmt(r.ouro||0)}</span></div></div>
-        <div class="fluxo">${r.componentes.map(compHtml).join('<span class="grande">+</span>')}${res?`<span class="grande">⟶</span>${icoItem(res,44)}`:""}</div>
-        ${r.notas.length?`<p class="nota" style="margin:8px 0 0">${esc(r.notas.join(" · "))}</p>`:""}
-        <p class="mudo" style="margin:8px 0 0;font-size:12px">Custo estimado (taxa + componentes conhecidos): <span class="ouro">${fmt(soma)}</span>${res?` · ${esc(resumoStats(res))}`:""}</p></div>`;}).join("")}</div></div>`;
+const precoFolha = n => (n.it && n.it.ouro != null) ? n.it.ouro : ((n.opcoes||[]).map(o => o.id && ITEM[o.id] && ITEM[o.id].ouro).find(x => x) || null);
+function arvoreHtml(n, topo=false){
+  const nome = n.it ? n.it.nome : n.nome;
+  const icone = n.it ? icoItem(n.it, topo ? 64 : 46) : ico("", nome, "", 46);
+  const pr = precoFolha(n);
+  const preco = pr != null ? `<span class="ouro">${fmt(pr)}${n.it && n.it.cristais ? " + "+n.it.cristais+" cr." : ""}</span>` : `<span class="mudo">preço ?</span>`;
+  const loja = !n.filhos.length && n.loja ? `<span class="lojatag">${esc(n.loja)}</span>` : "";
+  const ops = (n.opcoes||[]).length ? `<div class="opcoes">escolha um:<br>${n.opcoes.map(o => { const it = o.id ? ITEM[o.id] : null; return `<span class="op2">${it ? icoItem(it,20) : ""} ${esc(o.nome)}</span>`; }).join(" ")}</div>` : "";
+  const nota = n.nota ? `<div class="notapq">${esc(n.nota)}</div>` : "";
+  const qtd = n.qtd > 1 ? `<span class="qtd">×${n.qtd}</span>` : "";
+  const folha = `<div class="folha ${topo ? "topo" : ""} ${n.filhos.length ? "inter" : ""}" ${n.id ? `data-arv="${n.id}"` : ""} title="${esc(nome)}">${icone}<b>${esc(nome)}${qtd}</b>${preco}${loja}${ops}${nota}</div>`;
+  if(!n.filhos.length) return `<div class="no">${folha}</div>`;
+  const t = n.taxa && n.taxa.id ? ITEM[n.taxa.id] : null;
+  const taxaTxt = n.m === "upgrade"
+    ? `Upgrade ${n.taxa.vezes > 1 ? "×"+n.taxa.vezes : ""} <small>${t ? fmt(t.ouro)+" cada"+(n.taxa.vezes>1 ? " = "+fmt(t.ouro*n.taxa.vezes) : "") : ""}</small>`
+    : `Combinar <small>${t ? (n.taxa.incluida ? "taxa "+fmt(t.ouro)+" (já no preço)" : "taxa "+fmt(t.ouro)) : ""}</small>`;
+  return `<div class="no"><div class="filhos">${n.filhos.map(f => arvoreHtml(f)).join('<span class="mais">+</span>')}</div><div class="op"><span>▼ ${taxaTxt}</span></div>${folha}</div>`;
 }
-function filtrarReceitas(){ const q = $("filtroRec").value.trim().toLowerCase(); document.querySelectorAll("#cardsRec .card").forEach(c => c.style.display = (!q || c.dataset.busca.includes(q)) ? "" : "none"); }
+function coletar(n, mult, acc){
+  const m = mult * (n.qtd||1);
+  if(!n.filhos.length){ acc.folhas.push({n, qtd:m}); return; }
+  if(n.taxa && n.taxa.id && !n.taxa.incluida) acc.taxas.push({t:ITEM[n.taxa.id], qtd:m*n.taxa.vezes});
+  for(const f of n.filhos) coletar(f, m, acc);
+}
+function listaComprasHtml(nos){
+  const acc = {folhas:[], taxas:[]}; nos.forEach(n => coletar(n, 1, acc));
+  const lojas = {};
+  for(const {n, qtd} of acc.folhas){
+    const loja = n.loja || (n.it && n.it.loja) || "Loja não identificada", nome = n.it ? n.it.nome : n.nome;
+    const g = (lojas[loja] = lojas[loja] || {}); (g[nome] = g[nome] || {n, qtd:0}).qtd += qtd;
+  }
+  const taxas = {}; for(const {t, qtd} of acc.taxas){ if(!t) continue; (taxas[t.nome] = taxas[t.nome] || {t, qtd:0}).qtd += qtd; }
+  let total = 0;
+  const linhaItem = ({n, qtd}) => { const pr = precoFolha(n) || 0; total += pr*qtd;
+    return `<tr><td>${n.it ? icoItem(n.it,30) : ico("", n.nome, "", 30)}</td><td>${esc(n.it ? n.it.nome : n.nome)}${(n.opcoes||[]).length?' <span class="mudo">(escolha um)</span>':""}</td><td>×${qtd}</td><td class="ouro">${pr ? fmt(pr*qtd) : "?"}</td></tr>`; };
+  let h = Object.entries(lojas).sort((a,b) => a[0].localeCompare(b[0])).map(([loja, g]) =>
+    `<tr><th colspan="4" style="color:var(--verde)">${esc(loja)}</th></tr>` + Object.values(g).map(linhaItem).join("")).join("");
+  const tx = Object.values(taxas);
+  if(tx.length) h += `<tr><th colspan="4" style="color:var(--laranja2)">Taxas de montagem (combinar / upgrade)</th></tr>` +
+    tx.map(({t, qtd}) => { total += (t.ouro||0)*qtd; return `<tr><td>${icoItem(t,30)}</td><td>${esc(t.nome)}</td><td>×${qtd}</td><td class="ouro">${fmt((t.ouro||0)*qtd)}</td></tr>`; }).join("");
+  return `<table class="t"><tr><th></th><th>O que comprar</th><th>Qtd</th><th>Ouro</th></tr>${h}<tr><td></td><td><b>Soma estimada</b></td><td></td><td class="ouro">${fmt(total)}</td></tr></table>`;
+}
+const USADO = {};
+for(const [id, r] of Object.entries(CR)){
+  const refs = r.m === "upgrade" ? [r.base] : (r.comps||[]).flatMap(c => [c.id, ...((c.opcoes||[]).map(o => o.id))]);
+  for(const x of refs.filter(Boolean)) (USADO[x] = USADO[x] || new Set()).add(id);
+}
+function custoResumo(id){
+  const r = CR[id] || {}, it = ITEM[id];
+  let h = `<p style="margin:6px 0"><b>Preço de tabela:</b> <span class="ouro">${preco(it)}</span>`;
+  if(r.soma != null){
+    h += ` · soma dos passos: <span class="ouro">${fmt(r.soma)}</span>`;
+    if(r.dif) h += ` <span class="aprox">(${sinal(r.dif)} em relação à tabela; vale o preço de tabela do jogo)</span>`;
+    else h += ` <span class="verde">✓ confere</span>`;
+  }
+  return h + "</p>";
+}
+function blocoComoFazer(id, aberto=true){
+  const it = ITEM[id]; if(!it) return "";
+  const no = expandir(id);
+  const usado = [...(USADO[id]||[])].map(x => ITEM[x]).filter(Boolean).slice(0,10);
+  return `<div class="caixa" style="margin-bottom:10px"><div class="heroi" style="margin-bottom:6px">${icoItem(it,56)}<div><h2 style="font-size:17px">${esc(it.nome)}</h2>
+      <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"componente/consumível")}</span>${it.loja?` <span class="lojatag">${esc(it.loja)}</span>`:""} ${esc(resumoStats(it))}</p></div></div>
+    ${CR[id] && CR[id].m === "compra" ? `<p class="nota">Item de compra direta${it.loja?" em <b>"+esc(it.loja)+"</b>":" (loja não identificada)"}. Não tem receita.</p>` : ""}
+    <div class="arvore">${arvoreHtml(no, true)}</div>${custoResumo(id)}
+    ${no.filhos.length ? `<details><summary class="mudo">Lista de compras por loja</summary>${listaComprasHtml([no])}</details>` : ""}
+    ${usado.length ? `<p class="mudo" style="font-size:12px;margin:8px 0 0">Usado para fazer: ${usado.map(x => `<button class="pilula" data-arv="${x.id}">${esc(x.nome)}</button>`).join(" ")}</p>` : ""}</div>`;
+}
+const CATS = [["todas","Todos"],["arma_batalha","Armas Battle"],["arma_elemental","Armas elementais"],["arma_lendaria","Armas lendárias"],["arma_situacional","Armas especiais"],
+              ["roupa","Roupas"],["bota","Botas"],["pedra","Pedras"],["mascara","Máscaras"],["suporte","Suporte e consumíveis"],["espirito","Spirits"]];
+function abaComoFazer(X){
+  if(!S.arvoreSel || !ITEM[S.arvoreSel]) S.arvoreSel = (porNome("Jade of Susano'o") || D.itens[0]).id;
+  return `<div class="grade2"><div class="caixa"><h2>Escolha um item</h2>
+      <input id="filtroArv" placeholder="Buscar item (ex.: Jade, Fire Kunai, Super Boots)">
+      <div class="cats">${CATS.map(([k,n]) => `<button class="${S.cat===k?"ativa":""}" data-cat="${k}">${n}</button>`).join("")}
+        <button class="${S.soMontados?"ativa":""}" data-cat="_montados">só os que se montam</button></div>
+      <div class="grade-itens" id="gradeArv"></div></div>
+    <div id="arvoreMain">${blocoComoFazer(S.arvoreSel)}</div></div>`;
+}
+function desenharGradeArv(){
+  const q = ($("filtroArv")||{value:""}).value.trim().toLowerCase();
+  const lista = D.itens.filter(i => (S.cat === "todas" || i.categoria === S.cat) && (!S.soMontados || (CR[i.id]||{}).m !== "compra") &&
+      (!q || i.nome.toLowerCase().includes(q)) && !/^(Upgrade |Combine:|Recipe:|Mission:)/.test(i.nome))
+    .sort((a,b) => ((a.tipo?0:1)-(b.tipo?0:1)) || ((a.ouro||0)-(b.ouro||0)));
+  $("gradeArv").innerHTML = lista.map(i => `<button class="gcell ${i.id===S.arvoreSel?"sel":""}" data-arv="${i.id}" title="${esc(i.nome)}">${icoItem(i,44)}<span>${esc(i.nome)}</span><span class="ouro">${preco(i)}</span></button>`).join("")
+    || '<p class="mudo">Nenhum item.</p>';
+}
+function comoFazerPlano(ordem){
+  if(!ordem.length) return "";
+  const nos = ordem.map(it => expandir(it.id));
+  return `<div class="caixa"><h2>Como fazer os itens do plano</h2>
+    <details open><summary><b>Lista de compras do plano, por loja</b></summary>${listaComprasHtml(nos)}</details>
+    ${ordem.map((it,i) => `<details ${i<2?"open":""} style="margin-top:8px"><summary><b>${i+1}. ${esc(it.nome)}</b> <span class="ouro">${preco(it)}</span></summary>
+       <div class="arvore">${arvoreHtml(nos[i], true)}</div>${custoResumo(it.id)}</details>`).join("")}</div>`;
+}
 
 /* ---------- aba Catalogo ---------- */
 function abaCatalogo(){
@@ -702,7 +844,7 @@ function filtrarCatalogo(){
     .map(i => ({i, g: (set.includes(i) || !comprável(i)) ? 0 : pontuacao(calcular(X.h, X.nivel, set.concat(i)), "equil", X.w) - base}))
     .sort((a,b)=>b.g-a.g).slice(0,100);
   $("tabCat").innerHTML = `<tr><th></th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar</th><th></th></tr>` +
-    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i)?' <span class="tag">situacional</span>':""}</td>
+    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i, X.h)?' <span class="tag">situacional</span>':""}</td>
       <td><span class="tag t-${i.tipo}">${esc(i.tipo)}</span></td><td class="ouro">${i.ouro==null?"?":preco(i)}</td>
       <td>${esc(resumoStats(i))}<div class="mudo" style="font-size:12px">${esc(i.extras.slice(0,3).join(" | "))}</div></td>
       <td>${set.includes(i)?"—":(g>0?'<span class="verde">'+sinal(g)+"</span>":'<span class="mudo">'+fmt(g)+"</span>")}</td>

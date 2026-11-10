@@ -41,29 +41,15 @@
   "situacional_categorias": [
     "arma_situacional"
   ],
-  "situacional_motivo": "Itens usados de forma situacional, dependendo do personagem (armas da Legendary Equipment Shop, itens Akatsuki, itens medicos). Nao sao tratados como essenciais.",
+  "situacional_motivo": "Itens da Legendary Equipment Shop (Sanbi, Mirrored Shield, Kusanagi, Sword of Totsuka, Triple-Bladed Scythe, Executioner's Blade, Samehada, Chakra Blades, Stone of Gelel), itens Akatsuki e medicos, e os elementos que nao sao o padrao do heroi. Nao sao essenciais.",
   "regras": {
     "bota_essencial_se_peso_nin": 0.4,
-    "arma_elemental_se_primario": [
-      "tai"
-    ]
+    "arma_elemental_para_todos": true
   },
   "herois": {
     "Hatake Kakashi": {
       "bota_essencial": true,
       "nota": "O dano das skills depende do Ninjutsu: a bota e essencial e rende bonus quando evoluida para Super Boots."
-    },
-    "Akimichi Chouji": {
-      "arma_elemental": true,
-      "nota": "Arma elemental feita cedo (por nivel) e interessante."
-    },
-    "Uzumaki Naruto": {
-      "arma_elemental": true,
-      "nota": "Arma elemental feita cedo (por nivel) e interessante."
-    },
-    "Maito Gai": {
-      "arma_elemental": true,
-      "nota": "Arma elemental feita cedo (por nivel) e interessante."
     }
   },
   "dicas_farm": [
@@ -72,5 +58,35 @@
     "Edo Tensei Scroll no inicio ressuscita os NPCs ANBU do mapa e ajuda no farm.",
     "O leveling e parecido para quem nao tem dificuldade de farm no inicio; ajuste se o seu personagem tiver."
   ],
-  "gpm_padrao": 500
+  "gpm_padrao": 500,
+  "lojas": {
+    "Legendary Equipment Shop": [
+      "Sanbi's Skin",
+      "Mirrored Shield",
+      "Kusanagi Sword",
+      "Sword of Totsuka",
+      "Triple-Bladed Scythe",
+      "Executioner's Blade",
+      "Samehada Sword",
+      "Chakra Blades - Level 1",
+      "Stone of Gelel"
+    ]
+  },
+  "situacionais_contem": [
+    "Sanbi's",
+    "Mirrored Shield",
+    "Kusanagi",
+    "Totsuka",
+    "Triple-Bladed",
+    "Executioner",
+    "Samehada",
+    "Chakra Blades",
+    "Stone of Gelel",
+    "Juubi's Skin"
+  ],
+  "elemento_padrao": {
+    "tai": "Fire",
+    "nin": "Thunder",
+    "gen": "Water"
+  }
 }
