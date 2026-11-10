@@ -235,7 +235,9 @@ const isSit = (it, h) =>
   (it.categoria === "roupa" && EVOL_ROUPA.size && !EVOL_ROUPA.has(norm(it.nome))) ||
   (P.situacionais||[]).some(n => norm(n) === norm(it.nome)) || (P.situacionais_prefixos||[]).some(p => it.nome.startsWith(p)) ||
   (P.situacionais_contem||[]).some(s => it.nome.includes(s)) || (P.situacional_categorias||[]).includes(it.categoria) ||
-  (it.categoria === "arma_elemental" && h && ELEM(it.nome) !== elementoPadrao(h));
+  (it.categoria === "arma_elemental" && h && ELEM(it.nome) !== elementoPadrao(h)) ||
+  (it.categoria === "arma_lendaria" && h && norm(it.nome) !== norm((P.legendaria_padrao||{})[h.primario]));
+const legendariaPadrao = h => porNome((P.legendaria_padrao||{})[h.primario]);
 function recalcPolitica(){
   EVOL_ROUPA = new Set((P.evolucao_roupa||[]).map(norm));
   INICIAIS = (P.iniciais||[]).map(porNome).filter(Boolean);
@@ -372,7 +374,7 @@ function perfil(h, nivel){
   return {
     pesoNin, nota: o.nota || "",
     botaEssencial: o.bota_essencial ?? (pesoNin >= (reg.bota_essencial_se_peso_nin ?? 0.4)),
-    armaElemental: o.arma_elemental ?? (reg.arma_elemental_para_todos !== false), elemento: elementoPadrao(h),
+    armaElementalCedo: !!(o.arma_elemental_cedo ?? o.arma_elemental), elemento: elementoPadrao(h), legendaria: legendariaPadrao(h),
     manual: !!(o.bota_essencial !== undefined || o.arma_elemental !== undefined),
   };
 }
@@ -398,11 +400,12 @@ function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
     for(const it of cand.concat(NUCLEO)) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
       if(sc > ms + 1e-9 || (Math.abs(sc-ms) <= 1e-9 && (it.nivelItem||0) > ((m||{}).nivelItem||0))){ ms = sc; m = it; } } return m; };
   if(pf.botaEssencial && X.maxBota > 0){ const m = melhorDe(fixos, i => i.categoria === "bota"); if(m){ fixos.push(m); motivos.set(m.id, "bota essencial"); } }
-  if(pf.armaElemental && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome)); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental ("+pf.elemento+")"); } }
-  // toda a base de dano vem da arma: se o elemental nao couber, garante a melhor arma que cabe
+  if(pf.armaElementalCedo && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome)); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental ("+pf.elemento+")"); } }
+  // caminho padrao da arma: Battle ate o Level MAX; depois a lendaria do elemento padrao (Spirit/orb). Teto = fracao do ouro.
   if(X.maxArma > 0 && !fixos.some(i => i.tipo === "Weapon")){
-    const m = melhorDe(fixos, i => i.tipo === "Weapon");
-    if(m){ fixos.push(m); motivos.set(m.id, m.categoria === "arma_batalha" ? "arma base" : "arma"); }
+    const teto = (P.arma_teto_pct ?? 0.6) * ouro, leg = pf.legendaria;
+    const m = melhorDe(fixos, i => (i.categoria === "arma_batalha" || (leg && i === leg)) && (i.ouro||0) <= teto);
+    if(m){ fixos.push(m); motivos.set(m.id, m === leg ? "arma lendária" : "arma base (Battle até o MAX)"); }
   }
   if(usarNucleo) for(const it of NUCLEO){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "núcleo"); } }
   const travados = new Set(fixos.map(i => i.id));
@@ -648,7 +651,7 @@ function abaBuild(X){
 
   const chips = [
     pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
-    pf.armaElemental ? `<span class="tag motivo">arma elemental: ${esc(pf.elemento)}</span>` : "",
+    pf.armaElementalCedo ? `<span class="tag motivo">arma elemental cedo: ${esc(pf.elemento)}</span>` : `<span class="tag motivo">arma: Battle até MAX → lendária (${esc(pf.elemento)})</span>`,
     `<span class="tag">skills escalam ${fmt(pf.pesoNin*100)}% com Ninjutsu</span>`].join(" ");
   const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
   const centro = `<div class="caixa"><div class="heroi">${icoHeroi(X.h, 64)}

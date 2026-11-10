@@ -43,13 +43,24 @@
   ],
   "situacional_motivo": "Itens da Legendary Equipment Shop (Sanbi, Mirrored Shield, Kusanagi, Sword of Totsuka, Triple-Bladed Scythe, Executioner's Blade, Samehada, Chakra Blades, Stone of Gelel), itens Akatsuki e medicos, e os elementos que nao sao o padrao do heroi. Nao sao essenciais.",
   "regras": {
-    "bota_essencial_se_peso_nin": 0.4,
-    "arma_elemental_para_todos": true
+    "bota_essencial_se_peso_nin": 0.4
   },
   "herois": {
     "Hatake Kakashi": {
       "bota_essencial": true,
       "nota": "O dano das skills depende do Ninjutsu: a bota e essencial e rende bonus quando evoluida para Super Boots."
+    },
+    "Akimichi Chouji": {
+      "arma_elemental_cedo": true,
+      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
+    },
+    "Uzumaki Naruto": {
+      "arma_elemental_cedo": true,
+      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
+    },
+    "Maito Gai": {
+      "arma_elemental_cedo": true,
+      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
     }
   },
   "dicas_farm": [
@@ -88,5 +99,12 @@
     "tai": "Fire",
     "nin": "Thunder",
     "gen": "Water"
+  },
+  "arma_teto_pct": 0.6,
+  "arma_comentario": "Caminho padrao da arma: Battle Level 1 ate o Level MAX; depois a Soul Absorb Stone + Spirit do elemento (orb) fazem a arma lendaria. 'arma_teto_pct' e a fracao maxima do ouro que a arma pode consumir. Arma elemental feita cedo (Weapon Lv1 + Spirit) so para herois marcados com arma_elemental_cedo.",
+  "legendaria_padrao": {
+    "tai": "Legendary Weapon: Kyuubi's Chakra Cloak",
+    "nin": "Legendary Weapon: Raijin no Ken",
+    "gen": "Legendary Weapon: Haku's Senbons"
   }
 }

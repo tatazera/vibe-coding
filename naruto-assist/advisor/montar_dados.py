@@ -296,6 +296,12 @@ ELEMENTOS_SPIRIT = {"Fire": "Fire", "Water": "Water", "Wind": "Wind", "Earthen":
 FAMILIA_ARMA = {"tai": "Kunai", "nin": "Shuriken", "gen": "Senbons"}
 SPIRITS_LENDARIA = {"Kunai": ["Fire", "Earth", "Light"], "Shuriken": ["Thunder", "Wind", "Light"],
                     "Senbons": ["Water", "Darkness", "Light"]}
+LENDARIA_ESPIRITO = {   # inferido pelos nomes/elementos; marcado como "provavel" na tela
+    "Legendary Weapon: Kyuubi's Chakra Cloak": "Fire", "Legendary Weapon: Adamantine Staff": "Earth",
+    "Legendary Weapon: Perfect Battle Kunai": "Light", "Legendary Weapon: Raijin no Ken": "Thunder",
+    "Legendary Weapon: Iron Fan": "Wind", "Legendary Weapon: Perfect Battle Shuriken": "Light",
+    "Legendary Weapon: Haku's Senbons": "Water", "Legendary Weapon: Shinigami Mask": "Darkness",
+    "Legendary Weapon: Perfect Battle Senbons": "Light"}
 KAGE_ELEMENTO = {"Hokage Robe": "Fire", "Mizukage Robe": "Water", "Tsuchikage Robe": "Earth",
                  "Raikage Robe": "Thunder", "Kazekage Robe": "Wind"}
 BOTA_VARIANTE = {"Boots of Teleportation": [], "Anbu Shoes": ["Ninja Headband"], "Cloning Boots": ["Scroll of Kage Bunshin"],
@@ -383,10 +389,11 @@ def montar_criacao(itens, receitas, politica):
             st = i["stats"]
             f = max(FAMILIA_ARMA, key=lambda k: st.get(k, 0)) if any(st.get(k) for k in FAMILIA_ARMA) else (i["familia"] or "tai")
             fam = FAMILIA_ARMA[f]
-            cr[iid] = {"m": "combinar", "taxa": taxa["lend"],
-                       "comps": [comp(nbat(fam, 10)), comp("Soul Absorb Stone"),
-                                 comp("Spirit (escolha)", opcoes=["Spirit of " + e for e in SPIRITS_LENDARIA[fam]],
-                                      nota="o espirito escolhido define qual arma lendaria sai")]}
+            esp = LENDARIA_ESPIRITO.get(nome)
+            c3 = comp("Spirit of " + esp, nota="spirit provavel pelo nome da arma") if esp else \
+                comp("Spirit (escolha)", opcoes=["Spirit of " + e for e in SPIRITS_LENDARIA[fam]],
+                     nota="o espirito escolhido define qual arma lendaria sai")
+            cr[iid] = {"m": "combinar", "taxa": taxa["lend"], "comps": [comp(nbat(fam, 10)), comp("Soul Absorb Stone"), c3]}
             continue
         # 5) roupas
         if nome in evol:
