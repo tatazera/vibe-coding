@@ -24,18 +24,30 @@
   .topo h1{font-size:18px;margin:0}.topo h1 span{color:var(--laranja)}
   .topo small{color:var(--mudo)}
   .tema{margin-left:auto}
-  .filtros{display:grid;grid-template-columns:2fr 90px 110px 90px 1.3fr 1.2fr;gap:10px;padding:14px 0;align-items:end}
+  .filtros{display:grid;grid-template-columns:2.2fr 80px 100px 80px 90px 1.2fr;gap:10px;padding:14px 0;align-items:end}
   .filtros label{display:block;font-size:11px;color:var(--mudo);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
   @media(max-width:1000px){.filtros{grid-template-columns:1fr 1fr}}
   details.regras{background:var(--painel);border:1px solid var(--borda);border-radius:10px;padding:8px 12px;margin-bottom:12px}
   details.regras summary{cursor:pointer;color:var(--mudo)}
   .linha{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}.linha>div{flex:1;min-width:110px}
   .linha label{display:block;font-size:11px;color:var(--mudo);margin-bottom:3px}
+  .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--texto)!important}
+  .check input{width:auto}
+  /* seletor de heroi */
+  .picker{position:relative}
+  .heroi-btn{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:5px 10px}
+  .heroi-btn b{display:block;line-height:1.1}.heroi-btn small{color:var(--mudo)}
+  .painel-heroi{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:min(760px,92vw);background:var(--painel);border:1px solid var(--laranja);border-radius:12px;padding:12px;box-shadow:0 12px 40px #000a}
+  .painel-heroi[hidden]{display:none}
+  .grade-herois{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;max-height:min(58vh,520px);overflow:auto;margin-top:10px;padding:2px}
+  .hcell{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;text-align:center;font-size:12px;line-height:1.2;background:var(--painel2)}
+  .hcell:hover,.hcell.sel{border-color:var(--laranja);background:var(--painel3)}
+  .hcell small{color:var(--mudo);font-size:10px}
   .abas{display:flex;gap:4px;border-bottom:1px solid var(--borda);margin-bottom:14px;overflow:auto}
   .aba{background:none;border:none;border-bottom:3px solid transparent;border-radius:0;padding:10px 16px;color:var(--mudo);font-weight:600;white-space:nowrap}
   .aba.ativa{color:var(--texto);border-bottom-color:var(--laranja)}
   .aba:hover{color:var(--texto)}
-  .grade3{display:grid;grid-template-columns:260px 1fr 330px;gap:14px;align-items:start}
+  .grade3{display:grid;grid-template-columns:250px 1fr 330px;gap:14px;align-items:start}
   @media(max-width:1150px){.grade3{grid-template-columns:1fr}}
   .caixa{background:var(--painel);border:1px solid var(--borda);border-radius:12px;padding:14px;margin-bottom:14px}
   .caixa h2{font-size:12px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.9px;color:var(--laranja2)}
@@ -76,6 +88,7 @@
   .ordem td.c{width:26px;height:26px;border-radius:5px;background:var(--painel2)}
   .ordem td.c.on{background:var(--laranja);color:#101010;font-weight:800}
   .ordem th.l{text-align:left;padding-right:8px;white-space:nowrap}
+  .ordem th.pico{color:var(--laranja2);font-weight:800}
   table.t{width:100%;border-collapse:collapse}
   .t th,.t td{padding:7px 8px;border-bottom:1px solid var(--borda);text-align:left;vertical-align:top;font-size:13px}
   .t th{color:var(--mudo);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
@@ -83,6 +96,7 @@
   .rolavel{max-height:560px;overflow:auto}
   .tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;background:var(--painel2);border:1px solid var(--borda);color:var(--mudo)}
   .tag.t-Weapon,.tag.t-Cloth,.tag.t-Support{color:var(--cor)}
+  .tag.motivo{border-color:var(--laranja);color:var(--laranja2)}
   .ouro{color:var(--ouro);font-weight:700}.mudo{color:var(--mudo)}.aprox{color:var(--laranja2)}.verde{color:var(--verde)}
   .nota{background:var(--painel2);border-left:3px solid var(--laranja);padding:8px 10px;border-radius:6px;font-size:12px;color:var(--mudo)}
   .pilula{padding:1px 8px;font-size:12px;border-radius:6px}
@@ -90,6 +104,11 @@
   .detalhe .linhas{white-space:pre-line;color:var(--mudo);font-size:13px;margin:8px 0}
   .sit{margin-bottom:12px}
   .sit p{margin:4px 0 0;font-size:12px;color:var(--mudo)}
+  .cp{display:flex;gap:8px;flex-wrap:wrap}
+  .cp span{background:var(--painel2);border:1px solid var(--laranja);border-radius:8px;padding:4px 9px;font-size:12px}
+  .cp b{color:var(--laranja2)}
+  .farm{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+  .farm p{margin:0;font-size:12px;color:var(--mudo)}
   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px}
   @media(max-width:520px){.cards{grid-template-columns:1fr}}
   .card{background:var(--painel2);border:1px solid var(--borda);border-radius:12px;padding:12px}
@@ -113,11 +132,17 @@
 
 <div class="wrap">
   <div class="filtros">
-    <div><label for="busca">Buscar herói</label><input id="busca" placeholder="ex.: Yamato"></div>
+    <div class="picker"><label>Herói</label>
+      <button class="heroi-btn" id="btnHeroi" type="button"></button>
+      <div class="painel-heroi" id="painelHeroi" hidden>
+        <input id="busca" placeholder="Buscar herói (ex.: Naruto) — clique no ícone da forma certa">
+        <div class="grade-herois" id="gradeHerois"></div>
+      </div>
+    </div>
     <div><label for="nivel">Nível</label><input id="nivel" type="number" min="1" max="200" value="20"></div>
     <div><label for="ouro">Ouro</label><input id="ouro" type="number" min="0" step="100" value="20000"></div>
     <div><label for="cristais">Cristais</label><input id="cristais" type="number" min="0" value="0"></div>
-    <div><label for="heroi">Herói</label><select id="heroi"></select></div>
+    <div><label for="gpm" title="Ouro por minuto: usado só para estimar em que minuto cada compra acontece">Ouro/min</label><input id="gpm" type="number" min="50" step="50" value="500"></div>
     <div><label for="peso">Peso da defesa: <span id="pesoTxt">25</span>%</label><input id="peso" type="range" min="0" max="100" value="25" style="padding:0"></div>
   </div>
   <details class="regras"><summary>Regras de itens (suposições editáveis)</summary>
@@ -125,9 +150,20 @@
       <div><label for="slots">Vagas de item</label><input id="slots" type="number" min="1" max="12" value="6"></div>
       <div><label for="maxArma">Máx. armas</label><input id="maxArma" type="number" min="0" max="12" value="1"></div>
       <div><label for="maxRoupa">Máx. roupas</label><input id="maxRoupa" type="number" min="0" max="12" value="1"></div>
+      <div><label for="maxBota">Máx. botas</label><input id="maxBota" type="number" min="0" max="12" value="1"></div>
       <div style="align-self:end"><button id="limpar" type="button">Limpar fixados/banidos</button></div>
     </div>
-    <p class="nota" style="margin:10px 0 0">Armas só entram se forem da família do atributo principal do herói (kunai = Taijutsu, shuriken = Ninjutsu, senbons = Genjutsu). O peso da defesa controla o quanto resistência pesa na build "Equilibrada".</p>
+    <div class="linha">
+      <div><label class="check"><input id="usarIniciais" type="checkbox" checked> Começar com os itens iniciais padrão (Ninja Headband, Bingo Book)</label></div>
+      <div><label class="check"><input id="usarNucleo" type="checkbox" checked> Plano padrão inclui o núcleo (Jade of Susano'o, Heaven Mirror) quando couber</label></div>
+      <div><label class="check"><input id="incluirSit" type="checkbox"> Permitir itens situacionais na sugestão automática</label></div>
+    </div>
+    <details style="margin-top:10px"><summary>Editar a política de compra (itens iniciais, núcleo, situacionais, heróis com bota/arma elemental)</summary>
+      <p class="nota" style="margin:8px 0">Use os nomes dos itens exatamente como aparecem no jogo. O que você salvar fica guardado neste navegador.</p>
+      <textarea id="polTxt" rows="16" style="width:100%;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--painel2);color:var(--texto);border:1px solid var(--borda);border-radius:8px;padding:8px"></textarea>
+      <p style="margin:8px 0 0"><button id="polAplicar" type="button">Aplicar e salvar</button> <button id="polPadrao" type="button">Restaurar padrão</button> <span id="polMsg" class="mudo"></span></p>
+    </details>
+    <p class="nota" style="margin:10px 0 0">Armas só entram se forem da família do atributo principal do herói (kunai = Taijutsu, shuriken = Ninjutsu, senbons = Genjutsu). As listas de itens iniciais, núcleo e situacionais vêm do arquivo <b>politica.json</b>.</p>
   </details>
 
   <div class="abas" id="abas">
@@ -143,21 +179,40 @@
 const D = /*DADOS*/null;
 const ICONES = /*ICONES*/{};
 const C = D.constantes;
+let P = D.politica || {};
+const P_PADRAO = JSON.parse(JSON.stringify(P));
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const NOME = {tai:"Taijutsu", nin:"Ninjutsu", gen:"Genjutsu"};
 const fmt = (n, d=0) => n == null ? "—" : Number(n).toLocaleString("pt-BR", {maximumFractionDigits:d, minimumFractionDigits:d});
 const sinal = (n, d=0) => (n>0?"+":"") + fmt(n, d);
+const norm = n => String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 
 /* ---------- estado ---------- */
-const S = { fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", preset:"equil", itemSel:null, receitaSel:null };
+const S = { heroiId:null, fixos:new Set(), banidos:new Set(), niveisSkill:{}, ranks:{}, tab:"build", preset:"padrao", itemSel:null, receitaSel:null };
+D.receitas = D.receitas.filter(r => r.tipoReceita !== "Mission");
 const ITEM = Object.fromEntries(D.itens.map(i => [i.id, i]));
-D.receitas = D.receitas.filter(r => r.tipoReceita !== "Mission");   // missoes de bijuu nao sao receitas
 const RECEITA_DE = {}; for(const r of D.receitas) if(r.resultadoId) RECEITA_DE[r.resultadoId] = r;
+const ITEM_NOME = {};
+for(const i of D.itens){ const k = norm(i.nome); if(!ITEM_NOME[k] || (i.tipo && !ITEM_NOME[k].tipo)) ITEM_NOME[k] = i; }
+const porNome = n => ITEM_NOME[norm(n)] || null;
 const comprável = i => (i.ouro > 0 || i.cristais > 0);
-const CANDIDATOS = D.itens.filter(i => i.tipo && Object.keys(i.stats).length && comprável(i));
+let EVOL_ROUPA = new Set(), INICIAIS = [], NUCLEO = [];
+const isSit = it => (it.categoria === "roupa" && EVOL_ROUPA.size && !EVOL_ROUPA.has(norm(it.nome))) ||
+                    (P.situacionais||[]).some(n => norm(n) === norm(it.nome)) || (P.situacionais_prefixos||[]).some(p => it.nome.startsWith(p)) ||
+                    (P.situacional_categorias||[]).includes(it.categoria);
+function recalcPolitica(){
+  EVOL_ROUPA = new Set((P.evolucao_roupa||[]).map(norm));
+  INICIAIS = (P.iniciais||[]).map(porNome).filter(Boolean);
+  NUCLEO = (P.nucleo||[]).map(porNome).filter(Boolean);
+}
+try{ const s = localStorage.getItem("politica_naruto"); if(s) P = Object.assign({}, P, JSON.parse(s)); }catch(e){}
+recalcPolitica();
+const TEM_STATS = i => i.tipo && Object.keys(i.stats).length && comprável(i) && i.categoria !== "espirito";
+const CANDIDATOS = D.itens.filter(TEM_STATS);
+const taxaUpgrade = n => (porNome(n)||{}).ouro || 0;
 
-/* ---------- icones (reais se houver; senao um icone simples com iniciais) ---------- */
+/* ---------- icones ---------- */
 function iniciais(nome){
   const p = String(nome||"").replace(/[^A-Za-z0-9 ]/g," ").trim().split(/\s+/).filter(Boolean);
   if(!p.length) return "?";
@@ -170,6 +225,7 @@ function ico(caminho, nome, classe="", tam=46, tecla=""){
   return `<span class="ico fb ${classe}" style="--t:${tam}px" title="${esc(nome)}">${tecla ? esc(tecla) : esc(iniciais(nome))}</span>`;
 }
 const icoItem = (it, tam=46) => ico(it.icone, it.nome, "t-"+(it.tipo||""), tam);
+const icoHeroi = (h, tam=46) => ico(h.icone, h.nome, "a-"+h.primario, tam);
 
 /* ---------- formulas ---------- */
 const cacheFn = new Map();
@@ -215,14 +271,22 @@ function maxSequencia(o){
   return feitos;
 }
 const nivelSkill = s => Math.max(1, S.niveisSkill[s.id] ?? S.ranks[s.id] ?? 1);
+/* checkpoints de poder: niveis em que as skills com nivel minimo (ultimates) sobem */
+function checkpoints(h, nivelMax){
+  const out = [];
+  for(const s of h.skills.filter(s => s.heroica && s.tecla && s.req.arlv != null)){
+    for(let r=1; r<=(s.niveis||1); r++){
+      const L = reqNivel(s, r);
+      out.push({L, txt: (r===1 ? (s.niveis>1 ? s.tecla+" nível 1 (libera a skill)" : "libera "+s.tecla) : s.tecla+" nível "+r), s, ativo: L<=nivelMax});
+    }
+  }
+  return out.sort((a,b)=>a.L-b.L);
+}
 
 /* ---------- calculo ---------- */
 function calcular(h, nivel, itens){
   const base = atributosBase(h, nivel), add = {tai:0,nin:0,gen:0,dano:0,hp:0,chakra:0,armadura:0,mov:0,evasao:0,reducao:0};
-  for(const it of itens){
-    for(const [k,v] of Object.entries(it.stats)) add[k] = (add[k]||0) + v;
-    for(const [k,v] of Object.entries(it.porNivel)) add[k] = (add[k]||0) + v*nivel;
-  }
+  for(const it of itens) for(const [k,v] of Object.entries(it.stats)) add[k] = (add[k]||0) + v;
   const T = base.tai+add.tai, N = base.nin+add.nin, G = base.gen+add.gen;
   const prim = {tai:T,nin:N,gen:G}[h.primario];
   const hp = C.hp_base + C.hp_por_tai*T + add.hp;
@@ -253,22 +317,60 @@ function pontuacao(r, obj, w){
   return Math.pow(Math.max(r.potencial,1), 1-w) * Math.pow(Math.sqrt(Math.max(r.ehp,1)), w);
 }
 
-/* ---------- otimizador ---------- */
+/* ---------- perfil do heroi (regras do jogo informadas pelo jogador) ---------- */
+function perfil(h, nivel){
+  const b = atributosBase(h, nivel); let tot = 0, nin = 0;
+  for(const s of h.skills){
+    if(!s.dano) continue;
+    const L = Math.min(s.niveis||1, 5), d = avaliar(s.dano, L, b.tai, b.nin, b.gen), cd = avaliar(s.cooldown, L, b.tai, b.nin, b.gen) ?? 20;
+    if(d == null) continue; const v = d / Math.max(cd, 1); tot += v; if(s.atributos.includes("nin")) nin += v;
+  }
+  const o = (P.herois||{})[h.nome] || {}, reg = P.regras || {};
+  const pesoNin = tot ? nin/tot : 0;
+  return {
+    pesoNin, nota: o.nota || "",
+    botaEssencial: o.bota_essencial ?? (pesoNin >= (reg.bota_essencial_se_peso_nin ?? 0.4)),
+    armaElemental: o.arma_elemental ?? (reg.arma_elemental_se_primario||[]).includes(h.primario),
+    manual: !!(o.bota_essencial !== undefined || o.arma_elemental !== undefined),
+  };
+}
+
+/* ---------- otimizador (com a politica de compra) ---------- */
 const armaCompativel = (it, h) => it.tipo !== "Weapon" || !it.familia || it.familia === h.primario;
-function otimizar(h, nivel, ouro, cristais, vagas, maxArma, maxRoupa, obj, w){
+function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
+  const h = X.h, nivel = X.nivel, w = X.w;
   const score = set => pontuacao(calcular(h, nivel, set), obj, w);
-  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h));
-  const fixos = [...S.fixos].map(id => ITEM[id]).filter(Boolean);
-  const cont = (set, tp) => set.filter(i => i.tipo === tp).length;
+  const cand = CANDIDATOS.filter(i => !S.banidos.has(i.id) && !S.fixos.has(i.id) && armaCompativel(i, h) && (X.incluirSit || !isSit(i)));
+  const cont = (set, f) => set.filter(f).length;
   const custo = set => set.reduce((a,i)=>a+(i.ouro||0), 0), custoCr = set => set.reduce((a,i)=>a+(i.cristais||0), 0);
-  const valido = (set, it) => !set.includes(it) && set.length < vagas && custo(set)+(it.ouro||0) <= ouro && custoCr(set)+(it.cristais||0) <= cristais &&
-    (it.tipo !== "Weapon" || cont(set,"Weapon") < maxArma) && (it.tipo !== "Cloth" || cont(set,"Cloth") < maxRoupa);
+  const valido = (set, it) => !set.includes(it) && set.length < X.vagas && custo(set)+(it.ouro||0) <= ouro && custoCr(set)+(it.cristais||0) <= cristais &&
+    (it.tipo !== "Weapon" || cont(set,i=>i.tipo==="Weapon") < X.maxArma) && (it.tipo !== "Cloth" || cont(set,i=>i.tipo==="Cloth") < X.maxRoupa) &&
+    (it.categoria !== "bota" || cont(set,i=>i.categoria==="bota") < X.maxBota);
+
+  // 1) itens fixados pelo usuario + iniciais padrao
+  let fixos = [...S.fixos].map(id => ITEM[id]).filter(Boolean);
+  const motivos = new Map(fixos.map(i => [i.id, "fixado"]));
+  if(X.usarIniciais) for(const it of INICIAIS){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "inicial"); } }
+  // 2) melhor de uma classe, dentro do que cabe (usado para bota essencial, arma elemental e nucleo)
+  const melhorDe = (set, pred) => { let m = null, ms = -Infinity;
+    for(const it of cand.concat(NUCLEO)) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
+      if(sc > ms + 1e-9 || (Math.abs(sc-ms) <= 1e-9 && (it.nivelItem||0) > ((m||{}).nivelItem||0))){ ms = sc; m = it; } } return m; };
+  if(pf.botaEssencial && X.maxBota > 0){ const m = melhorDe(fixos, i => i.categoria === "bota"); if(m){ fixos.push(m); motivos.set(m.id, "bota essencial"); } }
+  if(pf.armaElemental && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental"); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental"); } }
+  // toda a base de dano vem da arma: sempre garante uma (ate 30% do orcamento), a menos que ja haja uma
+  if(X.maxArma > 0 && !fixos.some(i => i.tipo === "Weapon")){
+    const m = melhorDe(fixos, i => i.tipo === "Weapon" && (i.ouro||0) <= ouro*0.3);
+    if(m){ fixos.push(m); motivos.set(m.id, m.categoria === "arma_batalha" ? "arma base" : "arma"); }
+  }
+  if(usarNucleo) for(const it of NUCLEO){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "núcleo"); } }
+  const travados = new Set(fixos.map(i => i.id));
+
   function guloso(porOuro){
     let set = fixos.slice();
     for(;;){
       const s0 = score(set); let melhor = null, mg = 1e-9;
       for(const it of cand){
-        if(!valido(set, it)) continue;
+        if(travados.has(it.id) || !valido(set, it)) continue;
         let g = score(set.concat(it)) - s0; if(porOuro) g /= Math.max(it.ouro||0, 50);
         if(g > mg){ mg = g; melhor = it; }
       }
@@ -279,32 +381,53 @@ function otimizar(h, nivel, ouro, cristais, vagas, maxArma, maxRoupa, obj, w){
     for(let r=0; r<4; r++){
       let atual = score(set), mudou = false;
       for(let i=0; i<set.length; i++){
-        if(S.fixos.has(set[i].id)) continue;
+        if(travados.has(set[i].id)) continue;
         const sem = set.filter((_,k)=>k!==i); let melhor = null, ms = atual;
-        for(const it of cand){ if(it === set[i] || !valido(sem, it)) continue; const sc = score(sem.concat(it)); if(sc > ms + 1e-9){ ms = sc; melhor = it; } }
+        for(const it of cand){ if(travados.has(it.id) || it === set[i] || !valido(sem, it)) continue; const sc = score(sem.concat(it)); if(sc > ms + 1e-9){ ms = sc; melhor = it; } }
         if(melhor){ set = sem.concat(melhor); atual = ms; mudou = true; }
       }
       let mAdd = null, ms = atual;
-      for(const it of cand){ if(!valido(set, it)) continue; const sc = score(set.concat(it)); if(sc > ms + 1e-9){ ms = sc; mAdd = it; } }
+      for(const it of cand){ if(travados.has(it.id) || !valido(set, it)) continue; const sc = score(set.concat(it)); if(sc > ms + 1e-9){ ms = sc; mAdd = it; } }
       if(mAdd){ set = set.concat(mAdd); mudou = true; }
       if(!mudou) break;
     }
     return set;
   }
   const a = refinar(guloso(false)), b = refinar(guloso(true));
-  return score(a) >= score(b) ? a : b;
+  const set = score(a) >= score(b) ? a : b;
+  return {set, motivos};
 }
-function ordemCompra(h, nivel, set, obj, w){
-  const restante = set.slice(), ordem = []; let atual = [];
-  while(restante.length){
-    const s0 = pontuacao(calcular(h, nivel, atual), obj, w); let melhor = null, mv = -Infinity;
-    for(const it of restante){
-      const v = (pontuacao(calcular(h, nivel, atual.concat(it)), obj, w) - s0) / Math.max(it.ouro||0, 50);
-      if(v > mv){ mv = v; melhor = it; }
-    }
-    ordem.push(melhor); atual = atual.concat(melhor); restante.splice(restante.indexOf(melhor), 1);
+
+/* ordem de compra do plano: iniciais -> arma -> bota essencial -> roupa -> nucleo -> resto (mais barato primeiro) */
+function ordemPlano(set, motivos, pf){
+  const grupo = it => {
+    const m = motivos.get(it.id);
+    if(m === "inicial") return 0;
+    if(it.categoria.startsWith("arma")) return 1;
+    if(it.categoria === "bota") return pf.botaEssencial ? 2 : 5;
+    if(it.categoria === "roupa") return 3;
+    if(m === "núcleo" || NUCLEO.includes(it)) return 4;
+    return 6;
+  };
+  return set.slice().sort((a,b) => (grupo(a)-grupo(b)) || ((a.ouro||0)-(b.ouro||0)));
+}
+function motivoDe(it, motivos, pf){
+  const m = motivos.get(it.id); if(m) return m;
+  if(it.categoria === "arma_batalha") return "arma base";
+  if(it.categoria.startsWith("arma")) return "arma";
+  if(it.categoria === "roupa") return "roupa";
+  if(it.categoria === "bota") return "bota";
+  return "ganho de poder";
+}
+function evolucao(it){
+  if(it.categoria === "arma_batalha" && it.nivelItem > 1)
+    return `Lv 1 + ${it.nivelItem-1}× Upgrade Weapon (${fmt(taxaUpgrade("Upgrade Weapon"))} cada)`;
+  if(it.categoria === "roupa"){
+    const i = (P.evolucao_roupa||[]).findIndex(n => norm(n) === norm(it.nome));
+    if(i > 0) return `Genin Cloth + ${i}× Upgrade Cloth (${fmt(taxaUpgrade("Upgrade Cloth"))} cada)`;
   }
-  return ordem;
+  if(it.categoria === "bota" && it.nivelItem > 1) return `Nível 1 + ${it.nivelItem-1}× Upgrade Super Boots (${fmt(taxaUpgrade("Upgrade Super Boots"))} cada)`;
+  return "";
 }
 function estagios(ordem){
   const total = ordem.reduce((a,i)=>a+(i.ouro||0),0) || 1; let cum = 0; const ini = [], core = [];
@@ -325,7 +448,6 @@ function resumoStats(it){
     if(tudo && ["tai","nin","gen"].includes(k)) continue;
     if(k==="evasao") p.push("+"+v+"% evasão"); else if(k==="reducao") p.push("-"+v+"% dano recebido"); else if(m[k]) p.push("+"+v+" "+m[k]);
   }
-  for(const [k,v] of Object.entries(it.porNivel)) if(m[k]) p.push("+"+v+" "+m[k]+" por nível");
   return p.join(" · ");
 }
 const preco = it => fmt(it.ouro||0) + (it.cristais ? " + "+it.cristais+" cr." : "");
@@ -338,17 +460,36 @@ const SIT = [
   {t:"Utilidade", d:"Contra invisibilidade e clones, ou para jogadas especiais.", re:/invisib|true sight|clone|vision|reveal/i},
 ];
 function situacionais(h, set){
-  return SIT.map(g => ({g, itens: D.itens.filter(i => i.tipo && comprável(i) && !set.includes(i) && !S.banidos.has(i.id) && armaCompativel(i,h) &&
-     g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
+  const lista = D.itens.filter(i => i.tipo && comprável(i) && !set.includes(i) && !S.banidos.has(i.id) && armaCompativel(i,h));
+  const pol = lista.filter(isSit).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,14);
+  const grupos = SIT.map(g => ({t:g.t, d:g.d, itens: lista.filter(i => !isSit(i) && i.categoria !== "espirito" && g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
+  return {pol, grupos};
 }
 
 /* ---------- interface ---------- */
 function iniciar(){
   $("resumoDados").textContent = D.herois.length + " heróis · " + D.itens.length + " itens · " + D.receitas.length + " receitas" + (Object.keys(ICONES).length ? "" : " · ícones: modo simples");
-  preencherHerois("");
-  $("busca").addEventListener("input", e => preencherHerois(e.target.value));
-  for(const id of ["heroi","nivel","ouro","cristais","slots","maxArma","maxRoupa","peso"])
-    $(id).addEventListener("input", () => { if(id==="heroi") S.niveisSkill = {}; if(id==="peso") $("pesoTxt").textContent = $("peso").value; atualizar(); });
+  $("gpm").value = P.gpm_padrao || 500;
+  S.heroiId = (D.herois.find(h => h.nome === "Yamato") || D.herois[0]).id;
+  desenharPicker();
+  $("btnHeroi").addEventListener("click", () => { const p = $("painelHeroi"); p.hidden = !p.hidden; if(!p.hidden){ $("busca").value = ""; desenharPicker(); $("busca").focus(); } });
+  $("busca").addEventListener("input", desenharGrade);
+  document.addEventListener("click", e => { if(!e.target.closest(".picker")) $("painelHeroi").hidden = true; });
+  $("gradeHerois").addEventListener("click", e => { const b = e.target.closest("[data-heroi]"); if(!b) return;
+    S.heroiId = b.dataset.heroi; S.niveisSkill = {}; $("painelHeroi").hidden = true; desenharPicker(); atualizar(); });
+  for(const id of ["nivel","ouro","cristais","gpm","slots","maxArma","maxRoupa","maxBota","peso","usarIniciais","usarNucleo","incluirSit"])
+    $(id).addEventListener("input", () => { if(id==="peso") $("pesoTxt").textContent = $("peso").value; atualizar(); });
+  const mostrarPol = () => { $("polTxt").value = JSON.stringify(P, null, 2); };
+  mostrarPol();
+  $("polAplicar").addEventListener("click", () => {
+    try{ P = JSON.parse($("polTxt").value); recalcPolitica(); try{ localStorage.setItem("politica_naruto", JSON.stringify(P)); }catch(e){}
+         $("polMsg").textContent = "Política aplicada."; atualizar(); }
+    catch(e){ $("polMsg").textContent = "JSON inválido: " + e.message; }
+  });
+  $("polPadrao").addEventListener("click", () => {
+    P = JSON.parse(JSON.stringify(P_PADRAO)); recalcPolitica(); try{ localStorage.removeItem("politica_naruto"); }catch(e){}
+    mostrarPol(); $("polMsg").textContent = "Padrão restaurado."; atualizar();
+  });
   $("limpar").addEventListener("click", () => { S.fixos.clear(); S.banidos.clear(); atualizar(); });
   $("btnTema").addEventListener("click", () => { const r = document.documentElement; r.dataset.tema = r.dataset.tema === "claro" ? "" : "claro"; });
   $("abas").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b){ S.tab = b.dataset.tab; atualizar(); } });
@@ -364,28 +505,29 @@ function iniciar(){
   });
   atualizar();
 }
-function preencherHerois(filtro){
-  const f = filtro.trim().toLowerCase(), sel = $("heroi"), atual = sel.value;
-  sel.innerHTML = "";
-  const lista = D.herois.filter(h => !f || h.nome.toLowerCase().includes(f));
-  const rep = {}; for(const h of D.herois) rep[h.nome] = (rep[h.nome]||0) + 1;
-  for(const h of lista){
-    const o = document.createElement("option"); o.value = h.id;
-    o.textContent = h.nome + " ("+NOME[h.primario]+")" + (rep[h.nome] > 1 ? " ["+h.id+" · "+h.skills.filter(s=>s.tecla).length+" skills]" : "");
-    sel.appendChild(o);
-  }
-  const y = lista.find(h => h.id === atual) || lista.find(h => h.nome === "Yamato") || lista[0];
-  if(y) sel.value = y.id;
-  atualizar();
+const heroiAtual = () => D.herois.find(x => x.id === S.heroiId);
+const REP = {}; for(const h of D.herois) REP[h.nome] = (REP[h.nome]||0) + 1;
+const rotuloForma = h => REP[h.nome] > 1 ? `${h.id} · ${h.skills.filter(s=>s.tecla).length} skills` : "";
+function desenharPicker(){
+  const h = heroiAtual();
+  $("btnHeroi").innerHTML = `${icoHeroi(h, 40)}<span><b>${esc(h.nome)}</b><small>${NOME[h.primario]}${rotuloForma(h) ? " · "+rotuloForma(h) : ""} ▾</small></span>`;
+  desenharGrade();
+}
+function desenharGrade(){
+  const f = $("busca").value.trim().toLowerCase();
+  const lista = D.herois.filter(h => !f || h.nome.toLowerCase().includes(f) || h.id.toLowerCase() === f);
+  $("gradeHerois").innerHTML = lista.map(h => `<button class="hcell ${h.id===S.heroiId?"sel":""}" data-heroi="${h.id}" title="${esc(h.nome)}">${icoHeroi(h, 56)}
+      <span>${esc(h.nome)}</span><small>${NOME[h.primario]}${rotuloForma(h) ? "<br>"+rotuloForma(h) : ""}</small></button>`).join("") || '<p class="mudo">Nenhum herói encontrado.</p>';
 }
 function contexto(){
-  const h = D.herois.find(x => x.id === $("heroi").value); if(!h) return null;
+  const h = heroiAtual(); if(!h) return null;
   const nivel = Math.max(1, +$("nivel").value || 1);
   const o = ordemSkills(h, nivel);
   S.ranks = o.rank;
-  return { h, nivel, ouro: Math.max(0, +$("ouro").value || 0), cristais: Math.max(0, +$("cristais").value || 0),
-           vagas: Math.max(1, +$("slots").value || 6), maxArma: +$("maxArma").value, maxRoupa: +$("maxRoupa").value,
-           w: (+$("peso").value || 0)/100, ordem: o };
+  return { h, nivel, ouro: Math.max(0, +$("ouro").value || 0), cristais: Math.max(0, +$("cristais").value || 0), gpm: Math.max(50, +$("gpm").value || 500),
+           vagas: Math.max(1, +$("slots").value || 6), maxArma: +$("maxArma").value, maxRoupa: +$("maxRoupa").value, maxBota: +$("maxBota").value,
+           usarIniciais: $("usarIniciais").checked, usarNucleo: $("usarNucleo").checked, incluirSit: $("incluirSit").checked,
+           w: (+$("peso").value || 0)/100, ordem: o, pf: perfil(h, nivel) };
 }
 function atualizar(){
   document.querySelectorAll(".aba").forEach(b => b.classList.toggle("ativa", b.dataset.tab === S.tab));
@@ -408,15 +550,15 @@ function atualizar(){
 
 /* ---------- aba Build ---------- */
 const PRESETS = [
-  {id:"equil", nome:"Equilibrada", obj:"equil", f:1},
-  {id:"dano", nome:"Foco em dano", obj:"dano", f:1},
-  {id:"resist", nome:"Foco em defesa", obj:"resist", f:1},
-  {id:"eco", nome:"Econômica (60% do ouro)", obj:"equil", f:0.6},
+  {id:"padrao", nome:"Plano padrão", obj:"equil", f:1, nucleo:true, desc:"iniciais + núcleo + o que mais ajuda"},
+  {id:"dano", nome:"Foco em dano", obj:"dano", f:1, nucleo:false},
+  {id:"resist", nome:"Foco em defesa", obj:"resist", f:1, nucleo:false},
+  {id:"eco", nome:"Econômica (60% do ouro)", obj:"equil", f:0.6, nucleo:false},
 ];
 function montarPreset(X, p){
-  const set = otimizar(X.h, X.nivel, Math.floor(X.ouro*p.f), Math.floor(X.cristais*p.f), X.vagas, X.maxArma, X.maxRoupa, p.obj, X.w);
-  const ordem = ordemCompra(X.h, X.nivel, set, p.obj, X.w);
-  return {p, set, ordem, r: calcular(X.h, X.nivel, set)};
+  const r0 = otimizar(X, X.pf, Math.floor(X.ouro*p.f), Math.floor(X.cristais*p.f), p.obj, p.nucleo && X.usarNucleo);
+  const ordem = ordemPlano(r0.set, r0.motivos, X.pf);
+  return {p, set:r0.set, motivos:r0.motivos, ordem, r: calcular(X.h, X.nivel, r0.set)};
 }
 function slotsHtml(lista, vagas){
   let h = "";
@@ -433,7 +575,7 @@ function detalheItem(X, set, base){
   const g = set.includes(it) ? null : pontuacao(com, "equil", X.w) - pontuacao(base, "equil", X.w);
   const rec = RECEITA_DE[it.id];
   return `<div class="detalhe"><div class="heroi">${icoItem(it,56)}<div><h2 style="font-size:16px">${esc(it.nome)}</h2>
-      <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}</p></div></div>
+      <p><span class="tag t-${it.tipo||""}">${esc(it.tipo||"—")}</span> <span class="ouro">${preco(it)}</span>${it.familia?` · <span class="tag">${NOME[it.familia]}</span>`:""}${isSit(it)?' · <span class="tag">situacional</span>':""}</p></div></div>
     <p style="margin:8px 0 0"><b>${esc(resumoStats(it))||"Sem bônus numéricos"}</b></p>
     <div class="linhas">${esc(it.descricao)}</div>
     ${g!=null?`<p class="nota">Se somado à build: ${g>0?'<span class="verde">'+sinal(g)+'</span>':fmt(g)} pontos de pontuação.</p>`:""}
@@ -445,12 +587,15 @@ function abaBuild(X){
   const todos = PRESETS.map(p => montarPreset(X, p));
   const atual = todos.find(t => t.p.id === S.preset) || todos[0];
   const base = calcular(X.h, X.nivel, []);
-  const {set, ordem, r} = atual, est = estagios(ordem);
+  const {set, ordem, r, motivos} = atual, est = estagios(ordem), pf = X.pf;
   const gasto = set.reduce((a,i)=>a+(i.ouro||0),0), gastoCr = set.reduce((a,i)=>a+(i.cristais||0),0);
   const o = X.ordem, hs = o.hs, maxSeq = maxSequencia(o);
   const colunas = Math.min(X.nivel, 60);
   const sit = situacionais(X.h, set);
+  const cps = checkpoints(X.h, X.nivel);
+  const nivelCp = new Set(cps.map(c => c.L));
   if(!S.itemSel || !ITEM[S.itemSel]) S.itemSel = (ordem[0]||{}).id || null;
+  let cum = 0;
 
   const esq = `<div class="caixa"><h2>Builds recomendadas</h2>${todos.map(t => `
       <button class="preset ${t.p.id===atual.p.id?"ativa":""}" data-preset="${t.p.id}"><b>${t.p.nome}</b>
@@ -458,21 +603,40 @@ function abaBuild(X){
         <small>Dano ${fmt(t.r.potencial)} · Vida ef. ${fmt(t.r.ehp)}</small></button>`).join("")}</div>
     ${S.fixos.size||S.banidos.size?`<div class="caixa"><h2>Seus ajustes</h2><p class="mudo" style="margin:0;font-size:12px">${[...S.fixos].map(i=>"📌 "+esc(ITEM[i]?.nome)).join("<br>")}${S.fixos.size&&S.banidos.size?"<br>":""}${[...S.banidos].map(i=>"🚫 "+esc(ITEM[i]?.nome)).join("<br>")}</p></div>`:""}`;
 
-  const centro = `<div class="caixa"><div class="heroi">${ico(X.h.icone, X.h.nome, "a-"+X.h.primario, 64)}
-      <div><h2>${esc(X.h.nome)}</h2><p>Nível ${X.nivel} · atributo principal: ${NOME[X.h.primario]}</p></div></div></div>
+  const chips = [
+    pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
+    pf.armaElemental ? `<span class="tag motivo">arma elemental</span>` : "",
+    `<span class="tag">skills escalam ${fmt(pf.pesoNin*100)}% com Ninjutsu</span>`].join(" ");
+  const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
+  const centro = `<div class="caixa"><div class="heroi">${icoHeroi(X.h, 64)}
+      <div><h2>${esc(X.h.nome)}</h2><p>Nível ${X.nivel} · atributo principal: ${NOME[X.h.primario]}${rotuloForma(X.h)?" · "+rotuloForma(X.h):""}</p><p style="margin-top:6px">${chips}</p></div></div>
+      ${pf.nota?`<p class="nota" style="margin:10px 0 0">${esc(pf.nota)}</p>`:""}</div>
+
+    <div class="caixa"><h2>Kit de farm inicial (consumíveis)</h2>
+      ${kit.map(({c,it}) => `<div class="farm"><button class="item" data-item="${it.id}">${icoItem(it,44)}<span class="preco">${preco(it)}</span></button><div><b>${esc(it.nome)}</b><p>${esc(c.motivo)}</p></div></div>`).join("")}
+      ${(P.dicas_farm||[]).length?`<p class="nota" style="margin:8px 0 0">${(P.dicas_farm||[]).map(esc).join("<br>")}</p>`:""}</div>
+
     <div class="caixa"><h2>Itens</h2>
       <p style="margin:0 0 6px"><span class="ouro">${fmt(gasto)}</span> de ${fmt(X.ouro)} de ouro${X.cristais||gastoCr?` · <span class="ouro">${gastoCr}</span> de ${X.cristais} cristais`:""} · ${set.length}/${X.vagas} vagas${r.fatorChakra<1?` · <span class="aprox">chakra cobre ${fmt(r.fatorChakra*100)}% do combo</span>`:""}</p>
       <h3>Início</h3><div class="fila">${slotsHtml(est.inicio, est.inicio.length) || '<span class="mudo">—</span>'}</div>
       <h3>Essencial</h3><div class="fila">${slotsHtml(est.core, est.core.length) || '<span class="mudo">—</span>'}</div>
-      <h3>Build completa <span class="mudo">ordem de compra: maior ganho por ouro primeiro</span></h3>
-      <div class="fila">${slotsHtml(ordem, X.vagas)}</div></div>
-    <div class="caixa"><h2>Ordem das skills</h2>
+      <h3>Build completa</h3><div class="fila">${slotsHtml(ordem, X.vagas)}</div></div>
+
+    <div class="caixa"><h2>Plano de compra (ordem sugerida)</h2>
+      <table class="t"><tr><th>#</th><th>Item</th><th>Preço</th><th>Acumulado</th><th title="estimativa com o ouro por minuto informado">~Minuto</th><th>Por quê</th></tr>
+      ${ordem.map((it,i)=>{ cum += it.ouro||0; const ev = evolucao(it); return `<tr><td>${i+1}</td>
+        <td><button class="item" data-item="${it.id}" style="flex-direction:row;gap:8px;text-align:left">${icoItem(it,34)}<span><b>${esc(it.nome)}</b>${ev?`<br><small class="mudo">${esc(ev)}</small>`:""}</span></button></td>
+        <td class="ouro">${preco(it)}</td><td>${fmt(cum)}</td><td>${fmt(cum/X.gpm,0)} min</td><td><span class="tag motivo">${esc(motivoDe(it, motivos, pf))}</span></td></tr>`; }).join("") || '<tr><td colspan="6" class="mudo">Nenhum item cabe nesse ouro.</td></tr>'}</table>
+      <p class="mudo" style="font-size:12px;margin:8px 0 0">Ordem: iniciais → arma → bota (se essencial) → roupa → núcleo → resto. O minuto é só uma estimativa com ${fmt(X.gpm)} de ouro por minuto.</p></div>
+
+    <div class="caixa"><h2>Ordem das skills e checkpoints</h2>
+      <div class="cp" style="margin-bottom:8px">${cps.map(c=>`<span style="${c.ativo?"":"opacity:.5"}"><b>Nível ${c.L}</b> · ${esc(c.txt)}</span>`).join("")}</div>
       ${maxSeq.length?`<p style="margin:0 0 8px">Máximo: ${maxSeq.map(x=>`<b style="color:var(--laranja2)">${esc(x.s.tecla)}</b>`).join(" → ")}</p>`:""}
-      <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th>${i+1}</th>`).join("")}</tr>
+      <div class="ordem"><table><tr><th class="l"></th>${Array.from({length:colunas},(_,i)=>`<th class="${nivelCp.has(i+1)?"pico":""}">${i+1}</th>`).join("")}</tr>
       ${hs.map(s=>`<tr><th class="l">${ico(s.icone, s.nome, "", 30, s.tecla)}</th>${Array.from({length:colunas},(_,i)=>{
         const p = o.passos.find(x => x.s===s && x.L===i+1);
         return p?`<td class="c on">${p.r}</td>`:`<td class="c"></td>`;}).join("")}</tr>`).join("")}</table></div>
-      <p class="mudo" style="font-size:12px;margin:6px 0 0">Regra do jogo: cada skill exige um nível mínimo do herói por nível da skill. A prioridade segue o maior ganho de dano; ultimates entram assim que liberados.</p></div>`;
+      <p class="mudo" style="font-size:12px;margin:6px 0 0">Os checkpoints vêm das skills com nível mínimo (ultimates). A ordem segue a regra do jogo e a prioridade por ganho de dano.</p></div>`;
 
   const direita = `<div class="caixa"><h2>Atributos com a build</h2><div class="atrs">${["tai","nin","gen"].map(k=>{
       const v = {tai:r.T,nin:r.N,gen:r.G}[k], v0 = {tai:base.T,nin:base.N,gen:base.G}[k];
@@ -481,7 +645,9 @@ function abaBuild(X){
         ["Dano do ataque",(base.danoMin+base.danoMax)/2,(r.danoMin+r.danoMax)/2,0],["Vida efetiva",base.ehp,r.ehp,0],["Dano potencial",base.potencial,r.potencial,0]]
         .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div></div>
     <div class="caixa"><h2>Item selecionado</h2>${detalheItem(X, set, r)}</div>
-    <div class="caixa"><h2>Itens situacionais</h2>${sit.map(x=>`<div class="sit"><b>${x.g.t}</b><div class="fila" style="margin-top:4px">${x.itens.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")}</div><p>${x.g.d}</p></div>`).join("")||'<p class="mudo">Nenhum item situacional encontrado.</p>'}</div>`;
+    <div class="caixa"><h2>Situacionais por personagem</h2><p class="mudo" style="font-size:12px;margin:0 0 8px">${esc(P.situacional_motivo||"")}</p>
+      <div class="fila">${sit.pol.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")||'<span class="mudo">—</span>'}</div></div>
+    <div class="caixa"><h2>Itens por necessidade</h2>${sit.grupos.map(x=>`<div class="sit"><b>${x.t}</b><div class="fila" style="margin-top:4px">${x.itens.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")}</div><p>${x.d}</p></div>`).join("")||'<p class="mudo">Nenhum item encontrado.</p>'}</div>`;
   return `<div class="grade3"><div>${esq}</div><div>${centro}</div><div>${direita}</div></div>`;
 }
 
@@ -530,13 +696,13 @@ function abaCatalogo(){
 function filtrarCatalogo(){
   const X = contexto(); if(!X) return;
   const q = $("filtroItem").value.trim().toLowerCase(), tp = $("filtroTipo").value;
-  const set = otimizar(X.h, X.nivel, X.ouro, X.cristais, X.vagas, X.maxArma, X.maxRoupa, "equil", X.w);
+  const principal = montarPreset(X, PRESETS[0]), set = principal.set;
   const base = pontuacao(calcular(X.h, X.nivel, set), "equil", X.w);
   const linhas = D.itens.filter(i => i.tipo && (!tp || i.tipo===tp) && (!q || (i.nome+" "+i.descricao).toLowerCase().includes(q)) && armaCompativel(i, X.h))
     .map(i => ({i, g: (set.includes(i) || !comprável(i)) ? 0 : pontuacao(calcular(X.h, X.nivel, set.concat(i)), "equil", X.w) - base}))
     .sort((a,b)=>b.g-a.g).slice(0,100);
   $("tabCat").innerHTML = `<tr><th></th><th>Item</th><th>Tipo</th><th>Preço</th><th>Bônus / efeitos</th><th>Ganho se somar</th><th></th></tr>` +
-    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}</td>
+    linhas.map(({i,g}) => `<tr><td>${icoItem(i,40)}</td><td><b>${esc(i.nome)}</b>${set.includes(i)?' <span class="tag">na build</span>':""}${isSit(i)?' <span class="tag">situacional</span>':""}</td>
       <td><span class="tag t-${i.tipo}">${esc(i.tipo)}</span></td><td class="ouro">${i.ouro==null?"?":preco(i)}</td>
       <td>${esc(resumoStats(i))}<div class="mudo" style="font-size:12px">${esc(i.extras.slice(0,3).join(" | "))}</div></td>
       <td>${set.includes(i)?"—":(g>0?'<span class="verde">'+sinal(g)+"</span>":'<span class="mudo">'+fmt(g)+"</span>")}</td>

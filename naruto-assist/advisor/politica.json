@@ -1,0 +1,76 @@
+{
+  "versao": 1,
+  "descricao": "Padroes de compra do mapa Naruto Ninpou. Os nomes devem ser iguais aos nomes dos itens. Depois de editar, rode: python montar_dados.py <pasta saida_naruto> e python gerar_site.py",
+  "iniciais": [
+    "Ninja Headband",
+    "Bingo Book"
+  ],
+  "consumiveis_farm": [
+    {
+      "nome": "Oil",
+      "motivo": "Item ativo de dano (340) para limpar as waves de minions logo no inicio. Controle de wave e o que permite farmar nas laterais (sides) e ter ouro alem dos abates."
+    },
+    {
+      "nome": "Bomb",
+      "motivo": "Comprada no vendedor nas pontas das lanes de cada vila. Dano 800 para limpar wave."
+    },
+    {
+      "nome": "Edo Tensei Scroll",
+      "motivo": "Ressuscita os NPCs ANBU do mapa no inicio, ajudando no farm."
+    }
+  ],
+  "nucleo": [
+    "Jade of Susano'o",
+    "The Heaven Mirror"
+  ],
+  "evolucao_roupa": [
+    "Genin Cloth",
+    "Chunnin Cloth",
+    "Jounin Cloth",
+    "Anbu Cloth",
+    "Sannin Cloth",
+    "Kage Robe"
+  ],
+  "situacionais": [
+    "Akatsuki Ring"
+  ],
+  "situacionais_prefixos": [
+    "Akatsuki ",
+    "Medical "
+  ],
+  "situacional_categorias": [
+    "arma_situacional"
+  ],
+  "situacional_motivo": "Itens usados de forma situacional, dependendo do personagem (armas da Legendary Equipment Shop, itens Akatsuki, itens medicos). Nao sao tratados como essenciais.",
+  "regras": {
+    "bota_essencial_se_peso_nin": 0.4,
+    "arma_elemental_se_primario": [
+      "tai"
+    ]
+  },
+  "herois": {
+    "Hatake Kakashi": {
+      "bota_essencial": true,
+      "nota": "O dano das skills depende do Ninjutsu: a bota e essencial e rende bonus quando evoluida para Super Boots."
+    },
+    "Akimichi Chouji": {
+      "arma_elemental": true,
+      "nota": "Arma elemental feita cedo (por nivel) e interessante."
+    },
+    "Uzumaki Naruto": {
+      "arma_elemental": true,
+      "nota": "Arma elemental feita cedo (por nivel) e interessante."
+    },
+    "Maito Gai": {
+      "arma_elemental": true,
+      "nota": "Arma elemental feita cedo (por nivel) e interessante."
+    }
+  },
+  "dicas_farm": [
+    "Controle de wave: farme as waves de minions nas laterais (sides) para ter ouro alem dos abates.",
+    "Oil e Bomb limpam waves rapido; a Bomb e comprada no vendedor nas pontas das lanes de cada vila.",
+    "Edo Tensei Scroll no inicio ressuscita os NPCs ANBU do mapa e ajuda no farm.",
+    "O leveling e parecido para quem nao tem dificuldade de farm no inicio; ajuste se o seu personagem tiver."
+  ],
+  "gpm_padrao": 500
+}

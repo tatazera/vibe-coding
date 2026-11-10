@@ -140,7 +140,29 @@ def atributos_da(expr):
 
 
 # ---------------------------------------------------------------- itens
-def parse_item(iid, jogo, skin):
+def categoria(nome, tipo):
+    if re.match(r"Battle (Kunai|Shuriken|Senbons) - Level", nome):
+        return "arma_batalha"
+    if tipo == "Weapon" and re.match(r"(Fire|Water|Wind|Earthen|Thunder|Yin|Yang) (Kunai|Shuriken|Senbons)", nome):
+        return "arma_elemental"
+    if nome.startswith("Legendary Weapon") or nome in ("True Raijin No Ken",):
+        return "arma_lendaria"
+    if tipo == "Weapon":
+        return "arma_situacional"
+    if re.search(r"Boots|Shoes|Sandals", nome):
+        return "bota"
+    if tipo == "Cloth":
+        return "roupa"
+    if nome.startswith("Spirit of"):
+        return "espirito"
+    if "Mask" in nome:
+        return "mascara"
+    if re.search(r"Stone of|Essence|Absorb", nome):
+        return "pedra"
+    return "suporte"
+
+
+def parse_item(iid, jogo, skin, habs_item=None):
     c, s = jogo.get(iid, {}), skin.get(iid, {})
     desc = limpar(s.get("utub") or s.get("ides") or "")
     nome = limpar(s.get("unam"))
@@ -179,6 +201,20 @@ def parse_item(iid, jogo, skin):
         stats["evasao"] = int(m_ev.group(1))
     if reducao:
         stats["reducao"] = reducao
+    nivel_item = None
+    mn = re.search(r"Level\s*(\d+|MAX)", nome, re.I)
+    if mn:
+        nivel_item = 10 if mn.group(1).upper() == "MAX" else int(mn.group(1))
+    if por_nivel:  # "+10 Taijutsu x Level": multiplica pelo nivel DO ITEM (Battle Kunai Level 3 = x3)
+        for k, v in por_nivel.items():
+            stats[k] = stats.get(k, 0) + v * (nivel_item or 1)
+        por_nivel = {}
+    if "evasao" not in stats and habs_item:
+        for a in str(c.get("iabi", "")).split(","):
+            ev = habs_item.get(a, {}).get("Eev1/1")
+            ev = next(iter(ev.values())) if isinstance(ev, dict) else ev
+            if isinstance(ev, (int, float)) and ev:
+                stats["evasao"] = round(ev * 100) if ev <= 1 else int(ev)
     familia = None
     d = (nome + " " + desc).lower()
     if tipo == "Weapon":
@@ -189,7 +225,8 @@ def parse_item(iid, jogo, skin):
         m = re.search(r"used by (taijutsu|ninjutsu|genjutsu) heroes", d)
         if m:
             familia = {"taijutsu": "tai", "ninjutsu": "nin", "genjutsu": "gen"}[m.group(1)]
-    return {"id": iid, "nome": nome, "icone": s.get("iico") or "", "ouro": c.get("igol"), "cristais": c.get("ilum", 0), "tipo": tipo, "familia": familia,
+    return {"id": iid, "nome": nome, "categoria": categoria(nome, tipo), "nivelItem": nivel_item,
+            "icone": s.get("iico") or "", "ouro": c.get("igol"), "cristais": c.get("ilum", 0), "tipo": tipo, "familia": familia,
             "stats": stats, "porNivel": por_nivel, "extras": extras, "descricao": desc}
 
 
@@ -307,11 +344,13 @@ def montar(pasta):
                        "cd": c.get("ua1c")},
             "skills": skills})
     herois.sort(key=lambda h: h["nome"].lower())
-    itens = [parse_item(i, jogo["t"], skin["t"]) for i in jogo["t"] if i in skin["t"]]
+    itens = [parse_item(i, jogo["t"], skin["t"], jogo["a"]) for i in jogo["t"] if i in skin["t"]]
     itens = [i for i in itens if i["nome"]]
     itens.sort(key=lambda i: (i["tipo"] or "z", i["ouro"] or 0))
     receitas = montar_receitas(itens)
-    return {"receitas": receitas, "constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
+    arq_pol = Path(__file__).resolve().parent / "politica.json"
+    politica = json.loads(arq_pol.read_text(encoding="utf-8")) if arq_pol.exists() else {}
+    return {"politica": politica, "receitas": receitas, "constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
                            "armadura_base": 2, "armadura_por_nin": 0.15, "vel_ataque_por_nin": 0.05,
                            "dano_por_primario": 1.0, "dano_base_padrao": [2, 24], "cd_ataque_padrao": 1.5,
                            "fonte": "war3mapMisc.txt do mapa; conferido com Yamato nivel 9 (964 HP, 705 chakra, armadura 7, dano 49-71)"},
