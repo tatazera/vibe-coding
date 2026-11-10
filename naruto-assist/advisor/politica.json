@@ -49,18 +49,6 @@
     "Hatake Kakashi": {
       "bota_essencial": true,
       "nota": "O dano das skills depende do Ninjutsu: a bota e essencial e rende bonus quando evoluida para Super Boots."
-    },
-    "Akimichi Chouji": {
-      "arma_elemental_cedo": true,
-      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
-    },
-    "Uzumaki Naruto": {
-      "arma_elemental_cedo": true,
-      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
-    },
-    "Maito Gai": {
-      "arma_elemental_cedo": true,
-      "nota": "Costuma fazer a arma elemental cedo (por nivel)."
     }
   },
   "dicas_farm": [
@@ -101,10 +89,11 @@
     "gen": "Water"
   },
   "arma_teto_pct": 0.6,
-  "arma_comentario": "Caminho padrao da arma: Battle Level 1 ate o Level MAX; depois a Soul Absorb Stone + Spirit do elemento (orb) fazem a arma lendaria. 'arma_teto_pct' e a fracao maxima do ouro que a arma pode consumir. Arma elemental feita cedo (Weapon Lv1 + Spirit) so para herois marcados com arma_elemental_cedo.",
+  "arma_comentario": "Caminho padrao da arma: Battle Level 1 ate o Level MAX; depois Soul Absorb Stone + Spirit do elemento (orb) fazem a arma lendaria. 'arma_teto_pct' e a fracao maxima do ouro que a arma pode consumir. A arma elemental feita cedo (Weapon Lv1 + Spirit) e um item SITUACIONAL, para qualquer heroi que precise de dano com escala de status rapido; o elemento vem do atributo (tai = Fire, nin = Thunder, gen = Water).",
   "legendaria_padrao": {
     "tai": "Legendary Weapon: Kyuubi's Chakra Cloak",
     "nin": "Legendary Weapon: Raijin no Ken",
     "gen": "Legendary Weapon: Haku's Senbons"
-  }
+  },
+  "elemental_cedo_escala_min": 0.5
 }

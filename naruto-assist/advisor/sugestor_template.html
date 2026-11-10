@@ -184,6 +184,7 @@
       <div><label class="check"><input id="usarIniciais" type="checkbox" checked> Começar com os itens iniciais padrão (Ninja Headband, Bingo Book)</label></div>
       <div><label class="check"><input id="usarNucleo" type="checkbox" checked> Plano padrão inclui o núcleo (Jade of Susano'o, Heaven Mirror) quando couber</label></div>
       <div><label class="check"><input id="incluirSit" type="checkbox"> Permitir itens situacionais na sugestão automática</label></div>
+      <div><label class="check"><input id="elementalCedo" type="checkbox"> Fazer a arma elemental cedo (Weapon Lv1 + Spirit do elemento do herói): para quem precisa de dano com escala de status rápido</label></div>
     </div>
     <details style="margin-top:10px"><summary>Editar a política de compra (itens iniciais, núcleo, situacionais, heróis com bota/arma elemental)</summary>
       <p class="nota" style="margin:8px 0">Use os nomes dos itens exatamente como aparecem no jogo. O que você salvar fica guardado neste navegador.</p>
@@ -235,7 +236,7 @@ const isSit = (it, h) =>
   (it.categoria === "roupa" && EVOL_ROUPA.size && !EVOL_ROUPA.has(norm(it.nome))) ||
   (P.situacionais||[]).some(n => norm(n) === norm(it.nome)) || (P.situacionais_prefixos||[]).some(p => it.nome.startsWith(p)) ||
   (P.situacionais_contem||[]).some(s => it.nome.includes(s)) || (P.situacional_categorias||[]).includes(it.categoria) ||
-  (it.categoria === "arma_elemental" && h && ELEM(it.nome) !== elementoPadrao(h)) ||
+  it.categoria === "arma_elemental" ||
   (it.categoria === "arma_lendaria" && h && norm(it.nome) !== norm((P.legendaria_padrao||{})[h.primario]));
 const legendariaPadrao = h => porNome((P.legendaria_padrao||{})[h.primario]);
 function recalcPolitica(){
@@ -371,10 +372,15 @@ function perfil(h, nivel){
   }
   const o = (P.herois||{})[h.nome] || {}, reg = P.regras || {};
   const pesoNin = tot ? nin/tot : 0;
+  // quanto do dano das skills (nivel 15, skills no nivel 3) vem de atributos: indica quem precisa de escala rapida
+  let pB = 0, pE = 0; const b15 = atributosBase(h, 15);
+  for(const s of h.skills){ if(!s.dano) continue; const L = Math.min(s.niveis||1, 3), c = avaliar(s.dano, L, b15.tai, b15.nin, b15.gen), bs = avaliar(s.dano, L, 0, 0, 0), cd = avaliar(s.cooldown, L, b15.tai, b15.nin, b15.gen) ?? 20;
+    if(c == null || bs == null) continue; pB += bs/Math.max(cd,1); pE += (c-bs)/Math.max(cd,1); }
+  const escalaCedo = (pB+pE) > 0 ? pE/(pB+pE) : 0;
   return {
     pesoNin, nota: o.nota || "",
     botaEssencial: o.bota_essencial ?? (pesoNin >= (reg.bota_essencial_se_peso_nin ?? 0.4)),
-    armaElementalCedo: !!(o.arma_elemental_cedo ?? o.arma_elemental), elemento: elementoPadrao(h), legendaria: legendariaPadrao(h),
+    escalaCedo, indicaElementalCedo: escalaCedo >= (P.elemental_cedo_escala_min ?? 0.5), elemento: elementoPadrao(h), legendaria: legendariaPadrao(h),
     manual: !!(o.bota_essencial !== undefined || o.arma_elemental !== undefined),
   };
 }
@@ -396,11 +402,12 @@ function otimizar(X, pf, ouro, cristais, obj, usarNucleo){
   const motivos = new Map(fixos.map(i => [i.id, "fixado"]));
   if(X.usarIniciais) for(const it of INICIAIS){ if(!fixos.includes(it) && !S.banidos.has(it.id) && valido(fixos, it)){ fixos.push(it); motivos.set(it.id, "inicial"); } }
   // 2) melhor de uma classe, dentro do que cabe (usado para bota essencial, arma elemental e nucleo)
-  const melhorDe = (set, pred) => { let m = null, ms = -Infinity;
-    for(const it of cand.concat(NUCLEO)) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
+  const poolTodos = CANDIDATOS.filter(i => !S.banidos.has(i.id) && armaCompativel(i, h));
+  const melhorDe = (set, pred, pool = cand.concat(NUCLEO)) => { let m = null, ms = -Infinity;
+    for(const it of pool) { if(!pred(it) || !valido(set, it)) continue; const sc = score(set.concat(it));
       if(sc > ms + 1e-9 || (Math.abs(sc-ms) <= 1e-9 && (it.nivelItem||0) > ((m||{}).nivelItem||0))){ ms = sc; m = it; } } return m; };
   if(pf.botaEssencial && X.maxBota > 0){ const m = melhorDe(fixos, i => i.categoria === "bota"); if(m){ fixos.push(m); motivos.set(m.id, "bota essencial"); } }
-  if(pf.armaElementalCedo && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome)); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental ("+pf.elemento+")"); } }
+  if(X.elementalCedo && X.maxArma > 0){ const m = melhorDe(fixos, i => i.categoria === "arma_elemental" && ELEM(i.nome) === pf.elemento && !/\(/.test(i.nome), poolTodos); if(m){ fixos.push(m); motivos.set(m.id, "arma elemental cedo ("+pf.elemento+")"); } }
   // caminho padrao da arma: Battle ate o Level MAX; depois a lendaria do elemento padrao (Spirit/orb). Teto = fracao do ouro.
   if(X.maxArma > 0 && !fixos.some(i => i.tipo === "Weapon")){
     const teto = (P.arma_teto_pct ?? 0.6) * ouro, leg = pf.legendaria;
@@ -506,7 +513,9 @@ const SIT = [
 ];
 function situacionais(h, set){
   const lista = D.itens.filter(i => i.tipo && comprável(i) && !set.includes(i) && !S.banidos.has(i.id) && armaCompativel(i,h));
-  const pol = lista.filter(i => isSit(i, h)).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,14);
+  const el = elementoPadrao(h), fam = {tai:"tai", nin:"nin", gen:"gen"}[h.primario];
+  const destaque = i => (i.categoria === "arma_elemental" && ELEM(i.nome) === el && i.familia === fam && !/\(/.test(i.nome)) ? 0 : 1;
+  const pol = lista.filter(i => isSit(i, h)).sort((a,b)=> destaque(a)-destaque(b) || (a.ouro||0)-(b.ouro||0)).slice(0,14);
   const grupos = SIT.map(g => ({t:g.t, d:g.d, itens: lista.filter(i => !isSit(i, h) && i.categoria !== "espirito" && g.re.test(i.nome+" "+i.descricao+" "+i.extras.join(" "))).sort((a,b)=>(a.ouro||0)-(b.ouro||0)).slice(0,8)})).filter(x => x.itens.length);
   return {pol, grupos};
 }
@@ -522,7 +531,7 @@ function iniciar(){
   document.addEventListener("click", e => { if(!e.target.closest(".picker")) $("painelHeroi").hidden = true; });
   $("gradeHerois").addEventListener("click", e => { const b = e.target.closest("[data-heroi]"); if(!b) return;
     S.heroiId = b.dataset.heroi; S.niveisSkill = {}; $("painelHeroi").hidden = true; desenharPicker(); atualizar(); });
-  for(const id of ["nivel","ouro","cristais","gpm","slots","maxArma","maxRoupa","maxBota","peso","usarIniciais","usarNucleo","incluirSit"])
+  for(const id of ["nivel","ouro","cristais","gpm","slots","maxArma","maxRoupa","maxBota","peso","usarIniciais","usarNucleo","incluirSit","elementalCedo"])
     $(id).addEventListener("input", () => { if(id==="peso") $("pesoTxt").textContent = $("peso").value; atualizar(); });
   const mostrarPol = () => { $("polTxt").value = JSON.stringify(P, null, 2); };
   mostrarPol();
@@ -573,7 +582,7 @@ function contexto(){
   S.ranks = o.rank;
   return { h, nivel, ouro: Math.max(0, +$("ouro").value || 0), cristais: Math.max(0, +$("cristais").value || 0), gpm: Math.max(50, +$("gpm").value || 500),
            vagas: Math.max(1, +$("slots").value || 6), maxArma: +$("maxArma").value, maxRoupa: +$("maxRoupa").value, maxBota: +$("maxBota").value,
-           usarIniciais: $("usarIniciais").checked, usarNucleo: $("usarNucleo").checked, incluirSit: $("incluirSit").checked,
+           usarIniciais: $("usarIniciais").checked, elementalCedo: $("elementalCedo").checked, usarNucleo: $("usarNucleo").checked, incluirSit: $("incluirSit").checked,
            w: (+$("peso").value || 0)/100, ordem: o, pf: perfil(h, nivel) };
 }
 function atualizar(){
@@ -651,7 +660,8 @@ function abaBuild(X){
 
   const chips = [
     pf.botaEssencial ? `<span class="tag motivo">bota essencial</span>` : "",
-    pf.armaElementalCedo ? `<span class="tag motivo">arma elemental cedo: ${esc(pf.elemento)}</span>` : `<span class="tag motivo">arma: Battle até MAX → lendária (${esc(pf.elemento)})</span>`,
+    `<span class="tag motivo">arma: Battle até MAX → lendária (${esc(pf.elemento)})</span>`,
+    pf.indicaElementalCedo ? `<span class="tag motivo" title="${fmt(pf.escalaCedo*100)}% do dano das skills escala com atributos no nível 15">indicado: arma elemental cedo (${esc(pf.elemento)})</span>` : "",
     `<span class="tag">skills escalam ${fmt(pf.pesoNin*100)}% com Ninjutsu</span>`].join(" ");
   const kit = (P.consumiveis_farm||[]).map(c => ({c, it: porNome(c.nome)})).filter(x => x.it);
   const centro = `<div class="caixa"><div class="heroi">${icoHeroi(X.h, 64)}
@@ -696,6 +706,7 @@ function abaBuild(X){
         .map(([n,a,b,d])=>`<div class="num"><small>${n}</small><b>${fmt(b,d)}</b>${b!==a?`<span class="d">${sinal(b-a,d)}</span>`:""}</div>`).join("")}</div></div>
     <div class="caixa"><h2>Item selecionado</h2>${detalheItem(X, set, r)}</div>
     <div class="caixa"><h2>Situacionais por personagem</h2><p class="mudo" style="font-size:12px;margin:0 0 8px">${esc(P.situacional_motivo||"")}</p>
+      <p class="nota" style="margin:0 0 8px">A primeira arma é a <b>elemental cedo</b> do seu herói (${esc(elementoPadrao(X.h))}): vale para quem precisa de dano que escala com status rápido.</p>
       <div class="fila">${sit.pol.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")||'<span class="mudo">—</span>'}</div></div>
     <div class="caixa"><h2>Itens por necessidade</h2>${sit.grupos.map(x=>`<div class="sit"><b>${x.t}</b><div class="fila" style="margin-top:4px">${x.itens.map(i=>`<button class="item ${S.itemSel===i.id?"sel":""}" data-item="${i.id}" title="${esc(i.nome)}">${icoItem(i,40)}<span class="preco">${preco(i)}</span></button>`).join("")}</div><p>${x.d}</p></div>`).join("")||'<p class="mudo">Nenhum item encontrado.</p>'}</div>`;
   return `<div class="grade3"><div>${esq}</div><div>${centro}</div><div>${direita}</div></div>`;

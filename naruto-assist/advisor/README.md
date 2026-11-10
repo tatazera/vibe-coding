@@ -31,6 +31,6 @@ as demais divergem por valor fixo (ex.: Explosive/Fuuma/Dance -1500; Totsuka +30
 Soul Absorb Stone nao tem preco no mapa; 1000 e o valor que faz as somas fecharem (marcado como inferido).
 
 ## Padroes de jogo informados (politica.json)
-Arma elemental padrao: Tai = Fire, Nin = Thunder, Gen = Water (outros elementos = situacionais).
+Arma: Battle Level 1 ate o MAX, depois a lendaria do elemento do heroi (tai = Fire, nin = Thunder, gen = Water). A arma elemental feita cedo (Weapon Lv1 + Spirit) e item SITUACIONAL para qualquer heroi que precise de dano com escala rapida de status (indicado na tela; interruptor nas regras forca no plano).
 Loja lendaria (situacionais): Sanbi, Mirrored Shield, Kusanagi, Sword of Totsuka, Triple-Bladed, Executioner's Blade, Samehada, Chakra Blades, Stone of Gelel.
 Ordem de skills: fase de farm (maior dano base inicial primeiro) e fase de escala (skills que escalam com Tai/Nin/Gen); ultimates assim que liberadas.
