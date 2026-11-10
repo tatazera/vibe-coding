@@ -226,6 +226,8 @@ def montar(pasta):
         habs = [a for a in str(c.get("uhab", "")).split(",") if a]
         extra = [a for a in str(c.get("uabi", "")).split(",") if a]
         skills = [x for x in (parse_skill(a, jogo["a"], skin["a"]) for a in habs + extra) if x]
+        if not any(sk["tecla"] for sk in skills):
+            continue  # unidade auxiliar do mapa (sem skills jogaveis)
         primario = ATRIB.get(c.get("upra", "STR"), "tai")
         herois.append({
             "id": uid, "nome": nome, "primario": primario,

@@ -335,7 +335,13 @@ function preencherHerois(filtro){
   const f = filtro.trim().toLowerCase(), sel = $("heroi"), atual = sel.value;
   sel.innerHTML = "";
   const lista = D.herois.filter(h => !f || h.nome.toLowerCase().includes(f));
-  for(const h of lista){ const o = document.createElement("option"); o.value = h.id; o.textContent = h.nome + " ("+NOME[h.primario]+")"; sel.appendChild(o); }
+  const repetidos = {}; for(const h of D.herois) repetidos[h.nome] = (repetidos[h.nome]||0) + 1;
+  for(const h of lista){
+    const o = document.createElement("option"); o.value = h.id;
+    const nSk = h.skills.filter(s => s.tecla).length;
+    o.textContent = h.nome + " ("+NOME[h.primario]+")" + (repetidos[h.nome] > 1 ? " ["+h.id+" · "+nSk+" skills]" : "");
+    sel.appendChild(o);
+  }
   const y = lista.find(h => h.id === atual) || lista.find(h => h.nome === "Yamato") || lista[0];
   if(y) sel.value = y.id;
   sel.size = lista.length > 1 && f ? Math.min(8, lista.length) : 1;
