@@ -189,8 +189,68 @@ def parse_item(iid, jogo, skin):
         m = re.search(r"used by (taijutsu|ninjutsu|genjutsu) heroes", d)
         if m:
             familia = {"taijutsu": "tai", "ninjutsu": "nin", "genjutsu": "gen"}[m.group(1)]
-    return {"id": iid, "nome": nome, "ouro": c.get("igol"), "cristais": c.get("ilum", 0), "tipo": tipo, "familia": familia,
+    return {"id": iid, "nome": nome, "icone": s.get("iico") or "", "ouro": c.get("igol"), "cristais": c.get("ilum", 0), "tipo": tipo, "familia": familia,
             "stats": stats, "porNivel": por_nivel, "extras": extras, "descricao": desc}
+
+
+# ---------------------------------------------------------------- receitas
+def norm(n):
+    return re.sub(r"[^a-z0-9]", "", (n or "").lower())
+
+
+def parse_receita(item):
+    """Interpreta o texto 'Requires:' de itens Combine/Upgrade/Recipe."""
+    linhas = item["descricao"].split("\n")
+    if not linhas or not linhas[0].lower().startswith("requires"):
+        return None
+    comps, atual, grupo, notas = [], None, None, []
+    for ln in linhas[1:]:
+        if not ln.strip():
+            continue
+        m = re.match(r"^(\s*)-\s*(.+?)\s*$", ln)
+        if m:
+            indent, txt = len(m.group(1)), re.sub(r"\s*OR\s*$", "", m.group(2))
+            mm = re.match(r"^(.*?)\s*\[(.+?)\]?\s*$", txt)
+            nome, loja = (mm.group(1).strip(), mm.group(2)) if mm else (txt.strip(), None)
+            if indent <= 1 and re.search(r"\(Active\)|\(Passive\)", nome):
+                notas.append(nome)
+            elif indent <= 1:
+                atual = {"nome": nome, "loja": loja, "opcoes": []}
+                comps.append(atual)
+                grupo = None
+            elif atual is not None:
+                atual["opcoes"].append({"nome": nome, "loja": loja, "grupo": grupo})
+        elif ln.strip().startswith("("):
+            grupo = ln.strip().strip("()")
+        else:
+            notas.append(ln.strip())
+    if not comps:
+        return None
+    return {"componentes": comps, "notas": notas}
+
+
+def montar_receitas(itens):
+    por_nome = {}
+    for i in itens:
+        k = norm(i["nome"])
+        if k and (k not in por_nome or (i["tipo"] and not itens[por_nome[k]]["tipo"])):
+            por_nome[k] = itens.index(i)
+    achar = lambda n: itens[por_nome[norm(n)]]["id"] if norm(n) in por_nome else None
+    receitas = []
+    for i in itens:
+        r = parse_receita(i)
+        if not r:
+            continue
+        m = re.match(r"^(Combine|Upgrade|Recipe|Mission)\s*:?\s*(.+)$", i["nome"], re.I)
+        resultado = m.group(2).strip() if m else i["nome"]
+        for c in r["componentes"]:
+            c["id"] = achar(c["nome"])
+            for o in c["opcoes"]:
+                o["id"] = achar(o["nome"])
+        receitas.append({"id": i["id"], "nome": i["nome"], "tipoReceita": (m.group(1).capitalize() if m else "Outro"),
+                         "resultado": resultado, "resultadoId": achar(resultado) if m and m.group(1).lower() == "combine" else None,
+                         "icone": i["icone"], "ouro": i["ouro"], **r})
+    return receitas
 
 
 # ---------------------------------------------------------------- herois
@@ -208,7 +268,10 @@ def parse_skill(aid, jogo, skin):
     f_dano, aprox = formula(dano) if dano else (None, False)
     f_cd = formula(cd)[0] if cd else None
     f_custo = formula(custo)[0] if custo else None
-    return {"id": aid, "nome": nome, "tecla": tecla, "niveis": niveis, "descricao": ub,
+    return {"id": aid, "nome": nome, "tecla": tecla, "niveis": niveis,
+            "icone": primeiro(s.get("aart")) or "",
+            "req": {"arlv": primeiro(c.get("arlv")), "alsk": primeiro(c.get("alsk"))},
+            "descricao": ub,
             "dano_txt": dano, "dano": f_dano, "dano_aprox": aprox, "atributos": atributos_da(f_dano),
             "tipo_dano": linha(ub, "Damage Type"), "cooldown_txt": cd, "cooldown": f_cd,
             "chakra_txt": custo, "chakra": f_custo}
@@ -225,12 +288,18 @@ def montar(pasta):
             continue
         habs = [a for a in str(c.get("uhab", "")).split(",") if a]
         extra = [a for a in str(c.get("uabi", "")).split(",") if a]
-        skills = [x for x in (parse_skill(a, jogo["a"], skin["a"]) for a in habs + extra) if x]
+        skills = []
+        for a in habs + extra:
+            x = parse_skill(a, jogo["a"], skin["a"])
+            if x:
+                x["heroica"] = a in habs   # gasta pontos de skill ao subir de nivel
+                skills.append(x)
         if not any(sk["tecla"] for sk in skills):
             continue  # unidade auxiliar do mapa (sem skills jogaveis)
         primario = ATRIB.get(c.get("upra", "STR"), "tai")
         herois.append({
             "id": uid, "nome": nome, "primario": primario,
+            "icone": skin["u"].get(uid, {}).get("uico") or "",
             "base": {"tai": c.get("ustr", 0), "nin": c.get("uagi", 0), "gen": c.get("uint", 0)},
             "cresc": {"tai": c.get("ustp", 0), "nin": c.get("uagp", 0), "gen": c.get("uinp", 0)},
             "mov": c.get("umvs", 300),
@@ -241,7 +310,8 @@ def montar(pasta):
     itens = [parse_item(i, jogo["t"], skin["t"]) for i in jogo["t"] if i in skin["t"]]
     itens = [i for i in itens if i["nome"]]
     itens.sort(key=lambda i: (i["tipo"] or "z", i["ouro"] or 0))
-    return {"constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
+    receitas = montar_receitas(itens)
+    return {"receitas": receitas, "constantes": {"hp_base": 100, "hp_por_tai": 24, "chakra_por_gen": 15,
                            "armadura_base": 2, "armadura_por_nin": 0.15, "vel_ataque_por_nin": 0.05,
                            "dano_por_primario": 1.0, "dano_base_padrao": [2, 24], "cd_ataque_padrao": 1.5,
                            "fonte": "war3mapMisc.txt do mapa; conferido com Yamato nivel 9 (964 HP, 705 chakra, armadura 7, dano 49-71)"},
@@ -259,7 +329,7 @@ def main():
     Path(a.saida).write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     sk = [s for h in d["herois"] for s in h["skills"]]
     print("herois:", len(d["herois"]), "| itens:", len(d["itens"]), "| skills:", len(sk),
-          "| com formula de dano:", sum(1 for s in sk if s["dano"]),
+          "| receitas:", len(d["receitas"]), "| com formula de dano:", sum(1 for s in sk if s["dano"]),
           "(aprox:", sum(1 for s in sk if s["dano"] and s["dano_aprox"]), ")",
           "| com dano em texto:", sum(1 for s in sk if s["dano_txt"]))
 

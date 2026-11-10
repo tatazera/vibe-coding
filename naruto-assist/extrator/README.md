@@ -32,3 +32,9 @@ python extrair_mapa.py --pasta "C:\mapa_extraido"
 `pistas_atributos.txt` (linhas que citam Taijutsu/Ninjutsu/Genjutsu), `resumo.txt`.
 
 Teste interno: `python teste_extrator.py`.
+
+## Icones (para o sugestor visual)
+1. `pip install pillow`
+2. `python extrair_icones.py "C:\caminho\mapa.w3x" dados.json` (dados.json vem do sugestor)
+3. Gera `icones.json` (PNG pequenos em base64). Uso pessoal; nao publique os icones do mapa.
+4. Coloque `icones.json` ao lado de `gerar_site.py` e rode `python gerar_site.py`.
