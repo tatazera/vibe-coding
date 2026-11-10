@@ -1,7 +1,7 @@
-# Sugestor de builds
+# Ninpou Reforged Builds (antigo "Sugestor de builds")
 
 - `montar_dados.py <pasta saida_naruto>` -> `dados.json` (herois, skills com formulas, itens com bonus).
-- `gerar_site.py` -> `sugestor_builds.html` (arquivo unico; abre com dois cliques, sem internet).
+- `gerar_site.py` -> `Ninpou_Reforged_Builds_<versao>.html` (arquivo unico; abre com dois cliques, sem internet).
 
 ## Modelo (calibrado com o jogo)
 Taijutsu = Forca, Ninjutsu = Agilidade, Genjutsu = Inteligencia.
@@ -63,3 +63,7 @@ O sugestor nao esconde informacao: todas as skills do heroi aparecem (faixa "Ski
 (sem pontos para distribuir, linhas apagadas) e as sem hotkey definida no mapa (a tecla e inferida pelo tooltip ou pela primeira letra livre Q/W/E/R/T e marcada "tecla inferida").
 Skills tecnicas (unidades de treino de atributos: Taijutsu, Armor, Damage...) sao marcadas `tecnica` e nao aparecem.
 O catalogo lista todos os itens (armas de outra familia ficam marcadas "outra familia"); so entradas tecnicas de loja (Upgrade/Combine/Recipe/Mission) ficam fora, e aparecem nas arvores de "Como fazer".
+
+## Versoes
+A versao fica em `versao.txt` (r00, r01, r02...), aparece no titulo, no topo da pagina e no nome do arquivo. A cada atualizacao sobe um numero
+e o `CHANGELOG.md` registra o que mudou.
