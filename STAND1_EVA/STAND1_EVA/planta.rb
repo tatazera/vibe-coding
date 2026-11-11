@@ -28,7 +28,7 @@ module STAND1
         'proj' => false, 'grid' => false, 'ele' => false, 'dxf' => false,
         'corProj' => '#d62828', 'corGrid' => '#ffffff', 'corEle' => '#0a5bd6', 'corFita' => '#ffb000',
         'corTexto' => '#ffffff', 'escSimb' => 1.0,
-        'escDesenho' => 1.0, 'posLegenda' => 'auto'
+        'escDesenho' => 1.0, 'posLegenda' => 'auto', 'modo' => 'memorial'
       }.freeze
 
       # Escala do desenho: linhas, tracejados, símbolos e legenda têm medida fixa em
@@ -214,6 +214,54 @@ module STAND1
         out = { est: [], ele: [], ele_extra: [] }
         coletar(model.entities, Geom::Transformation.new, nil, out)
         out
+      end
+
+      # ── Modo livre: projeção sem ler tags ─────────────────────────────────────
+      # Modo 'memorial' (padrão) usa as tags ESTRUTURAS/ELÉTRICA. Modo 'livre' projeta as
+      # estruturas acima do corte sem olhar a tag: vale para qualquer grupo ou componente
+      # visível. Ficam de fora: elétrica (pelo nome), pontos do EVA, a própria camada da planta
+      # e o que está em "Ignorar seleção". Peça que cruza o corte é aberta e só a parte acima
+      # do corte entra. Afeta só as projeções (grid e elétrica seguem as tags).
+
+      def self.modo_livre?(cfg)
+        cfg['modo'].to_s == 'livre'
+      end
+
+      def self.nome_livre(e)
+        n = e.is_a?(Sketchup::Group) ? e.name.to_s.strip : ''
+        n = e.definition.name.to_s.sub(/#\d+\z/, '').strip if n.empty?
+        n.empty? ? 'Peça sem nome' : n
+      end
+
+      def self.livre_acima(model, cut)
+        return [] unless cut
+        out = []
+        livre_varrer(model.entities, Geom::Transformation.new, cut, out)
+        out
+      end
+
+      def self.livre_varrer(entities, tr, cut, out)
+        entities.each do |e|
+          next unless e.is_a?(Sketchup::ComponentInstance) || e.is_a?(Sketchup::Group)
+          next unless visivel?(e)
+          next if ignorada?(e)
+          next if e.layer && norm_tag(e.layer.name) == norm_tag(TAG_NOME)
+          etr  = tr * e.transformation
+          pts  = (0..7).map { |i| e.definition.bounds.corner(i).transform(etr) }
+          minz = pts.map(&:z).min
+          maxz = pts.map(&:z).max
+          next if maxz < cut - 0.5 * MM                        # tudo abaixo do corte
+          if minz >= cut - 0.5 * MM                            # inteira acima do corte
+            nome = nome_livre(e)
+            next if tipo_ele(nome) != :outro || ponto_tomada?(e)
+            lf = leaf(e, etr, nil, e)
+            lf[:nome] = nome
+            out << lf
+          else                                                 # cruza o corte: vê o que está acima
+            filhos = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
+            livre_varrer(filhos, etr, cut, out)
+          end
+        end
       end
 
       # ── Geometria 2D das peças ────────────────────────────────────────────────
@@ -906,7 +954,12 @@ module STAND1
         r   = { fr: fr, cut: cut, est: col[:est], ele: col[:ele], k: k,
                 vista: [], proj: [], grid: [], piso: nil, simbolos: [], fitas: [], legenda: [] }
 
-        acima, vista = col[:est].partition { |lf| cut && lf[:minz] >= cut - 0.5 * MM }
+        if modo_livre?(cfg)
+          acima = livre_acima(model, cut)
+          vista = []
+        else
+          acima, vista = col[:est].partition { |lf| cut && lf[:minz] >= cut - 0.5 * MM }
+        end
         vistos = {}
         vista.each { |lf| r[:vista].concat(contorno_leaf(lf, fr, :planta, vistos)) }
 

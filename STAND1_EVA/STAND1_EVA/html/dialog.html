@@ -817,6 +817,10 @@
 
     <div class="section" id="plantaSec">
       <div class="section-label">Planta · cenas de topo</div>
+      <div class="planta-row"><span style="color:#888">Leitura das peças</span>
+        <select id="plModo" onchange="plantaSalvar()" title="Memorial: usa as tags ESTRUTURAS/ELÉTRICA. Livre: projeta as estruturas acima do corte sem ler tags (afeta só as projeções)">
+          <option value="memorial">Memorial (tags)</option><option value="livre">Livre (sem tags)</option>
+        </select></div>
       <div class="planta-row"><label><input type="checkbox" id="plProj" onchange="plantaSalvar()"> Projeções acima do corte</label>
         <input type="color" id="plCorProj" value="#d62828" onchange="plantaSalvar()" title="Cor do tracejado"></div>
       <div class="planta-row"><label><input type="checkbox" id="plGrid" onchange="plantaSalvar()"> Grid 1 m no piso</label>
@@ -1527,7 +1531,8 @@
       corFita: document.getElementById('plCorFita').value,
       corTexto: document.getElementById('plCorTexto').value,
       escDesenho: parseFloat(document.getElementById('plEscDesenho').value) || 1,
-      posLegenda: document.getElementById('plPosLegenda').value
+      posLegenda: document.getElementById('plPosLegenda').value,
+      modo: document.getElementById('plModo').value
     };
   }
   var _plantaCarregando = false;
@@ -1548,6 +1553,7 @@
     if (c.corTexto) document.getElementById('plCorTexto').value = c.corTexto;
     if (c.escDesenho) document.getElementById('plEscDesenho').value = String(parseFloat(c.escDesenho));
     if (c.posLegenda) document.getElementById('plPosLegenda').value = c.posLegenda;
+    if (c.modo) document.getElementById('plModo').value = c.modo;
     _plantaCarregando = false;
   };
   function plantaPreview() {
