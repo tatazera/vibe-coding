@@ -49,7 +49,7 @@ module STAND1
       @dialog.add_action_callback('get_materials')  { |_, msg| send_materials(msg) }
       @dialog.add_action_callback('build_prompts')  { |_, msg| handle_build(msg) }
       @dialog.add_action_callback('check_update')   { |_, _|   AutoUpdate.check(@dialog, true) }
-      @dialog.add_action_callback('install_update') { |_, url| AutoUpdate.install(url) }
+      @dialog.add_action_callback('install_update') { |_, url| AutoUpdate.install(url, @dialog) }
       @dialog.add_action_callback('get_settings')    { |_, _|   send_settings        }
       @dialog.add_action_callback('save_settings')  { |_, msg| save_settings(msg)   }
       @dialog.add_action_callback('choose_logo_file') { |_, _|   choose_logo_file            }

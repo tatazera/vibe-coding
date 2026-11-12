@@ -105,9 +105,12 @@ module STAND1
       end
 
       # Baixa o .rbz e instala via API nativa; fallback abre a URL no navegador.
-      def self.install(url)
+      # Avisa o painel do resultado (updateInstalado / updateFalhou): sem isso o banner
+      # ficava em "Baixando atualização..." para sempre, mesmo com a instalação concluída.
+      def self.install(url, dialog = nil)
         http_async(url) do |body, ok|
           if !ok || body.nil?
+            dialog.execute_script('updateFalhou()') rescue nil if dialog
             UI.messagebox("Não foi possível baixar a atualização.\nAbrindo o download no navegador.")
             UI.openURL(url) rescue nil
             next
@@ -117,11 +120,14 @@ module STAND1
             File.open(destino, 'wb') { |f| f.write(body) }
             if Sketchup.respond_to?(:install_from_archive)
               Sketchup.install_from_archive(destino)
+              dialog.execute_script('updateInstalado()') rescue nil if dialog
               UI.messagebox("✅ Atualização instalada!\n\nReinicie o SketchUp para concluir.")
             else
+              dialog.execute_script('updateFalhou()') rescue nil if dialog
               UI.openURL(url)
             end
           rescue => e
+            dialog.execute_script('updateFalhou()') rescue nil if dialog
             UI.messagebox("Falha ao instalar a atualização:\n#{e.message}\n\nAbrindo o download no navegador.")
             UI.openURL(url) rescue nil
           end

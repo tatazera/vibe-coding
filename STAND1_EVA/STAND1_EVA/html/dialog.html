@@ -1722,6 +1722,7 @@
     var banner = document.getElementById('updateBanner');
     document.getElementById('updateMsg').textContent =
       'Nova versão ' + info.versao + ' disponível.' + (info.notas ? ' ' + info.notas : '');
+    document.getElementById('updInstall').style.display = '';
     document.getElementById('updInstall').onclick = function() {
       document.getElementById('updateMsg').textContent = 'Baixando atualização...';
       su('install_update', info.rbz);
@@ -1741,6 +1742,17 @@
     var old = el.textContent;
     el.textContent = 'erro ao checar';
     setTimeout(function() { el.textContent = old; }, 2500);
+  };
+
+  // Resultado da instalação (chamado pelo Ruby): troca o "Baixando..." que ficava girando.
+  window.updateInstalado = function() {
+    document.getElementById('updateMsg').textContent = '✅ Atualização instalada. Reinicie o SketchUp para concluir.';
+    document.getElementById('updInstall').style.display = 'none';
+  };
+
+  window.updateFalhou = function() {
+    document.getElementById('updateMsg').textContent = 'Não foi possível instalar. O download foi aberto no navegador.';
+    document.getElementById('updInstall').style.display = 'none';
   };
 
   function dismissUpdate() {
