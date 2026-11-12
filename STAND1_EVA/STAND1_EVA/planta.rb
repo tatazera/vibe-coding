@@ -221,7 +221,7 @@ module STAND1
       # estruturas acima do corte sem olhar a tag: vale para qualquer grupo ou componente
       # visível. Ficam de fora: elétrica (pelo nome), pontos do EVA, a própria camada da planta
       # e o que está em "Ignorar seleção". Peça que cruza o corte é aberta e só a parte acima
-      # do corte entra. Afeta só as projeções (grid e elétrica seguem as tags).
+      # do corte entra. O grid também acha o piso sem tag (livre_pisos); a elétrica segue as tags.
 
       def self.modo_livre?(cfg)
         cfg['modo'].to_s == 'livre'
@@ -260,7 +260,52 @@ module STAND1
           else                                                 # cruza o corte: vê o que está acima
             filhos = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
             livre_varrer(filhos, etr, cut, out)
+            # Geometria solta da própria peça (pórtico desenhado como um grupo só: pernas no
+            # piso e travessa no alto). Entra só o que está inteiro acima do corte.
+            nome = nome_livre(e)
+            if tipo_ele(nome) == :outro && filhos.any? { |x| x.is_a?(Sketchup::Face) || x.is_a?(Sketchup::Edge) }
+              lf = leaf(e, etr, nil, e)
+              lf[:nome]    = nome
+              lf[:zmin]    = cut - 0.5 * MM
+              lf[:diretas] = true
+              out << lf
+            end
           end
+        end
+      end
+
+      # Piso no modo livre: sem a tag ESTRUTURAS, os candidatos são os grupos/componentes
+      # visíveis (em qualquer nível) com geometria própria abaixo do corte — pelo nome
+      # (piso, tablado...) ou com pegada de pelo menos 1 m². Cada candidato lê só as
+      # faces dele (sem os filhos), para o topo do piso não se misturar com mesa e balcão.
+      PISO_MIN_M2 = 1.0
+
+      def self.livre_pisos(model, cut)
+        out = []
+        livre_pisos_varrer(model.entities, Geom::Transformation.new, cut, out)
+        out
+      end
+
+      def self.livre_pisos_varrer(entities, tr, cut, out)
+        entities.each do |e|
+          next unless e.is_a?(Sketchup::ComponentInstance) || e.is_a?(Sketchup::Group)
+          next unless visivel?(e)
+          next if ignorada?(e)
+          next if e.layer && norm_tag(e.layer.name) == norm_tag(TAG_NOME)
+          etr    = tr * e.transformation
+          filhos = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
+          nome   = nome_livre(e)
+          if tipo_ele(nome) == :outro && !ponto_tomada?(e) && filhos.any? { |x| x.is_a?(Sketchup::Face) }
+            lf = leaf(e, etr, nil, e)
+            xs = lf[:pts].map(&:x); ys = lf[:pts].map(&:y)
+            pegada = (xs.max - xs.min) * (ys.max - ys.min) / (M * M)
+            if (cut.nil? || lf[:minz] < cut - 0.5 * MM) && (nome =~ PALAVRAS_PISO || pegada >= PISO_MIN_M2)
+              lf[:nome]    = nome
+              lf[:diretas] = true
+              out << lf
+            end
+          end
+          livre_pisos_varrer(filhos, etr, cut, out)
         end
       end
 
@@ -279,7 +324,9 @@ module STAND1
       end
 
       # modo :planta → só faces paralelas à vista (topo/fundo); :vista → faces voltadas p/ câmera.
-      def self.varrer(ents, tr, fr, modo, acc, cnt)
+      # zmin: só faces inteiras acima dessa altura (parte de peça que cruza o corte).
+      # fundo = false: só a geometria solta da própria peça, sem descer nos grupos filhos.
+      def self.varrer(ents, tr, fr, modo, acc, cnt, zmin = nil, fundo = true)
         ents.each do |e|
           return if cnt[0] > MAX_FACES
           next unless visivel?(e)
@@ -293,16 +340,17 @@ module STAND1
             cnt[0] += 1
             loops = e.loops.sort_by { |l| l.outer? ? 0 : 1 }
             p3    = loops.map { |l| l.vertices.map { |v| v.position.transform(tr) } }
+            next if zmin && p3[0].map(&:z).min < zmin
             polys = p3.map { |l| l.map { |p| proj(p, fr) } }
             p0    = p3[0][0]
             off   = ((n.x * p0.x + n.y * p0.y + n.z * p0.z) / MM).round
             acc << { loops: polys, dd: dd, z: p3[0].map(&:z).max,
                      area: area_loops(polys),
                      plano: [n.x.round(2), n.y.round(2), n.z.round(2), off] }
-          elsif e.is_a?(Sketchup::Group)
-            varrer(e.entities, tr * e.transformation, fr, modo, acc, cnt)
-          elsif e.is_a?(Sketchup::ComponentInstance)
-            varrer(e.definition.entities, tr * e.transformation, fr, modo, acc, cnt)
+          elsif fundo && e.is_a?(Sketchup::Group)
+            varrer(e.entities, tr * e.transformation, fr, modo, acc, cnt, zmin, fundo)
+          elsif fundo && e.is_a?(Sketchup::ComponentInstance)
+            varrer(e.definition.entities, tr * e.transformation, fr, modo, acc, cnt, zmin, fundo)
           end
         end
       end
@@ -316,7 +364,7 @@ module STAND1
 
       # Arestas "deitadas" em relação à vista (na planta: horizontais), projetadas.
       # Serve a peças sem face de topo: chapa curva, testeira só com faces verticais.
-      def self.varrer_arestas(ents, tr, fr, acc, vistos, cnt)
+      def self.varrer_arestas(ents, tr, fr, acc, vistos, cnt, zmin = nil, fundo = true)
         ents.each do |e|
           return if cnt[0] > MAX_FACES * 3
           next unless visivel?(e)
@@ -324,6 +372,7 @@ module STAND1
             cnt[0] += 1
             p = e.start.position.transform(tr)
             q = e.end.position.transform(tr)
+            next if zmin && [p.z, q.z].min < zmin
             dx = q.x - p.x; dy = q.y - p.y; dz = q.z - p.z
             len = Math.sqrt(dx * dx + dy * dy + dz * dz)
             next if len < 1e-6
@@ -333,17 +382,17 @@ module STAND1
             next if k.nil? || vistos[k]
             vistos[k] = true
             acc << [a, b]
-          elsif e.is_a?(Sketchup::Group)
-            varrer_arestas(e.entities, tr * e.transformation, fr, acc, vistos, cnt)
-          elsif e.is_a?(Sketchup::ComponentInstance)
-            varrer_arestas(e.definition.entities, tr * e.transformation, fr, acc, vistos, cnt)
+          elsif fundo && e.is_a?(Sketchup::Group)
+            varrer_arestas(e.entities, tr * e.transformation, fr, acc, vistos, cnt, zmin, fundo)
+          elsif fundo && e.is_a?(Sketchup::ComponentInstance)
+            varrer_arestas(e.definition.entities, tr * e.transformation, fr, acc, vistos, cnt, zmin, fundo)
           end
         end
       end
 
       def self.faces_leaf(lf, fr, modo)
         acc = []
-        varrer(lf[:inst].definition.entities, lf[:tr], fr, modo, acc, [0])
+        varrer(lf[:inst].definition.entities, lf[:tr], fr, modo, acc, [0], lf[:zmin], !lf[:diretas])
         acc
       end
 
@@ -410,7 +459,12 @@ module STAND1
         tipo  = :faces
         if segs.empty?
           tipo = :arestas
-          varrer_arestas(lf[:inst].definition.entities, lf[:tr], fr, segs, {}, [0])
+          varrer_arestas(lf[:inst].definition.entities, lf[:tr], fr, segs, {}, [0], lf[:zmin], !lf[:diretas])
+        end
+        if segs.empty? && lf[:zmin]
+          # parte de peça que cruza o corte: a caixa seria a peça inteira, não só o que está acima
+          metodo << :vazio if metodo
+          return []
         end
         if segs.empty?
           tipo = :caixa
@@ -986,9 +1040,12 @@ module STAND1
         end
 
         if cfg['grid']
-          r[:piso] = achar_piso(col[:est], fr, cut)
+          livre = modo_livre?(cfg)
+          r[:piso] = achar_piso(livre ? livre_pisos(model, cut) : col[:est], fr, cut)
           if r[:piso]
             r[:grid] = grid_segs(r[:piso][:faces], 1.0)
+          elsif livre
+            avisos << "#{nome}: piso não encontrado (nenhuma superfície de piso abaixo do corte) — grid ignorado."
           else
             avisos << "#{nome}: piso não encontrado na tag ESTRUTURAS — grid ignorado."
           end
