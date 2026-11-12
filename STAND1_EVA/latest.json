@@ -1,5 +1,5 @@
 {
-    "versao":  "2.5.3",
-    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.5.3.rbz",
-    "notas":  "v2.5.3: CORRIGIDO a pasta de destino das exportacoes, que voltava vazia a cada abertura (as preferencias agora ficam salvas num arquivo proprio). PLANTA: linhas, tracejados, simbolos de eletrica e legenda crescem sozinhos conforme o tamanho da planta, com ajuste manual em \"Espessura e tamanho\" (o DXF continua em tamanho real). Nova opcao \"Posicao da legenda\": automatica, ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem."
+    "versao":  "2.6.0",
+    "rbz":  "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.6.0.rbz",
+    "notas":  "v2.6.0: PLANTA: novo seletor \"Leitura das peças\". Memorial (tags) é o padrão e segue igual. Livre (sem tags) projeta as estruturas acima do corte sem depender das tags ESTRUTURAS: elétrica, pontos do EVA e peças em \"Ignorar seleção\" ficam de fora. Grid e elétrica continuam lendo pelas tags. v2.5.3: CORRIGIDO a pasta de destino das exportacoes, que voltava vazia a cada abertura (as preferencias agora ficam salvas num arquivo proprio). PLANTA: linhas, tracejados, simbolos de eletrica e legenda crescem sozinhos conforme o tamanho da planta, com ajuste manual em \"Espessura e tamanho\" (o DXF continua em tamanho real). Nova opcao \"Posicao da legenda\": automatica, ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem."
 }
