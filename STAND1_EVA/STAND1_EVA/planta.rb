@@ -227,22 +227,64 @@ module STAND1
         cfg['modo'].to_s == 'livre'
       end
 
+      # Limites do modo livre. Sem tag, a leitura vê o arquivo todo; num modelo com vários
+      # espaços 3D só interessa o que está dentro do quadro da cena, e a leitura não pode
+      # travar o SketchUp: passou do limite, para e avisa.
+      LIVRE_MARGEM  = 0.15       # folga em volta do enquadramento (fração do quadro)
+      LIVRE_MAX_NOS = 40_000     # grupos/componentes olhados por leitura
+      LIVRE_MAX_SEG = 20.0       # segundos por leitura
+      GRID_MAX_SEGS = 4_000      # linhas de grid desenháveis
+      PROJ_MAX_SEGS = 20_000     # segmentos de projeção desenháveis
+      PISO_MAX_VEZES = 2.5       # piso maior que isso × o quadro = piso geral, não do estande
+
+      def self.novo_estado
+        { nos: 0, estourou: false, t0: Time.now }
+      end
+
+      def self.livre_estourou?(estado)
+        return false unless estado
+        return true if estado[:estourou]
+        estado[:nos] += 1
+        if estado[:nos] > LIVRE_MAX_NOS || (estado[:nos] % 200 == 0 && Time.now - estado[:t0] > LIVRE_MAX_SEG)
+          estado[:estourou] = true
+        end
+        estado[:estourou]
+      end
+
+      # A caixa da peça está toda fora do quadro da cena (mais a folga)?
+      def self.fora_do_quadro?(pts, fr, area)
+        return false unless area && fr
+        us = []; vs = []
+        pts.each { |q| u, v = proj(q, fr); us << u; vs << v }
+        mu = (area[:umax] - area[:umin]) * LIVRE_MARGEM
+        mv = (area[:vmax] - area[:vmin]) * LIVRE_MARGEM
+        us.max < area[:umin] - mu || us.min > area[:umax] + mu ||
+          vs.max < area[:vmin] - mv || vs.min > area[:vmax] + mv
+      end
+
+      def self.pegada_uv(pts, fr)
+        us = []; vs = []
+        pts.each { |q| u, v = proj(q, fr); us << u; vs << v }
+        (us.max - us.min) * (vs.max - vs.min)
+      end
+
       def self.nome_livre(e)
         n = e.is_a?(Sketchup::Group) ? e.name.to_s.strip : ''
         n = e.definition.name.to_s.sub(/#\d+\z/, '').strip if n.empty?
         n.empty? ? 'Peça sem nome' : n
       end
 
-      def self.livre_acima(model, cut)
+      def self.livre_acima(model, cut, fr = nil, area = nil, estado = nil)
         return [] unless cut
         out = []
-        livre_varrer(model.entities, Geom::Transformation.new, cut, out)
+        livre_varrer(model.entities, Geom::Transformation.new, cut, out, fr, area, estado)
         out
       end
 
-      def self.livre_varrer(entities, tr, cut, out)
+      def self.livre_varrer(entities, tr, cut, out, fr = nil, area = nil, estado = nil)
         entities.each do |e|
           next unless e.is_a?(Sketchup::ComponentInstance) || e.is_a?(Sketchup::Group)
+          return if livre_estourou?(estado)
           next unless visivel?(e)
           next if ignorada?(e)
           next if e.layer && norm_tag(e.layer.name) == norm_tag(TAG_NOME)
@@ -251,6 +293,7 @@ module STAND1
           minz = pts.map(&:z).min
           maxz = pts.map(&:z).max
           next if maxz < cut - 0.5 * MM                        # tudo abaixo do corte
+          next if fora_do_quadro?(pts, fr, area)               # outro espaço do arquivo
           if minz >= cut - 0.5 * MM                            # inteira acima do corte
             nome = nome_livre(e)
             next if tipo_ele(nome) != :outro || ponto_tomada?(e)
@@ -259,7 +302,7 @@ module STAND1
             out << lf
           else                                                 # cruza o corte: vê o que está acima
             filhos = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
-            livre_varrer(filhos, etr, cut, out)
+            livre_varrer(filhos, etr, cut, out, fr, area, estado)
             # Geometria solta da própria peça (pórtico desenhado como um grupo só: pernas no
             # piso e travessa no alto). Entra só o que está inteiro acima do corte.
             nome = nome_livre(e)
@@ -280,32 +323,37 @@ module STAND1
       # faces dele (sem os filhos), para o topo do piso não se misturar com mesa e balcão.
       PISO_MIN_M2 = 1.0
 
-      def self.livre_pisos(model, cut)
+      def self.livre_pisos(model, cut, fr = nil, area = nil, estado = nil)
         out = []
-        livre_pisos_varrer(model.entities, Geom::Transformation.new, cut, out)
+        livre_pisos_varrer(model.entities, Geom::Transformation.new, cut, out, fr, area, estado)
         out
       end
 
-      def self.livre_pisos_varrer(entities, tr, cut, out)
+      def self.livre_pisos_varrer(entities, tr, cut, out, fr = nil, area = nil, estado = nil)
         entities.each do |e|
           next unless e.is_a?(Sketchup::ComponentInstance) || e.is_a?(Sketchup::Group)
+          return if livre_estourou?(estado)
           next unless visivel?(e)
           next if ignorada?(e)
           next if e.layer && norm_tag(e.layer.name) == norm_tag(TAG_NOME)
           etr    = tr * e.transformation
+          lf     = leaf(e, etr, nil, e)
+          next if fora_do_quadro?(lf[:pts], fr, area)          # outro espaço do arquivo
           filhos = e.is_a?(Sketchup::Group) ? e.entities : e.definition.entities
           nome   = nome_livre(e)
           if tipo_ele(nome) == :outro && !ponto_tomada?(e) && filhos.any? { |x| x.is_a?(Sketchup::Face) }
-            lf = leaf(e, etr, nil, e)
             xs = lf[:pts].map(&:x); ys = lf[:pts].map(&:y)
             pegada = (xs.max - xs.min) * (ys.max - ys.min) / (M * M)
-            if (cut.nil? || lf[:minz] < cut - 0.5 * MM) && (nome =~ PALAVRAS_PISO || pegada >= PISO_MIN_M2)
+            # piso geral do pavilhão (muito maior que o quadro) não é o piso deste estande
+            geral = area && fr &&
+                    pegada_uv(lf[:pts], fr) > PISO_MAX_VEZES * (area[:umax] - area[:umin]) * (area[:vmax] - area[:vmin])
+            if !geral && (cut.nil? || lf[:minz] < cut - 0.5 * MM) && (nome =~ PALAVRAS_PISO || pegada >= PISO_MIN_M2)
               lf[:nome]    = nome
               lf[:diretas] = true
               out << lf
             end
           end
-          livre_pisos_varrer(filhos, etr, cut, out)
+          livre_pisos_varrer(filhos, etr, cut, out, fr, area, estado)
         end
       end
 
@@ -1008,9 +1056,13 @@ module STAND1
         r   = { fr: fr, cut: cut, est: col[:est], ele: col[:ele], k: k,
                 vista: [], proj: [], grid: [], piso: nil, simbolos: [], fitas: [], legenda: [] }
 
-        if modo_livre?(cfg)
-          acima = livre_acima(model, cut)
+        livre  = modo_livre?(cfg)
+        area   = livre ? area_visivel(cam, model.active_view) : nil
+        estado = livre ? novo_estado : nil
+        if livre
+          acima = livre_acima(model, cut, fr, area, estado)
           vista = []
+          avisos << "#{nome}: modelo muito pesado — leitura das projeções interrompida (pode estar incompleta)." if estado[:estourou]
         else
           acima, vista = col[:est].partition { |lf| cut && lf[:minz] >= cut - 0.5 * MM }
         end
@@ -1031,6 +1083,10 @@ module STAND1
               caixa << lf[:nome] if met.first == :caixa
             end
             avisos << "#{nome}: nada de estrutura acima do corte." if acima.empty?
+            if r[:proj].size > PROJ_MAX_SEGS
+              avisos << "#{nome}: projeção com #{r[:proj].size} segmentos (modelo pesado demais) — ignorada para não travar o SketchUp."
+              r[:proj] = []
+            end
             unless caixa.empty?
               avisos << "#{nome}: contorno aproximado pela caixa em #{caixa.uniq.join(', ')} (sem faces/arestas legíveis)."
             end
@@ -1040,10 +1096,15 @@ module STAND1
         end
 
         if cfg['grid']
-          livre = modo_livre?(cfg)
-          r[:piso] = achar_piso(livre ? livre_pisos(model, cut) : col[:est], fr, cut)
+          estado_piso = livre ? novo_estado : nil
+          r[:piso] = achar_piso(livre ? livre_pisos(model, cut, fr, area, estado_piso) : col[:est], fr, cut)
+          avisos << "#{nome}: modelo muito pesado — leitura do piso interrompida." if estado_piso && estado_piso[:estourou]
           if r[:piso]
             r[:grid] = grid_segs(r[:piso][:faces], 1.0)
+            if r[:grid].size > GRID_MAX_SEGS
+              avisos << "#{nome}: grid com #{r[:grid].size} linhas (piso grande demais) — ignorado para não travar o SketchUp."
+              r[:grid] = []
+            end
           elsif livre
             avisos << "#{nome}: piso não encontrado (nenhuma superfície de piso abaixo do corte) — grid ignorado."
           else
