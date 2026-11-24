@@ -1439,6 +1439,15 @@ module STAND1
       # Export: move o modelo para um grupo temporário que leva o corte junto. Assim o
       # corte só recorta o modelo, e a planta (no nível de cima) pode ficar acima dele —
       # por cima das paredes cortadas. Roda dentro da operação que é desfeita no fim.
+      # Plano [a, b, c, d] do mundo → [ponto, normal] nas coordenadas de quem tem `tr`.
+      def self.plano_local(plano, tr)
+        a, b, c, d = plano
+        inv = tr.inverse
+        pt  = Geom::Point3d.new(-a * d, -b * d, -c * d).transform(inv)
+        vt  = Geom::Vector3d.new(a, b, c).transform(inv)
+        [pt, vt]
+      end
+
       def self.isolar_corte(model)
         return false unless model.active_path.nil?
         sp = (model.entities.active_section_plane rescue nil)
@@ -1447,7 +1456,10 @@ module STAND1
         itens = model.entities.to_a.reject { |e| e == sp }
         return false if itens.empty?
         g = model.entities.add_group(itens)
-        novo = g.entities.add_section_plane(plano)
+        # O grupo nasce com a origem nos eixos do modelo; se os eixos foram movidos, a
+        # origem dele não é a do mundo. O plano tem de ir em coordenadas do grupo, senão
+        # o corte cai noutro lugar (ex.: 100 m abaixo) e some o projeto inteiro.
+        novo = g.entities.add_section_plane(plano_local(plano, g.transformation))
         g.entities.active_section_plane = novo
         model.entities.active_section_plane = nil
         true
@@ -1528,6 +1540,7 @@ module STAND1
         # isola depois de ler: a leitura precisa do corte ainda no nível de cima
         r[:isolado] = isolar && r[:cut] ? isolar_corte(model) : false
         ov = model.entities.add_group
+        ov.transformation = Geom::Transformation.new unless (ov.transformation.identity? rescue true)
         ov.name = 'EVA Planta'
         ov.set_attribute(ATTR, OV_FLAG, '1')
         tag = get_tag(model)
