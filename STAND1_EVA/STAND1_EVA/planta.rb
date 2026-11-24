@@ -632,7 +632,9 @@ module STAND1
 
       # Faces de topo do piso: peças com "piso"/"tablado"/... no nome (todas) ou, na falta,
       # a peça de estrutura com a maior face de topo.
-      def self.achar_piso(est, fr, cut)
+      # unir = true (modo livre): o piso pode ser várias peças lado a lado (metades, carpete
+      # rente); junta todas as que têm topo no mesmo nível da escolhida.
+      def self.achar_piso(est, fr, cut, unir = false)
         cand = est.reject { |lf| cut && lf[:minz] >= cut - 0.5 * MM }
         info = cand.map do |lf|
           topo = faces_leaf(lf, fr, :planta).select { |f| f[:dd] < 0 }
@@ -642,9 +644,17 @@ module STAND1
         return nil if info.empty?
         escolhidos = info.select { |i| i[:lf][:nome] =~ PALAVRAS_PISO }
         escolhidos = [info.max_by { |i| i[:maior] }] if escolhidos.empty?
+        z0 = nil
+        if unir
+          z0 = escolhidos.map { |i| i[:topo].map { |f| f[:z] }.max }.max
+          info.each do |i|
+            next if escolhidos.include?(i)
+            escolhidos << i if i[:topo].any? { |f| (f[:z] - z0).abs < 3 * MM }
+          end
+        end
         faces = []
         escolhidos.each do |i|
-          zt = i[:topo].map { |f| f[:z] }.max
+          zt = z0 || i[:topo].map { |f| f[:z] }.max
           faces.concat(i[:topo].select { |f| (f[:z] - zt).abs < 3 * MM })
         end
         return nil if faces.empty?
@@ -1097,7 +1107,7 @@ module STAND1
 
         if cfg['grid']
           estado_piso = livre ? novo_estado : nil
-          r[:piso] = achar_piso(livre ? livre_pisos(model, cut, fr, area, estado_piso) : col[:est], fr, cut)
+          r[:piso] = achar_piso(livre ? livre_pisos(model, cut, fr, area, estado_piso) : col[:est], fr, cut, livre)
           avisos << "#{nome}: modelo muito pesado — leitura do piso interrompida." if estado_piso && estado_piso[:estourou]
           if r[:piso]
             r[:grid] = grid_segs(r[:piso][:faces], 1.0)
