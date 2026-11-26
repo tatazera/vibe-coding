@@ -1,5 +1,10 @@
 # encoding: UTF-8
-# prompt_builder.rb — Fase 2: leitura de câmera/materiais e montagem do prompt
+# prompt_builder.rb — monta o prompt de render (Nano Banana) a partir de blocos fixos
+# curtos + os ajustes do usuário.
+#
+# A câmera e a geometria vêm do PNG anexado, então o texto NÃO descreve ângulo nem o
+# estande. Ele só diz o que a imagem não sabe: ambiente, luz, pessoas e as
+# substituições de material/elemento (gerais e por cena).
 
 require 'set'
 
@@ -8,160 +13,78 @@ module STAND1
 
     module PromptBuilder
 
-      # ── Descrição fixa do estande (independe do ambiente) ────────────────────
+      # ── Blocos fixos (idênticos em todo prompt do mesmo ambiente) ────────────
 
-      # Intro enxuta: só a estética. A obrigação de "preservar o projeto" migrou para a
-      # âncora (2º parágrafo) e para o CRITICAL de ancoragem — evita redundância.
-      INTRO = <<~TXT.strip
-        Contemporary exhibition booth with a clean architectural language, precise geometries, \
-        balanced proportions and refined details.
-      TXT
-
-      # ── Modo "imagem anexada" (v1.4.0) ────────────────────────────────────────
-      # Quando o usuário anexa o PNG exportado da viewport junto do prompt (o Nano
-      # Banana aceita imagem + texto), a ancoragem vem da IMAGEM: o [TASK] manda
-      # transformar a foto preservando tudo, e o [SCENE]/ângulo SAI do prompt —
-      # a câmera já está na imagem; descrevê-la seria redundante ou conflitante.
-      IMAGE_TASK = <<~TXT.strip
-        The attached image is the exact viewport export of a SketchUp model of an exhibition \
-        booth. Transform this exact image into an ultra-realistic professional photograph. \
-        Keep the exact camera angle, framing, perspective, geometry, proportions and layout \
-        shown in the image — only upgrade realism: materials, textures, lighting, reflections, \
-        environment and people.
-      TXT
-
-      # Âncora do prompt: a imagem anexada.
-      IMAGE_ANCHOR_CRITICAL =
-        'MATCH THE ATTACHED IMAGE EXACTLY: SAME CAMERA ANGLE, SAME FRAMING, SAME GEOMETRY, ' \
-        'SAME PROPORTIONS AND SAME LAYOUT. DO NOT ADD, REMOVE, MOVE, RESIZE OR REDESIGN ANY ' \
-        'ELEMENT OF THE BOOTH.'
-
-      # Nota para imagens de referência extras (multi-imagem): a 1ª imagem é a
-      # viewport (âncora); as seguintes são referências de elementos específicos.
-      REFERENCES_NOTE =
-        'The first attached image is the booth viewport (the anchor). Any additional attached ' \
-        'images are visual references for specific elements — logos, materials, colors or finishes. ' \
-        'Reproduce those referenced elements faithfully and apply them to the matching parts of the ' \
-        'booth, WITHOUT changing the geometry, camera or layout of the viewport.'
-
-      # Bloco de pessoas — REAIS, fotografadas (combate o look de boneco/CGI).
-      PEOPLE = <<~TXT.strip
-        The people are real human beings captured in a candid street and documentary photograph — \
-        genuinely photographed, never rendered, illustrated or computer-generated. Adults of mixed \
-        gender, age and ethnicity, with believable body weight and bone structure, relaxed natural \
-        muscles, asymmetric real faces and genuine micro-expressions, real skin with natural tone \
-        variation, pores, freckles and minor blemishes, messy real hair, and ordinary casual \
-        clothing with natural creases, folds and slight wear. They walk, talk, gesture and interact \
-        spontaneously and mid-motion, with the imperfect, organic, slightly unposed quality of real \
-        life — never stiff, never static, never aligned. Foreground people sharp; more distant \
-        people with natural shallow depth of field and subtle motion blur. At least 4 people at \
-        varying distances from the camera. They must be indistinguishable from real photographed \
-        humans.
-      TXT
-
-      # Reforço como CRITICAL quando há público — mira direto no look de boneco/CGI.
-      PEOPLE_CRITICAL =
-        'PEOPLE MUST LOOK LIKE REAL PHOTOGRAPHED HUMANS WITH NATURAL SKIN, BODY WEIGHT, POSTURE ' \
-        'AND GENUINE EXPRESSIONS. THEY ARE NOT 3D-RENDERED OR CGI CHARACTERS, NOT VIDEO-GAME OR ' \
-        'POSER/DAZ FIGURES, NOT STIFF ARCHITECTURAL SCALE-FIGURE ENTOURAGE, NOT MANNEQUINS, ' \
-        'DOLLS OR WAX FIGURES, AND NEVER PLASTIC OR SHINY.'
-
-      # ── Ambientes selecionáveis (background do render) ───────────────────────
-      # :env    => descrição do entorno; :people => inclui figuras humanas?
-
-      # ── Tipo / configuração do estande ───────────────────────────────────────
-
-      BOOTH_TYPES = {
-        'ilha'     => 'The booth is configured as an island stand, open and accessible on all four sides.',
-        'ponta'    => 'The booth is configured as a peninsula stand, open on three sides with one back wall.',
-        'esquina'  => 'The booth is configured as a corner stand, open on two adjacent sides, with solid walls on the other two.',
-        'corredor' => 'The booth is configured as an inline booth, open on the front side only, with solid side and back walls.'
+      BASE = {
+        'interno' => 'Imagem foto-realística interna de stand em pavilhão tecnológico de feiras, ' \
+                     'teto em grid metálico preto e luminárias LED, sem estruturas aéreas, ' \
+                     'sem alterar a geometria.',
+        'externo' => 'Imagem foto-realística de stand em feira ao ar livre, sob céu aberto com ' \
+                     'luz natural, outros estandes e tendas ao fundo, sem estruturas aéreas, ' \
+                     'sem alterar a geometria.'
       }.freeze
 
-      ENVIRONMENTS = {
-        'feira' => {
-          people: true,
-          env: 'Located in a large industrial international trade fair pavilion, standing out ' \
-               'within the circulation flow. The surrounding environment reveals black-painted ' \
-               'steel structures supporting the ceiling, exposed ceiling grids and suspended ' \
-               'lighting systems, with other booths visible in the background, slightly out of ' \
-               'focus but realistic. The pavilion floor is entirely covered in polished concrete.'
-        },
-        'feira_externa' => {
-          people: true,
-          env: 'Located in an open-air outdoor trade fair area, an event held outside under the ' \
-               'open sky. The booth stands out along the pedestrian circulation flow, with other ' \
-               'outdoor booths and event tents visible in the background, slightly out of focus ' \
-               'but realistic. Natural daylight with a clear sky and soft clouds, real outdoor ' \
-               'context with trees and landscaping in the distance. The ground is covered with ' \
-               'outdoor event flooring or paved concrete.'
-        },
-        'neutro_claro' => {
-          people: false,
-          env: 'The booth is presented in isolation inside a bright, sophisticated minimalist design ' \
-               'studio with a clean, seamless light off-white cyclorama backdrop (infinity cove) ' \
-               'that curves smoothly from floor to wall with no visible edges or horizon line. ' \
-               'Elegant, refined, high-end showroom and art-gallery atmosphere. Bright, soft, even ' \
-               'and beautifully diffused studio lighting with gentle highlights, a smooth subtle ' \
-               'gradient and a delicate soft reflection on the floor. No surrounding structures, no ' \
-               'other booths and no environmental context — only the booth on a pristine minimalist ' \
-               'backdrop, emphasizing its form, proportions and materials.'
-        },
-        'neutro_cinza' => {
-          people: false,
-          env: 'The booth is presented in isolation inside a bright, sophisticated minimalist design ' \
-               'studio with a clean, seamless medium neutral grey cyclorama backdrop (infinity cove) ' \
-               'that curves smoothly from floor to wall with no visible edges or horizon line. ' \
-               'Elegant, refined, high-end showroom and art-gallery atmosphere. Bright, soft, even ' \
-               'and beautifully diffused studio lighting with gentle highlights, a smooth subtle ' \
-               'gradient and a delicate soft reflection on the floor. No surrounding structures, no ' \
-               'other booths and no environmental context — only the booth on a pristine minimalist ' \
-               'backdrop, emphasizing its form, proportions and materials.'
-        },
-        'neutro_escuro' => {
-          people: false,
-          env: 'The booth is presented in isolation inside a sophisticated minimalist design studio ' \
-               'with a clean, seamless dark charcoal cyclorama backdrop (infinity cove) that curves ' \
-               'smoothly from floor to wall with no visible edges or horizon line. Elegant, refined, ' \
-               'high-end showroom and art-gallery atmosphere. The booth itself is brightly and ' \
-               'beautifully lit with soft, even, well-diffused studio lighting and gentle highlights, ' \
-               'standing out against the dark backdrop, with a smooth subtle gradient and a delicate ' \
-               'soft reflection on the floor. No surrounding structures, no other booths and no ' \
-               'environmental context — only the booth on a pristine minimalist backdrop, ' \
-               'emphasizing its form, proportions and materials.'
-        }
+      LIGHT = {
+        'interno' => 'Luz geral do pavilhão em branco %s.',
+        'externo' => 'Iluminação do estande em branco %s.'
       }.freeze
 
-      CAMERA_TECH = <<~TXT.strip
-        Photography taken with a Canon EOS R5, 35mm lens, aperture f/2.8, high dynamic range. \
-        Ultra-realistic architectural photography. Sharp material definition, defined textures, \
-        realistic reflections, precise shadow behavior.
-      TXT
+      LIGHT_TONE = { 'frio' => 'frio', 'quente' => 'quente' }.freeze
 
-      LIGHTING = {
-        'frio'   => 'cold white',
-        'quente' => 'warm white'
-      }.freeze
+      PEOPLE = 'Adicionar pessoas foto-realísticas circulando.'.freeze
 
-      # ── Ângulos de câmera para OVERRIDE manual ───────────────────────────────
-      # Quando o usuário escolhe um destes por cena, a frase abaixo SUBSTITUI por
-      # completo a leitura automática (camera_description). '' ou 'auto' = automático.
-      CAMERA_OVERRIDES = {
-        'centered'  => 'Perspective eye-level view of the booth, seen centered and head-on to its main facade, camera at approximately 1.6m height.',
-        'tq_left'   => 'Perspective eye-level view of the booth, seen at a three-quarter corner angle from the left, camera at approximately 1.6m height.',
-        'tq_right'  => 'Perspective eye-level view of the booth, seen at a three-quarter corner angle from the right, camera at approximately 1.6m height.',
-        'lateral'   => 'Perspective eye-level view of the booth, seen from the side along its length, camera at approximately 1.6m height.',
-        'iso'       => 'Isometric axonometric view of the booth, three-quarter angle showing two adjacent sides.',
-        'plan'      => 'Top-down orthographic plan view of the booth, seen directly from above.',
-        'aerial'    => 'High-angle aerial perspective view of the booth, looking down at a three-quarter angle.',
-        'elevation' => 'Orthographic front elevation view of the booth, head-on and perfectly level.'
-      }.freeze
+      # Aceita as chaves antigas ('feira', 'feira_externa', neutros...) de projetos já salvos.
+      def self.normalize_env(key)
+        %w[externo feira_externa].include?(key.to_s) ? 'externo' : 'interno'
+      end
 
-      # A preservação de geometria/proporções fica no IMAGE_ANCHOR_CRITICAL (evita duplicar).
-      CRITICALS_FIXED = [
-        'DO NOT ADD SUSPENDED BOXTRUSS STRUCTURES.',
-        'DO NOT ADD NEW LOGOS OR GRAPHICS NOT PRESENT IN THE ORIGINAL PROJECT.'
-      ].freeze
+      # ── Frases ───────────────────────────────────────────────────────────────
+
+      # Texto do usuário limpo: espaços colapsados, sem ponto final solto.
+      def self.clean(txt)
+        safe_utf8(txt).gsub(/\s+/, ' ').sub(/[.\s]+\z/, '').strip
+      end
+
+      # Vira frase: 1ª letra maiúscula e ponto final.
+      def self.sentence(txt)
+        t = clean(txt)
+        return nil if t.empty?
+        t[0].upcase + t[1..-1].to_s + '.'
+      end
+
+      # { 'de' => elemento no modelo, 'para' => como deve ficar }.
+      #   de + para  => "Substituir <de> por <para>."
+      #   só para    => "<para>."  (frase livre: "O painel branco tem contorno LED")
+      #   sem para   => ignorado
+      def self.substitution_sentence(item)
+        return nil unless item.is_a?(Hash)
+        de   = clean(item['de']   || item[:de])
+        para = clean(item['para'] || item[:para])
+        return nil if para.empty?
+        de.empty? ? sentence(para) : sentence("Substituir #{de} por #{para}")
+      end
+
+      # ── Monta o prompt de UMA cena ───────────────────────────────────────────
+      #
+      # opts:
+      #   environment => 'interno' | 'externo'
+      #   lighting    => 'frio' | 'quente'
+      #   people      => true | false   (padrão true)
+      #   general     => array de textos (ajustes de TODAS as cenas)
+      #   subs        => array de { 'de', 'para' } (substituições desta cena)
+
+      def self.build(opts)
+        env    = normalize_env(opts[:environment])
+        tone   = LIGHT_TONE[opts[:lighting].to_s] || 'frio'
+        people = opts[:people].nil? ? true : !!opts[:people]
+
+        parts = [BASE[env], format(LIGHT[env], tone)]
+        parts << PEOPLE if people
+        (opts[:general] || []).each { |l| s = sentence(l); parts << s if s }
+        (opts[:subs]    || []).each { |i| s = substitution_sentence(i); parts << s if s }
+
+        safe_utf8(parts.join(' '))
+      end
 
       # ── Leitura da PALETA do projeto (instantânea) ───────────────────────────
       #
@@ -223,152 +146,6 @@ module STAND1
         0.5 * Math.atan2(2 * sxy, sxx - syy)
       end
 
-      # ── Converte câmera de uma Scene em descrição fotográfica ────────────────
-      #
-      # axis_rad = eixo principal da planta (de footprint_axis). Se presente, a
-      # orientação horizontal é medida em relação à geometria REAL do estande
-      # (frontal/centralizada x três-quartos de esquina x lateral), independente
-      # de como o modelo está girado no mundo. Se nil, cai no eixo -Y do mundo.
-      def self.camera_description(page, axis_rad = nil)
-        cam = (page.respond_to?(:camera) && page.camera) ? page.camera : nil
-        return 'Three-quarter eye-level perspective view of the booth.' unless cam
-
-        eye    = cam.eye
-        target = cam.target
-        dir    = target - eye
-
-        height_m = (eye.z.to_f * 0.0254).round(2)
-
-        horiz = Math.sqrt(dir.x.to_f**2 + dir.y.to_f**2)
-        pitch = horiz.zero? ? (dir.z.to_f >= 0 ? 90.0 : -90.0) :
-                              Math.atan2(dir.z.to_f, horiz) * 180.0 / Math::PI
-
-        perspective = cam.perspective?
-        plan_view   = pitch <= -75
-
-        view_type =
-          if !perspective && plan_view          then 'Top-down orthographic plan view'
-          elsif !perspective && pitch.abs < 15  then 'Orthographic elevation view'
-          elsif !perspective                    then 'Isometric axonometric view'
-          elsif plan_view                       then 'High-angle aerial perspective view'
-          else                                       'Perspective view'
-          end
-
-        # Orientação horizontal relativa à geometria real (eixo principal da planta).
-        orient = nil
-        unless plan_view || horiz.zero?
-          cam_ang = Math.atan2(dir.y.to_f, dir.x.to_f) * 180.0 / Math::PI
-          ref     = axis_rad ? (axis_rad * 180.0 / Math::PI) : -90.0 # -90° = olhar p/ -Y (fallback mundo)
-          rel     = cam_ang - ref
-          rel -= 360.0 while rel > 180.0
-          rel += 360.0 while rel <= -180.0
-          # Dobra para o "facade" mais próximo (fachadas a cada 90°): offset em (-45,45].
-          k        = (rel / 90.0).round
-          face_off = rel - k * 90.0
-          a        = face_off.abs
-          side     = face_off >= 0 ? 'left' : 'right'
-          orient =
-            if a < 22.5 then 'seen centered and head-on to one facade'
-            else             "seen at a three-quarter corner angle from the #{side}"
-            end
-        end
-
-        parts = [view_type, 'of the booth']
-        parts << orient if orient
-        sentence = parts.join(' ')
-
-        extra = []
-        extra << "camera at approximately #{height_m}m height" unless plan_view
-        extra << "#{cam.fov.round}mm-equivalent field of view" if perspective
-        sentence += ', ' + extra.join(', ') unless extra.empty?
-        sentence + '.'
-      end
-
-      # ── Monta o prompt completo de uma Scene ─────────────────────────────────
-      #
-      # opts:
-      #   page          => Sketchup::Page
-      #   lighting      => 'frio' | 'quente'
-      #   environment   => 'feira' | 'feira_externa' | 'neutro_claro' | 'neutro_cinza' | 'neutro_escuro'
-      #   criticals_pt  => array de strings em PT inseridas pelo usuário
-      #   lang          => 'en' | 'pt'
-
-      def self.build(opts)
-        page         = opts[:page]
-        lighting_key = opts[:lighting]     || 'frio'
-        env_key      = opts[:environment]  || 'feira'
-        booth_key    = opts[:booth_type]   || 'ilha'
-        criticals_pt = opts[:criticals_pt] || []
-        axis_rad     = opts[:axis_rad]                 # eixo principal da planta (ou nil)
-        cam_override = opts[:camera_override].to_s.strip # ângulo manual por cena ('' = auto)
-        image_mode   = !!opts[:image_mode]             # prompt p/ uso com PNG anexado
-
-        light_en   = LIGHTING[lighting_key] || 'cold white'
-        # 'generico' = background manual: usa SÓ o texto que o usuário digitou
-        # (sem descrição automática). Se vazio, o bloco [ENVIRONMENT] é omitido.
-        env =
-          if env_key == 'generico'
-            { people: false, env: opts[:env_custom].to_s.strip }
-          else
-            ENVIRONMENTS[env_key] || ENVIRONMENTS['feira']
-          end
-        booth_line = BOOTH_TYPES[booth_key] || BOOTH_TYPES['ilha']
-
-        # Pessoas: toggle explícito; se não vier (nil), segue o padrão do ambiente.
-        people = opts[:people].nil? ? env[:people] : opts[:people]
-
-        # Ângulo: override manual (substitui a leitura automática) OU leitura da
-        # câmera da cena relativa à geometria real. Só uma fonte entra no [SCENE].
-        # No modo imagem o ângulo NÃO entra: a câmera já está na imagem anexada.
-        angle = nil
-        unless image_mode
-          angle =
-            if CAMERA_OVERRIDES.key?(cam_override)
-              CAMERA_OVERRIDES[cam_override]
-            elsif page
-              camera_description(page, axis_rad)
-            else
-              'Three-quarter eye-level view of the booth.'
-            end
-        end
-
-        lighting_block = "Integrated architectural lighting is a key element: #{light_en} " \
-          "artificial lighting creates a dramatic atmosphere with strong contrast and sculpted shadows, " \
-          "creating a sharp luminous outline that enhances the volumetry."
-
-        # SUBJECT = estética. A âncora de geometria/câmera é a imagem anexada.
-        subject = INTRO
-
-        # CRITICALs: âncora primeiro (reforço), depois fixos, pessoas e os do usuário.
-        user_criticals = criticals_pt.reject { |c| c.to_s.strip.empty? }.map do |c|
-          Dictionary.translate(c).upcase
-        end
-        all_criticals = []
-        # A âncora é a imagem anexada — reforço no 1º CRITICAL.
-        all_criticals << IMAGE_ANCHOR_CRITICAL if image_mode
-        all_criticals += CRITICALS_FIXED
-        all_criticals << PEOPLE_CRITICAL if people
-        all_criticals += user_criticals
-        criticals = all_criticals.map { |c| "CRITICAL: #{c}" }
-
-        # Blocos rotulados (agrupados) — o modelo interpreta melhor e fica mais enxuto.
-        ref_count = opts[:ref_count].to_i
-
-        blocks = []
-        blocks << "[TASK]\n#{IMAGE_TASK}" if image_mode
-        blocks << "[REFERENCES]\n#{REFERENCES_NOTE}" if image_mode && ref_count > 0
-        blocks << "[SCENE]\n#{angle}" if angle
-        blocks << "[SUBJECT]\n#{subject}"
-        blocks << "[BOOTH TYPE]\n#{booth_line}"
-        blocks << "[ENVIRONMENT]\n#{env[:env]}" unless env[:env].to_s.strip.empty?
-        blocks << "[PEOPLE]\n#{PEOPLE}" if people
-        blocks << "[LIGHTING]\n#{lighting_block}"
-        blocks << "[PHOTOGRAPHY]\n#{CAMERA_TECH}"
-        blocks << "[CRITICALS]\n#{criticals.join("\n")}"
-
-        safe_utf8(blocks.join("\n\n"))
-      end
-
       # Garante UTF-8 válido (nomes de material no Windows costumam vir em Latin-1/
       # ASCII-8BIT; sem isso o to_json lança JSON::GeneratorError e a UI trava).
       def self.safe_utf8(str)
@@ -378,20 +155,13 @@ module STAND1
       end
 
       # ── Monta prompts para várias Scenes ─────────────────────────────────────
+      # shared_opts[:scene_subs] => { nome_da_cena => [ {de, para}, ... ] }
 
       def self.build_all(model, scene_names, shared_opts)
-        # Eixo principal da planta: calculado UMA vez por modelo (custo amortizado).
-        axis_rad = (footprint_axis(model) rescue nil)
         pages = model.pages.select { |p| scene_names.include?(p.name) }
         pages.map do |page|
-          # criticals por cena (se vierem no mapa), senão os gerais compartilhados.
-          per_scene = shared_opts[:scene_criticals] && shared_opts[:scene_criticals][page.name]
-          crit = (shared_opts[:criticals_pt] || []) + (per_scene || [])
-          cam  = shared_opts[:scene_cameras] && shared_opts[:scene_cameras][page.name]
-          {
-            scene:  safe_utf8(page.name),
-            prompt: build(shared_opts.merge(page: page, axis_rad: axis_rad, criticals_pt: crit, camera_override: cam))
-          }
+          subs = (shared_opts[:scene_subs] || {})[page.name] || []
+          { scene: safe_utf8(page.name), prompt: build(shared_opts.merge(subs: subs)) }
         end
       end
 

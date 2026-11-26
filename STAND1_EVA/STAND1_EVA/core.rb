@@ -60,9 +60,8 @@ module STAND1
       @dialog.add_action_callback('tint_logo')        { |_, msg| handle_tint_logo(msg)       }
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
       @dialog.add_action_callback('open_url')         { |_, url| UI.openURL(url)             }
-      @dialog.add_action_callback('save_scene_criticals') { |_, msg| save_scene_criticals(msg) }
-      @dialog.add_action_callback('save_scene_camera')    { |_, msg| save_scene_camera(msg)    }
-      @dialog.add_action_callback('get_scene_thumbs')     { |_, msg| send_scene_thumbs(msg)    }
+      @dialog.add_action_callback('save_scene_subs')      { |_, msg| save_scene_subs(msg)      }
+      @dialog.add_action_callback('get_scene_thumbs')    { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
       @dialog.add_action_callback('mapa_scan')           { |_, _|   MapaArtes.scan_from_dialog(@dialog) }
       @dialog.add_action_callback('mapa_diagramar')      { |_, msg| MapaArtes.diagramar_from_dialog(msg, @dialog) }
@@ -143,7 +142,7 @@ module STAND1
       sid.to_s
     end
 
-    # ── Store por cena: { sid => { criticals, prompt, camera } } ───────────────
+    # ── Store por cena: { sid => { subs: [{de, para}, ...] } } ──────────────────
     # Gravado no modelo (.skp) + sidecar POR PROJETO (não usa mais registro
     # global — o fallback global vazava dados entre projetos e era sobrescrito
     # pelo último projeto aberto).
@@ -165,28 +164,33 @@ module STAND1
       Sketchup.write_default(SETTINGS_KEY, 'last_scene_store', '') rescue nil
     end
 
-    # Salva os criticals de UMA cena (por sid). msg = { sid, criticals }.
-    def self.save_scene_criticals(msg)
-      data  = JSON.parse(msg) rescue nil
-      return unless data && data['sid']
-      model = Sketchup.active_model
-      store = read_scene_store(model)
-      entry = store[data['sid']] || {}
-      entry['criticals'] = data['criticals'].to_s
-      store[data['sid']] = entry
-      write_scene_store(model, store)
-    rescue
+    # Substituições de UMA cena: lista de { 'de', 'para' }.
+    # Entradas antigas (campo 'criticals', uma linha = uma frase) viram itens só com
+    # 'para', então nada que o usuário já escreveu se perde.
+    def self.scene_subs(entry)
+      return [] unless entry.is_a?(Hash)
+      if entry['subs'].is_a?(Array)
+        entry['subs'].select { |s| s.is_a?(Hash) }
+                     .map { |s| { 'de' => s['de'].to_s, 'para' => s['para'].to_s } }
+      else
+        entry['criticals'].to_s.split(/\r?\n/).map(&:strip).reject(&:empty?)
+                          .map { |l| { 'de' => '', 'para' => l } }
+      end
     end
 
-    # Salva o override de ângulo de UMA cena (por sid). msg = { sid, camera }.
-    # camera = '' (automático) ou uma das chaves de PromptBuilder::CAMERA_OVERRIDES.
-    def self.save_scene_camera(msg)
+    # Salva as substituições de UMA cena (por sid). msg = { sid, subs: [{de, para}] }.
+    # Grava no .skp + sidecar do projeto (mesmo store das demais coisas por cena).
+    def self.save_scene_subs(msg)
       data  = JSON.parse(msg) rescue nil
-      return unless data && data['sid']
+      return unless data && data['sid'] && data['subs'].is_a?(Array)
       model = Sketchup.active_model
       store = read_scene_store(model)
       entry = store[data['sid']] || {}
-      entry['camera'] = data['camera'].to_s
+      entry['subs'] = data['subs'].select { |s| s.is_a?(Hash) }
+                                  .map { |s| { 'de' => s['de'].to_s, 'para' => s['para'].to_s } }
+                                  .reject { |s| s['de'].strip.empty? && s['para'].strip.empty? }
+      # campos de versões anteriores (já migrados para 'subs' / não existem mais)
+      %w[criticals camera prompt].each { |k| entry.delete(k) }
       store[data['sid']] = entry
       write_scene_store(model, store)
     rescue
@@ -275,8 +279,10 @@ module STAND1
       # global — não vazam entre projetos e não somem sem salvar o .skp.
       obj['criticals'] = read_project_text(model, 'criticals')
       obj['rbgApiKey'] = read_api_key
-      # Store por cena (criticals + últimos prompts), chaveado por sid.
-      obj['sceneStore'] = read_scene_store(model)
+      # Substituições por cena, chaveadas por sid (já migradas do formato antigo).
+      obj['sceneStore'] = read_scene_store(model).each_with_object({}) do |(sid, entry), h|
+        h[sid] = { 'subs' => scene_subs(entry) }
+      end
       @dialog.execute_script("window.applySettings(#{obj.to_json})")
     end
 
@@ -427,7 +433,10 @@ module STAND1
       @dialog.execute_script("window.setMaterials([]); window.buildError(#{e.message.to_json})")
     end
 
-    # ── Fase 2: recebe config e monta prompts ─────────────────────────────────
+    # ── Monta os prompts das cenas pedidas ─────────────────────────────────────
+    # config: { scenes: [nomes], lighting, environment, people, general: [linhas] }.
+    # O prompt é curto e determinístico: não é persistido (só as substituições de
+    # cada cena e os ajustes gerais ficam salvos), então é refeito a cada pedido.
 
     def self.handle_build(msg)
       model  = Sketchup.active_model
@@ -436,47 +445,24 @@ module STAND1
       scene_names = config[:scenes] || []
       store       = read_scene_store(model)
 
-      # Mapa nome-da-cena => criticals específicos (do store, por sid), em linhas.
-      # E mapa nome-da-cena => override de ângulo (do store, por sid).
-      scene_crit = {}
-      scene_cam  = {}
+      # nome-da-cena => substituições (do store, por sid)
+      scene_subs_map = {}
       model.pages.each do |p|
         next unless scene_names.include?(p.name)
-        entry = store[scene_sid(p)]
-        next unless entry
-        txt = entry['criticals']
-        scene_crit[p.name] = txt.to_s.split(/\r?\n/).map(&:strip).reject(&:empty?) unless txt.nil? || txt.to_s.strip.empty?
-        cam = entry['camera']
-        scene_cam[p.name] = cam.to_s unless cam.nil? || cam.to_s.strip.empty?
+        subs = scene_subs(store[scene_sid(p)])
+        scene_subs_map[p.name] = subs unless subs.empty?
       end
 
       shared = {
-        lighting:        config[:lighting]     || 'frio',
-        environment:     config[:environment]  || 'feira',
-        env_custom:      config[:env_custom]   || '',
-        booth_type:      config[:booth_type]   || 'ilha',
-        people:          config[:people],
-        criticals_pt:    config[:criticals_pt] || [], # gerais (todas as cenas)
-        scene_criticals: scene_crit,                   # específicos por cena
-        scene_cameras:   scene_cam,                    # override de ângulo por cena
-        # O EVA sempre gera prompt ancorado na imagem exportada (config[:image_mode]
-        # não vem mais do HTML desde a simplificação do toggle "Texto puro"; default true).
-        image_mode:      config.key?(:image_mode) ? !!config[:image_mode] : true
+        lighting:    config[:lighting]    || 'frio',
+        environment: config[:environment] || 'interno',
+        people:      config[:people],
+        general:     config[:general]     || [],   # ajustes de todas as cenas
+        scene_subs:  scene_subs_map                # substituições por cena
       }
 
       results = PromptBuilder.build_all(model, scene_names, shared)
-
-      # Persiste o prompt gerado de cada cena no store (por sid) + devolve sid ao JS.
-      results.each do |r|
-        page = model.pages.find { |p| p.name == r[:scene] }
-        next unless page
-        sid = scene_sid(page)
-        entry = store[sid] || {}
-        entry['prompt'] = r[:prompt]
-        store[sid] = entry
-        r[:sid] = sid
-      end
-      write_scene_store(model, store)
+      write_scene_store(model, store) # grava os sid recém-criados (cenas novas)
 
       @dialog.execute_script("window.promptsDone(#{results.to_json})")
     rescue => e

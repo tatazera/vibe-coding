@@ -132,6 +132,27 @@
 
     .scene-item:hover { background: #fafaff; }
     .scene-item.checked { background: #fbe9f3; }
+    .scene-item.editing { box-shadow: inset 3px 0 0 var(--rosa); }
+    .scene-item.editing label { font-weight: 700; }
+
+    /* Substituições por cena (Render IA) */
+    .sub-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .sub-row input {
+      min-width: 0; padding: 8px 9px;
+      border: 1.5px solid var(--borda); border-radius: 6px;
+      font-size: 12px; font-family: var(--font); color: #222; background: #fff;
+    }
+    .sub-row input:focus { outline: none; border-color: var(--rosa); }
+    .sub-row .sub-de   { flex: 1 1 0; }
+    .sub-row .sub-para { flex: 1.3 1 0; }
+    .sub-row .sub-arrow { color: #aaa; font-size: 12px; flex-shrink: 0; }
+    .sub-row .sub-del {
+      border: none; background: none; color: #bbb;
+      font-size: 17px; line-height: 1; cursor: pointer; padding: 0 4px; flex-shrink: 0;
+    }
+    .sub-row .sub-del:hover { color: #e0436b; }
+    .sub-empty { font-size: 11.5px; color: #aaa; padding: 2px 0 8px; }
+    .hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: #999; }
 
     .scene-item input[type="checkbox"] {
       accent-color: var(--rosa);
@@ -558,11 +579,8 @@
 
     /* Overrides de estilos inline hardcoded (textareas/selects) */
     body.dark #criticals,
-    body.dark #sceneCriticals,
-    body.dark #sceneSelect,
-    body.dark #sceneCamera,
-    body.dark .planta-row select,
-    body.dark #envCustom {
+    body.dark .sub-row input,
+    body.dark .planta-row select {
       background: #24262f !important; border-color: #3a3c47 !important; color: #d3d5e0 !important;
     }
     /* Caixa "prompt ancorado na imagem" (estilo inline) */
@@ -651,38 +669,18 @@
   <div class="panel-config">
 
     <div class="section">
+      <div class="section-label">Ambiente</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="env-interno" onclick="setEnv('interno')">Interno</button>
+        <button class="toggle-btn" id="env-externo" onclick="setEnv('externo')">Externo</button>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">Iluminação</div>
       <div class="toggle-group">
         <button class="toggle-btn active" id="btn-frio" onclick="setLight('frio')">Branco Frio</button>
         <button class="toggle-btn" id="btn-quente" onclick="setLight('quente')">Branco Quente</button>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">Tipo de estande</div>
-      <div class="toggle-group">
-        <button class="toggle-btn active" id="booth-ilha" onclick="setBooth('ilha')">Ilha<br><small style="opacity:.6;font-weight:400">4 lados</small></button>
-        <button class="toggle-btn" id="booth-ponta" onclick="setBooth('ponta')">Ponta<br><small style="opacity:.6;font-weight:400">3 lados</small></button>
-        <button class="toggle-btn" id="booth-esquina" onclick="setBooth('esquina')">Esquina<br><small style="opacity:.6;font-weight:400">2 lados</small></button>
-        <button class="toggle-btn" id="booth-corredor" onclick="setBooth('corredor')">Corredor<br><small style="opacity:.6;font-weight:400">1 lado</small></button>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-label">Ambiente do render</div>
-      <div class="toggle-group">
-        <button class="toggle-btn active" id="env-feira" onclick="setEnv('feira')">Feira</button>
-        <button class="toggle-btn" id="env-feira_externa" onclick="setEnv('feira_externa')">Feira externa</button>
-        <button class="toggle-btn" id="env-neutro_claro" onclick="setEnv('neutro_claro')">Neutro claro</button>
-        <button class="toggle-btn" id="env-neutro_cinza" onclick="setEnv('neutro_cinza')">Neutro cinza</button>
-        <button class="toggle-btn" id="env-neutro_escuro" onclick="setEnv('neutro_escuro')">Neutro escuro</button>
-        <button class="toggle-btn" id="env-generico" onclick="setEnv('generico')">Genérico ✎</button>
-      </div>
-      <div id="envCustomWrap" style="display:none;margin-top:8px">
-        <textarea id="envCustom" rows="3" onchange="saveSettings()" oninput="envCustomDebounce()"
-          placeholder="Descreva o background manualmente. Este texto vai no bloco [ENVIRONMENT] do prompt — nenhuma descrição automática é usada.&#10;Ex.: Ambiente noturno de rooftop com skyline da cidade ao fundo e luzes bokeh."
-          style="width:100%;padding:9px;border:1.5px solid var(--borda);border-radius:8px;font-size:12px;font-family:var(--font);background:#fafafa;color:#333;resize:vertical;min-height:66px"></textarea>
-        <div style="font-size:10px;color:#999;margin-top:4px">Genérico: só o seu texto entra como background. Deixe vazio para não incluir nenhum background no prompt.</div>
       </div>
     </div>
 
@@ -695,51 +693,25 @@
     </div>
 
     <div class="section">
-      <div class="section-label">CRITICALs gerais (todas as cenas)</div>
-      <textarea id="criticals" rows="4" onchange="saveSettings()" oninput="criticalsDebounce()" placeholder="Um por linha — valem para TODAS as cenas. Ex:&#10;Não adicionar pessoas em primeiro plano&#10;Manter cor exata do balcão"
-        style="width:100%;min-height:100px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
+      <div class="section-label">Ajustes gerais
+        <span class="hint">— valem para todas as cenas do projeto</span>
+      </div>
+      <textarea id="criticals" rows="3" onchange="saveSettings()" oninput="criticalsDebounce()"
+        placeholder="Uma frase por linha. Ex:&#10;Piso em manta vinílica cimento queimado cinza claro&#10;Faixas coloridas em carpete corporativo"
+        style="width:100%;min-height:72px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
     </div>
 
     <div class="section">
-      <div class="section-label">CRITICALs da cena
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— específicos, salvos por cena</span>
-      </div>
-      <select id="sceneSelect" onchange="onSceneSelect()"
-        style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff;margin-bottom:6px">
-        <option value="">— selecione uma cena —</option>
-      </select>
-      <textarea id="sceneCriticals" rows="3" onchange="saveSceneCriticals()" oninput="sceneCriticalsDebounce()" disabled placeholder="Selecione uma cena acima. Estes CRITICALs valem só para a cena escolhida."
-        style="width:100%;min-height:80px;background:#fff;border:1.5px solid var(--borda);border-radius:6px;color:#222;font-size:12px;padding:9px;resize:vertical"></textarea>
-      <div style="font-size:10px;color:#888;margin-top:4px">Salvo automaticamente por cena (sobrevive a renomear a cena).</div>
-
-      <div class="section-label" style="margin-top:12px">Ângulo da câmera
-        <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#999">— só use se a leitura automática errar</span>
-      </div>
-      <select id="sceneCamera" onchange="saveSceneCamera()" disabled
-        style="width:100%;padding:7px 8px;border:1.5px solid var(--borda);border-radius:6px;font-size:12px;color:#222;background:#fff">
-        <option value="">Automático (ler da cena)</option>
-        <option value="centered">Frontal / centralizado</option>
-        <option value="tq_left">Três-quartos — esquina esquerda</option>
-        <option value="tq_right">Três-quartos — esquina direita</option>
-        <option value="lateral">Lateral</option>
-        <option value="iso">Isométrica</option>
-        <option value="aerial">Aérea (alto ângulo)</option>
-        <option value="plan">Planta (vista de cima)</option>
-        <option value="elevation">Elevação frontal</option>
-      </select>
-      <div style="font-size:10px;color:#888;margin-top:4px">Ao escolher um ângulo, ele SUBSTITUI a leitura automática (não soma).</div>
+      <div class="section-label">Substituições · <span id="sceneName">—</span></div>
+      <div id="subsBox"><div class="sub-empty">Clique numa cena da lista.</div></div>
+      <button class="btn-small" id="btnAddSub" onclick="addSub()" disabled>＋ Adicionar substituição</button>
+      <div style="font-size:10px;color:#888;margin-top:6px">Salvas na própria cena, dentro do arquivo do SketchUp. Só o campo da direita preenchido vira uma frase livre (ex.: “O painel branco tem contorno LED”).</div>
     </div>
 
     <div class="section">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Prompts gerados</span>
-        <span id="promptsActions" style="display:none;gap:6px">
-          <button class="btn-small" onclick="copyAllPrompts()">Copiar todos</button>
-          <button class="btn-small" onclick="savePromptsTxt()">Salvar .txt</button>
-        </span>
-      </div>
+      <div class="section-label">Prompt da cena</div>
       <div id="promptsOutput">
-        <div class="empty-scenes">Os prompts aparecerão aqui após gerar.</div>
+        <div class="empty-scenes">Clique numa cena da lista.</div>
       </div>
     </div>
 
@@ -747,8 +719,9 @@
 </div>
 
 <footer>
-  <div class="status" id="statusR">Marque as cenas e clique em Gerar prompts.</div>
-  <button class="btn-export" id="btnBuild" onclick="doBuild()">Gerar prompts</button>
+  <div class="status" id="statusR">Clique numa cena para editar · marque as cenas para copiar vários prompts.</div>
+  <button class="btn-small" onclick="savePromptsTxt()">Salvar .txt</button>
+  <button class="btn-export" id="btnBuild" onclick="copyAllPrompts()" disabled>Copiar marcadas</button>
 </footer>
 </div><!-- /content-render -->
 
@@ -1034,16 +1007,16 @@
   // ── Estado ─────────────────────────────────────────────────────────────────
   var scenes      = [];          // [{name, sid}]
   var lighting    = 'frio';
-  var environment = 'feira';
-  var boothType   = 'ilha';
+  var environment = 'interno';   // 'interno' | 'externo'
   var people      = true;
-  var lastPrompts = [];
-  var sceneStore  = {};          // sid => { criticals, prompt }
+  var promptByName = {};         // nome da cena => prompt (refeito a cada mudança)
+  var sceneStore  = {};          // sid => { subs: [{de, para}] }  (salvo no .skp)
   var sceneThumbs = {};          // sid => dataURL
-  var curSid      = '';          // cena selecionada para CRITICALs por cena
+  var curSid      = '';          // cena em edição (Render IA)
 
-  var ENV_BTNS   = ['env-feira','env-feira_externa','env-neutro_claro','env-neutro_cinza','env-neutro_escuro','env-generico'];
-  var BOOTH_BTNS = ['booth-ilha','booth-ponta','booth-esquina','booth-corredor'];
+  var ENV_BTNS = ['env-interno','env-externo'];
+  // projetos antigos guardavam 'feira', 'feira_externa', neutros...
+  function normEnv(e) { return (e === 'externo' || e === 'feira_externa') ? 'externo' : 'interno'; }
 
   // estado por aba: r = Render IA (cenas), p = Apresentação (cenas + export)
   var st = {
@@ -1076,9 +1049,7 @@
     try {
       if (s.pBg)                         setBg('p', s.pBg);
       if (s.lighting)                    setLight(s.lighting);
-      if (typeof s.envCustom === 'string') document.getElementById('envCustom').value = s.envCustom;
-      if (s.environment)                 setEnv(s.environment);
-      if (s.boothType)                   setBooth(s.boothType);
+      if (s.environment)                 setEnv(normEnv(s.environment));
       if (typeof s.people === 'boolean') setPeople(s.people);
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
       if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
@@ -1090,21 +1061,13 @@
       }
       if (s.sceneStore && typeof s.sceneStore === 'object') {
         sceneStore = s.sceneStore;
-        populateSceneSelect();
-        renderSavedPrompts();
+        renderEditor();
       }
       updateApiBadge();
     } catch (e) {}
     _applying = false;
+    scheduleBuild();
   };
-
-  // Reexibe os últimos prompts salvos por cena (por projeto), ao reabrir o plugin.
-  function renderSavedPrompts() {
-    if (lastPrompts.length) return; // já há prompts recém-gerados na tela
-    var saved = scenes.filter(function(s){ return sceneStore[s.sid] && sceneStore[s.sid].prompt; })
-                      .map(function(s){ return { scene: s.name, sid: s.sid, prompt: sceneStore[s.sid].prompt }; });
-    if (saved.length) { lastPrompts = saved; paintPrompts(); }
-  }
 
   function applyRes(p, w, h) {
     if (!w) return;
@@ -1118,8 +1081,7 @@
     var pRes = readRes('p');
     var s = {
       pBg: st.p.bg, lighting: lighting, environment: environment,
-      envCustom: document.getElementById('envCustom').value,
-      boothType: boothType, people: people,
+      people: people,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
       criticals: document.getElementById('criticals').value
@@ -1235,8 +1197,10 @@
     renderSceneList('p');
     refreshButtons('r');
     refreshButtons('p');
-    populateSceneSelect();
-    renderSavedPrompts();
+    // mantém a cena em edição; se ela sumiu, cai na primeira
+    if (!scenes.some(function(x){ return x.sid === curSid; })) curSid = scenes.length ? scenes[0].sid : '';
+    markEditing();
+    renderEditor();
   };
 
   function thumbTag(sid) {
@@ -1262,7 +1226,8 @@
     list.innerHTML = scenes.map(function(s, i) {
       var on = !!prev[i];
       st[p].sel[i] = on;
-      return '<div class="scene-item' + (on ? ' checked' : '') + '" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
+      var editing = (p === 'r' && s.sid === curSid) ? ' editing' : '';
+      return '<div class="scene-item' + (on ? ' checked' : '') + editing + '" id="' + p + 'item-' + i + '" onclick="rowClick(\'' + p + '\',' + i + ')">' +
              '<input type="checkbox"' + (on ? ' checked' : '') + ' id="' + p + 'chk-' + i + '" onclick="boxClick(\'' + p + '\',' + i + ',event)">' +
              thumbTag(s.sid) +
              '<label>' + escHtml(s.name) + '</label>' +
@@ -1271,6 +1236,8 @@
   }
 
   function rowClick(p, i) {
+    // Render IA: clicar na linha EDITA a cena (o checkbox é que marca para copiar).
+    if (p === 'r') { selectScene(i); return; }
     var chk = document.getElementById(p + 'chk-' + i);
     chk.checked = !chk.checked;
     syncScene(p, i);
@@ -1326,62 +1293,130 @@
     setStatusR(Object.keys(sceneThumbs).length + ' miniatura(s) geradas.', 'ok');
   };
 
-  // ── CRITICALs por cena (seletor) ────────────────────────────────────────────
-  function populateSceneSelect() {
-    var sel = document.getElementById('sceneSelect');
-    if (!sel) return;
-    var keep = curSid;
-    sel.innerHTML = '<option value="">— selecione uma cena —</option>' +
-      scenes.map(function(s) {
-        return '<option value="' + escHtml(s.sid) + '">' + escHtml(s.name) + '</option>';
-      }).join('');
-    // restaura seleção se a cena ainda existe
-    if (keep && scenes.some(function(s){ return s.sid === keep; })) { sel.value = keep; onSceneSelect(); }
-    else {
-      curSid = '';
-      document.getElementById('sceneCriticals').value = ''; document.getElementById('sceneCriticals').disabled = true;
-      var cam = document.getElementById('sceneCamera'); cam.value = ''; cam.disabled = true;
+  // ── Substituições por cena (Render IA) ──────────────────────────────────────
+  // Cada linha: "elemento no modelo" → "como deve ficar". Salvas por cena (sid) no .skp.
+  var _subsT = null;
+
+  function sceneByName(name) {
+    for (var i = 0; i < scenes.length; i++) if (scenes[i].name === name) return scenes[i];
+    return null;
+  }
+
+  function selectScene(i) {
+    var sc = scenes[i];
+    if (!sc || sc.sid === curSid) return;
+    flushSubs();               // grava o que estava sendo digitado na cena anterior
+    curSid = sc.sid;
+    markEditing();
+    renderEditor();
+    scheduleBuild();
+  }
+
+  function markEditing() {
+    scenes.forEach(function(sc, i) {
+      var el = document.getElementById('ritem-' + i);
+      if (el) el.classList.toggle('editing', sc.sid === curSid);
+    });
+  }
+
+  function mkInput(cls, ph, val) {
+    var el = document.createElement('input');
+    el.type = 'text'; el.className = cls; el.placeholder = ph; el.value = val || '';
+    el.addEventListener('input', subsChanged);
+    return el;
+  }
+
+  function subRow(it) {
+    var row = document.createElement('div');
+    row.className = 'sub-row';
+    var arrow = document.createElement('span');
+    arrow.className = 'sub-arrow'; arrow.textContent = '→';
+    var del = document.createElement('button');
+    del.className = 'sub-del'; del.type = 'button'; del.title = 'Remover'; del.textContent = '×';
+    del.addEventListener('click', function() { row.remove(); subsChanged(true); showEmptyHint(); });
+    row.appendChild(mkInput('sub-de', 'Elemento (ex.: linhas amarelas das colunas)', it.de));
+    row.appendChild(arrow);
+    row.appendChild(mkInput('sub-para', 'Por / fica assim (ex.: fita LED branco frio)', it.para));
+    row.appendChild(del);
+    return row;
+  }
+
+  function showEmptyHint() {
+    var box = document.getElementById('subsBox');
+    var has = box.querySelector('.sub-row');
+    var hint = box.querySelector('.sub-empty');
+    if (!has && !hint) {
+      box.innerHTML = '<div class="sub-empty">Nenhuma substituição nesta cena.</div>';
     }
   }
 
-  function onSceneSelect() {
-    var sel = document.getElementById('sceneSelect');
-    curSid = sel.value || '';
-    var ta  = document.getElementById('sceneCriticals');
-    var cam = document.getElementById('sceneCamera');
-    if (!curSid) { ta.value = ''; ta.disabled = true; cam.value = ''; cam.disabled = true; return; }
-    ta.disabled  = false;
-    ta.value     = (sceneStore[curSid] && sceneStore[curSid].criticals) || '';
-    cam.disabled = false;
-    cam.value    = (sceneStore[curSid] && sceneStore[curSid].camera) || '';
+  function renderEditor() {
+    var sc  = sceneBySid(curSid);
+    var box = document.getElementById('subsBox');
+    var add = document.getElementById('btnAddSub');
+    document.getElementById('sceneName').textContent = sc ? sc.name : '—';
+    box.innerHTML = '';
+    if (!sc) {
+      box.innerHTML = '<div class="sub-empty">Clique numa cena da lista.</div>';
+      add.disabled = true;
+      paintPrompt();
+      return;
+    }
+    add.disabled = false;
+    var subs = (sceneStore[curSid] && sceneStore[curSid].subs) || [];
+    subs.forEach(function(it) { box.appendChild(subRow(it)); });
+    showEmptyHint();
+    paintPrompt();
   }
 
-  function saveSceneCriticals() {
+  function sceneBySid(sid) {
+    for (var i = 0; i < scenes.length; i++) if (scenes[i].sid === sid) return scenes[i];
+    return null;
+  }
+
+  function addSub() {
     if (!curSid) return;
-    var val = document.getElementById('sceneCriticals').value;
-    if (!sceneStore[curSid]) sceneStore[curSid] = {};
-    sceneStore[curSid].criticals = val;
-    su('save_scene_criticals', JSON.stringify({ sid: curSid, criticals: val }));
+    var box = document.getElementById('subsBox');
+    var hint = box.querySelector('.sub-empty');
+    if (hint) hint.remove();
+    var row = subRow({ de: '', para: '' });
+    box.appendChild(row);
+    row.querySelector('.sub-de').focus();
   }
 
-  function saveSceneCamera() {
+  // Lê as linhas da tela para o store local da cena em edição.
+  function collectSubs() {
     if (!curSid) return;
-    var val = document.getElementById('sceneCamera').value;
+    var arr = [];
+    document.querySelectorAll('#subsBox .sub-row').forEach(function(r) {
+      arr.push({ de: r.querySelector('.sub-de').value, para: r.querySelector('.sub-para').value });
+    });
     if (!sceneStore[curSid]) sceneStore[curSid] = {};
-    sceneStore[curSid].camera = val;
-    su('save_scene_camera', JSON.stringify({ sid: curSid, camera: val }));
+    sceneStore[curSid].subs = arr;
   }
 
-  // Salva enquanto digita (debounce 800ms) — o onchange (blur) pode nunca
-  // disparar se o usuário fechar o diálogo com o foco ainda no textarea.
-  var _critT = null, _scritT = null;
+  function saveSubsNow() {
+    if (!curSid) return;
+    collectSubs();
+    su('save_scene_subs', JSON.stringify({ sid: curSid, subs: sceneStore[curSid].subs }));
+  }
+
+  // Grava o que está pendente (usado ao trocar de cena ou gerar/copiar).
+  function flushSubs() {
+    if (_subsT) { clearTimeout(_subsT); _subsT = null; saveSubsNow(); }
+  }
+
+  // Salva enquanto digita (debounce) e já refaz o prompt — o blur pode nunca
+  // disparar se o usuário fechar o diálogo com o foco no campo.
+  function subsChanged(now) {
+    clearTimeout(_subsT);
+    _subsT = setTimeout(function() { _subsT = null; saveSubsNow(); requestBuild(); }, now === true ? 0 : 450);
+  }
+
+  var _critT = null;
   function criticalsDebounce() {
     clearTimeout(_critT);
-    _critT = setTimeout(saveSettings, 800);
-  }
-  function sceneCriticalsDebounce() {
-    clearTimeout(_scritT);
-    _scritT = setTimeout(saveSceneCriticals, 800);
+    _critT = setTimeout(function() { saveSettings(); scheduleBuild(); }, 450);
   }
 
   // ── Pasta de destino ────────────────────────────────────────────────────────
@@ -1430,28 +1465,16 @@
     document.getElementById('btn-frio').classList.toggle('active', l === 'frio');
     document.getElementById('btn-quente').classList.toggle('active', l === 'quente');
     saveSettings();
+    scheduleBuild();
   }
 
   function setEnv(e) {
-    environment = e;
+    environment = normEnv(e);
     ENV_BTNS.forEach(function(id) {
-      document.getElementById(id).classList.toggle('active', id === 'env-' + e);
-    });
-    // Campo de background manual só aparece no modo Genérico.
-    document.getElementById('envCustomWrap').style.display = (e === 'generico') ? 'block' : 'none';
-    // Padrão inteligente: feira (interna/externa) tem público, fundo neutro não (só em clique do usuário).
-    if (!_applying) setPeople(e === 'feira' || e === 'feira_externa');
-    saveSettings();
-  }
-  var _envCustomT = null;
-  function envCustomDebounce() { clearTimeout(_envCustomT); _envCustomT = setTimeout(saveSettings, 800); }
-
-  function setBooth(b) {
-    boothType = b;
-    BOOTH_BTNS.forEach(function(id) {
-      document.getElementById(id).classList.toggle('active', id === 'booth-' + b);
+      document.getElementById(id).classList.toggle('active', id === 'env-' + environment);
     });
     saveSettings();
+    scheduleBuild();
   }
 
   function setPeople(v) {
@@ -1459,6 +1482,7 @@
     document.getElementById('people-on').classList.toggle('active', people);
     document.getElementById('people-off').classList.toggle('active', !people);
     saveSettings();
+    scheduleBuild();
   }
 
   function readRes(p) {
@@ -1582,77 +1606,88 @@
   });
 
   // ── Prompts ─────────────────────────────────────────────────────────────────
-  function doBuild() {
-    var sel = getSelected('r');
-    if (sel.length === 0) { setStatusR('Marque ao menos uma cena.', 'error'); return; }
+  // O prompt é curto e determinístico: refaz sozinho a cada mudança (ambiente, luz,
+  // pessoas, ajustes, substituições, cena em edição ou marcadas). Não há "Gerar".
+  var _buildT = null;
+  function scheduleBuild() {
+    if (_applying) return;
+    clearTimeout(_buildT);
+    _buildT = setTimeout(requestBuild, 300);
+  }
 
-    // persiste descrição + criticals gerais + criticals da cena antes de gerar
-    saveSettings();
-    saveSceneCriticals();
-
-    var criticals = document.getElementById('criticals').value
+  function generalLines() {
+    return document.getElementById('criticals').value
       .split('\n').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
+  }
 
-    var config = {
-      scenes: sel, lighting: lighting, environment: environment,
-      env_custom: document.getElementById('envCustom').value.trim(),
-      booth_type: boothType, people: people,
-      image_mode: true, // o prompt do EVA é sempre ancorado na imagem exportada
-      criticals_pt: criticals
-    };
+  // Cenas que precisam de prompt: as marcadas + a que está em edição.
+  function wantedScenes() {
+    return scenes.filter(function(sc, i) { return st.r.sel[i] || sc.sid === curSid; })
+                 .map(function(sc) { return sc.name; });
+  }
 
-    setStatusR('Gerando ' + sel.length + ' prompt(s)...', 'info');
-    document.getElementById('btnBuild').disabled = true;
-    su('build_prompts', JSON.stringify(config));
+  function requestBuild() {
+    var names = wantedScenes();
+    if (!names.length) { promptByName = {}; paintPrompt(); return; }
+    su('build_prompts', JSON.stringify({
+      scenes: names, lighting: lighting, environment: environment,
+      people: people, general: generalLines()
+    }));
   }
 
   window.promptsDone = function(results) {
-    lastPrompts = results || [];
-    document.getElementById('btnBuild').disabled = false;
-    // sincroniza o store local com os prompts gerados (por sid)
-    lastPrompts.forEach(function(p) {
-      if (p.sid) { if (!sceneStore[p.sid]) sceneStore[p.sid] = {}; sceneStore[p.sid].prompt = p.prompt; }
-    });
-    paintPrompts();
-    setStatusR(lastPrompts.length ? (lastPrompts.length + ' prompt(s) gerados.') : 'Nenhum prompt gerado.',
-               lastPrompts.length ? 'ok' : 'error');
+    promptByName = {};
+    (results || []).forEach(function(r) { promptByName[r.scene] = r.prompt; });
+    paintPrompt();
   };
 
-  // Renderiza lastPrompts (usado ao gerar e ao reabrir prompts salvos).
-  function paintPrompts() {
+  // Card do prompt da cena em edição.
+  function paintPrompt() {
     var out = document.getElementById('promptsOutput');
-    var act = document.getElementById('promptsActions');
-    if (!lastPrompts.length) {
-      out.innerHTML = '<div class="empty-scenes">Os prompts aparecerão aqui após gerar.</div>';
-      if (act) act.style.display = 'none';
-      return;
-    }
-    out.innerHTML = lastPrompts.map(function(p, i) {
-      return '<div class="prompt-card">' +
-        '<div class="prompt-head">' +
-          '<span class="prompt-scene">' + escHtml(p.scene) + '</span>' +
-          '<button class="btn-copy" onclick="copyPrompt(' + i + ')">Copiar</button>' +
-        '</div>' +
-        '<pre class="prompt-text" id="ptext-' + i + '">' + escHtml(p.prompt) + '</pre>' +
-      '</div>';
-    }).join('');
-    if (act) act.style.display = 'flex';
+    var sc  = sceneBySid(curSid);
+    var txt = sc ? promptByName[sc.name] : '';
+    if (!sc) { out.innerHTML = '<div class="empty-scenes">Clique numa cena da lista.</div>'; return; }
+    out.innerHTML = '';
+    var card = document.createElement('div'); card.className = 'prompt-card';
+    var head = document.createElement('div'); head.className = 'prompt-head';
+    var nm   = document.createElement('span'); nm.className = 'prompt-scene'; nm.textContent = sc.name;
+    var btn  = document.createElement('button'); btn.className = 'btn-copy'; btn.textContent = 'Copiar';
+    var pre  = document.createElement('pre'); pre.className = 'prompt-text'; pre.title = 'Clique para copiar';
+    pre.textContent = txt || 'Gerando...';
+    var copy = function() { if (txt) copyText(txt, 'Prompt "' + sc.name + '" copiado!'); };
+    btn.addEventListener('click', copy);
+    pre.addEventListener('click', copy);
+    head.appendChild(nm); head.appendChild(btn);
+    card.appendChild(head); card.appendChild(pre);
+    out.appendChild(card);
   }
 
-  // ── U2: copiar todos / salvar .txt ──────────────────────────────────────────
-  function copyAllPrompts() {
-    if (!lastPrompts.length) return;
-    var text = lastPrompts.map(function(p){ return '=== ' + p.scene + ' ===\n' + p.prompt; }).join('\n\n');
+  function copyText(text, okMsg) {
     var ta = document.createElement('textarea');
     ta.value = text; document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); setStatusR(lastPrompts.length + ' prompt(s) copiados!', 'ok'); }
+    try { document.execCommand('copy'); setStatusR(okMsg, 'ok'); }
     catch (e) { setStatusR('Não foi possível copiar.', 'error'); }
     document.body.removeChild(ta);
   }
 
+  // Prompts das cenas marcadas, na ordem da lista.
+  function checkedPrompts() {
+    return scenes.filter(function(sc, i) { return st.r.sel[i] && promptByName[sc.name]; })
+                 .map(function(sc) { return { scene: sc.name, prompt: promptByName[sc.name] }; });
+  }
+
+  function copyAllPrompts() {
+    var list = checkedPrompts();
+    if (!list.length) { setStatusR('Marque ao menos uma cena.', 'error'); return; }
+    var text = list.length === 1 ? list[0].prompt
+             : list.map(function(p){ return '=== ' + p.scene + ' ===\n' + p.prompt; }).join('\n\n');
+    copyText(text, list.length + ' prompt(s) copiado(s)!');
+  }
+
   function savePromptsTxt() {
-    if (!lastPrompts.length) { setStatusR('Nada para salvar.', 'error'); return; }
-    su('export_prompts_txt', JSON.stringify({ prompts: lastPrompts, name: 'prompts_EVA' }));
+    var list = checkedPrompts();
+    if (!list.length) { setStatusR('Marque ao menos uma cena para salvar.', 'error'); return; }
+    su('export_prompts_txt', JSON.stringify({ prompts: list, name: 'prompts_EVA' }));
   }
 
   window.promptsTxtDone = function(res) {
@@ -1661,21 +1696,9 @@
   };
 
   window.buildError = function(msg) {
-    document.getElementById('btnBuild').disabled = false;
     hideProgress();
     setStatusR('Erro: ' + (msg || 'falha ao gerar.'), 'error');
   };
-
-  function copyPrompt(i) {
-    var text = lastPrompts[i].prompt;
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); setStatusR('Prompt "' + lastPrompts[i].scene + '" copiado!', 'ok'); }
-    catch (e) { setStatusR('Não foi possível copiar.', 'error'); }
-    document.body.removeChild(ta);
-  }
 
   // ── Botões / status / progresso ─────────────────────────────────────────────
   function refreshButtons(p) {
@@ -1683,6 +1706,7 @@
       var anyR = getSelected('r').length > 0;
       var b = document.getElementById('btnBuild');
       if (b) b.disabled = !anyR;
+      scheduleBuild(); // a seleção mudou: refaz os prompts das marcadas
       return;
     }
     var any = getSelected('p').length > 0;

@@ -11,12 +11,15 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 ## Abas
 
 ### Render IA — gerador de prompts
-- Um prompt por Scene marcada, ancorado no PNG exportado (imagem + texto no Nano Banana)
-- Leitura automática da câmera de cada Scene (altura, ângulo, FOV) e da paleta do projeto
-- Tipo de estande, ambiente do render, iluminação e público
-- CRITICALs gerais (todas as cenas) e por cena, salvos por projeto
-- Override manual do ângulo, quando a leitura automática erra
-- Copiar individual, copiar todos ou salvar em `.txt`
+Um prompt curto, em português, para colar no **Nano Banana** junto do PNG exportado da cena.
+A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o estande.
+- **Blocos fixos**, sempre iguais: base do ambiente (**Interno** ou **Externo**), iluminação
+  (branco frio / quente) e pessoas (com / sem público)
+- **Ajustes gerais:** frases do projeto inteiro, uma por linha (piso, materiais...). Salvos por projeto
+- **Substituições por cena:** linhas "elemento → por" (ex.: *linhas amarelas das colunas → fita LED
+  branco frio*) ou só a frase livre. Ficam salvas na própria cena, dentro do arquivo do SketchUp
+- O prompt se atualiza sozinho a cada mudança. Clique numa cena para editá-la; marque as cenas
+  para **Copiar marcadas** (ou **Salvar .txt**). **Copiar** no card copia só a cena em edição
 
 ### Apresentação — exportador de Scenes
 - Resolução 4K padrão (2K / FHD / HD ou customizada): você define a largura e a
@@ -112,7 +115,7 @@ STAND1_EVA/
     ├── core.rb               # dialog + callbacks + menu/toolbar
     ├── dictionary.rb         # dicionário PT→EN
     ├── exporter.rb           # export padronizado de Scenes
-    ├── prompt_builder.rb     # leitura de câmera/materiais + montagem do prompt
+    ├── prompt_builder.rb     # montagem do prompt (blocos fixos + ajustes e substituições)
     ├── mapa_artes.rb         # varredura, diagramação e cotas do KV
     ├── planta.rb             # projeções, grid, elétrica, tomadas e DXF
     ├── autoupdate.rb         # checagem/instalação de update via GitHub
