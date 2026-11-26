@@ -745,6 +745,24 @@
   <div class="panel-config">
 
     <div class="section" style="padding-top:18px">
+      <div class="section-label">Estilo do print</div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="pia-off" onclick="setIA(false)">Como está na cena</button>
+        <button class="toggle-btn" id="pia-on" onclick="setIA(true)">Otimizado para IA</button>
+      </div>
+      <div id="iaOpts" style="display:none;margin-top:8px">
+        <div class="planta-row"><span style="color:#888">Linhas das arestas</span>
+          <select id="pLinhas" onchange="saveSettings()" title="Finas mantém as arestas (separam planos de mesma cor). Sem linhas esconde todas.">
+            <option value="finas">Finas (recomendado)</option>
+            <option value="sem">Sem linhas</option>
+          </select></div>
+      </div>
+      <div style="font-size:10.5px;color:#999;margin-top:7px;line-height:1.4" id="iaHint">
+        O print sai exatamente como a cena está no SketchUp.
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">Fundo</div>
       <div class="toggle-group">
         <button class="toggle-btn active" id="pbg-white" onclick="setBg('p','white')">Branco</button>
@@ -827,9 +845,10 @@
     </div>
 
     <div class="section" style="color:#999;font-size:11.5px;line-height:1.5">
-      A apresentação exporta cada cena <b>exatamente como está</b> no SketchUp
-      (estilo, sombras e tags da própria cena), aplicando apenas o fundo e a
-      resolução escolhidos.
+      Com <b>Como está na cena</b>, cada cena sai exatamente como está no SketchUp
+      (estilo, sombras e tags), aplicando apenas o fundo e a resolução. Com
+      <b>Otimizado para IA</b>, o estilo muda só durante o export e é devolvido
+      ao fim: nada é salvo na cena.
     </div>
 
   </div>
@@ -1003,6 +1022,7 @@
   var scenes      = [];          // [{name, sid}]
   var lighting    = 'frio';
   var people      = true;
+  var iaStyle     = false;       // Apresentação: estilo otimizado para IA no export
   var promptByName = {};         // nome da cena => prompt (refeito a cada mudança)
   var sceneStore  = {};          // sid => { subs: [{de, para}] }  (salvo no .skp)
   var sceneThumbs = {};          // sid => dataURL
@@ -1040,6 +1060,8 @@
       if (s.pBg)                         setBg('p', s.pBg);
       if (s.lighting)                    setLight(s.lighting);
       if (typeof s.people === 'boolean') setPeople(s.people);
+      if (typeof s.pIA === 'boolean')    setIA(s.pIA);
+      if (s.pLinhas)                     document.getElementById('pLinhas').value = s.pLinhas;
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
       if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
       if (s.pFolder)                     window.setFolder('pres', s.pFolder);
@@ -1071,6 +1093,7 @@
     var s = {
       pBg: st.p.bg, lighting: lighting,
       people: people,
+      pIA: iaStyle, pLinhas: document.getElementById('pLinhas').value,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
       criticals: document.getElementById('criticals').value
@@ -1457,6 +1480,18 @@
     scheduleBuild();
   }
 
+  var IA_HINT_ON  = 'Só durante o export: sombras off, texturas on, sem perfis/profundidade/extensão, ' +
+                    'sem geometria oculta, guias, névoa, céu e chão. A cena não é alterada.';
+  var IA_HINT_OFF = 'O print sai exatamente como a cena está no SketchUp.';
+  function setIA(v) {
+    iaStyle = !!v;
+    document.getElementById('pia-on').classList.toggle('active', iaStyle);
+    document.getElementById('pia-off').classList.toggle('active', !iaStyle);
+    document.getElementById('iaOpts').style.display = iaStyle ? 'block' : 'none';
+    document.getElementById('iaHint').textContent = iaStyle ? IA_HINT_ON : IA_HINT_OFF;
+    saveSettings();
+  }
+
   function setPeople(v) {
     people = !!v;
     document.getElementById('people-on').classList.toggle('active', people);
@@ -1485,6 +1520,7 @@
     var config = {
       mode: 'presentation', scenes: sel, folder: st.p.folder,
       resolution: readRes('p'), background: st.p.bg, planta: plantaLer(),
+      ia: iaStyle, linhas: document.getElementById('pLinhas').value,
       // Substituir só faz sentido com uma cena: várias gravam com o próprio nome.
       replace: sel.length === 1 ? (st.p.replace || '') : ''
     };

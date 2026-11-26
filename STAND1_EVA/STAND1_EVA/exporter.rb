@@ -23,6 +23,72 @@ module STAND1
       # MODO presentation  → exporta a cena COMO ESTÁ (estilo/sombras da própria
       #                      cena), aplicando apenas o fundo escolhido e a resolução.
 
+      # ── Estilo "otimizado para IA" ────────────────────────────────────────────
+      # Opcional no export da Apresentação. Troca o estilo SÓ durante o export e
+      # devolve tudo no fim: nada é salvo na cena nem no estilo do SketchUp.
+      #
+      # O que ajuda a IA a ler o print: sombras desligadas (a IA cria a própria luz;
+      # sombra do SketchUp vira "sujeira" ou é copiada), texturas ligadas (logos e
+      # artes legíveis), e nenhum efeito de linha: perfis grossos, profundidade,
+      # extensão, pontas e tremido viram traço de desenho no render. Arestas finas
+      # continuam, porque separam planos de mesma cor. Também some tudo que não é
+      # estande: geometria oculta, guias, névoa, marca d'água, céu, chão e horizonte.
+      #
+      # O nome das chaves de rendering_options muda entre versões do SketchUp e a
+      # documentação oficial é incompleta. Por isso cada ajuste tem nomes candidatos
+      # e só vale se a chave EXISTE em rendering_options.keys; o que não existir é
+      # ignorado e listado nos avisos do export.
+      IA_AJUSTES = [
+        # [rótulo no aviso,   chaves candidatas,                    valor]
+        ['texturas',          %w[Texture Textures],                 true ],
+        ['perfis',            %w[DrawSilhouettes],                  false],
+        ['profundidade',      %w[DrawDepthQue],                     false],
+        ['extensão de linha', %w[ExtendLines],                      false],
+        ['pontas de linha',   %w[DrawLineEnds DrawLineEndPoints],   false],
+        ['linhas tremidas',   %w[JitterEdges],                      false],
+        ['geometria oculta',  %w[DrawHidden],                       false],
+        ['guias',             %w[HideConstructionGeometry],         true ],
+        ['névoa',             %w[DisplayFog],                       false],
+        ['marca d\'água',     %w[DisplayWatermarks],                false],
+        ['céu',               %w[DisplaySky DrawSky],               false],
+        ['chão',              %w[DrawGround DisplayGround],         false],
+        ['horizonte',         %w[DrawHorizon],                      false]
+      ].freeze
+
+      # Só com "Sem linhas": esconde as arestas por completo.
+      IA_SEM_LINHAS = ['arestas', %w[EdgeDisplayMode], false].freeze
+
+      # Quais chaves aplicar neste SketchUp: { chaves: [[chave, valor]], faltando: [rótulos] }.
+      # Sem acesso à lista de chaves, tenta o 1º candidato (safe_set ignora o que falhar).
+      def self.ia_resolver(ro, linhas = 'finas')
+        keys = (ro.keys.map(&:to_s) rescue nil)
+        ajustes = IA_AJUSTES.dup
+        ajustes << IA_SEM_LINHAS if linhas.to_s == 'sem'
+        chaves = []
+        faltando = []
+        ajustes.each do |rotulo, candidatas, valor|
+          achou = keys ? candidatas.find { |c| keys.include?(c) } : candidatas.first
+          achou ? chaves << [achou, valor] : faltando << rotulo
+        end
+        { chaves: chaves, faltando: faltando }
+      end
+
+      # Valores atuais das chaves que serão alteradas (+ RenderMode), para restaurar.
+      def self.ia_snapshot(ro, chaves)
+        h = {}
+        chaves.each { |k, _| h[k] = safe_get(ro, k) }
+        h['RenderMode'] = safe_get(ro, 'RenderMode')
+        h
+      end
+
+      # Aplica o estilo IA na cena atual. Chamado a cada cena, DEPOIS de selecioná-la
+      # (selecionar a página reaplica o estilo salvo nela).
+      def self.ia_aplicar(model, ro, chaves)
+        (model.shadow_info['DisplayShadows'] = false) rescue nil
+        safe_set(ro, 'RenderMode', 3) # Shaded with Textures
+        chaves.each { |k, v| safe_set(ro, k, v) }
+      end
+
       # O export corre em passos — uma cena por chamada de `passo` — para o
       # diálogo continuar respondendo e o status andar junto com os arquivos.
       # `preparar` valida e guarda o estado, `passo` grava um PNG, `finalizar`
@@ -43,6 +109,15 @@ module STAND1
         pages = model.pages.select { |p| selected_names.include?(p.name) }
         return { ok: false, error: 'Nenhuma cena encontrada no modelo.' } if pages.empty?
 
+        # Estilo otimizado para IA (opcional): resolve as chaves ANTES do snapshot.
+        ia      = !!config[:ia]
+        ia_info = ia ? ia_resolver(ro, config[:linhas]) : nil
+        avisos  = []
+        if ia_info && !ia_info[:faltando].empty?
+          avisos << 'Estilo IA: não encontrei estas opções neste SketchUp (ignoradas): ' +
+                    ia_info[:faltando].join(', ') + '.'
+        end
+
         @sessao = {
           model:      model,
           view:       view,
@@ -55,8 +130,11 @@ module STAND1
           resolution: config[:resolution] || { width: 3840, height: 2160 },
           replace:    config[:replace],
           planta:     Planta.normalizar_cfg(config[:planta]),
-          avisos:     [],
-          saved:      snapshot_settings(model, view, ro),
+          ia:         ia,
+          ia_chaves:  ia_info ? ia_info[:chaves] : [],
+          avisos:     avisos,
+          saved:      snapshot_settings(model, view, ro).merge(
+                        ia: (ia ? ia_snapshot(ro, ia_info[:chaves]) : nil)),
           exported:   [],
           failed:     [],
           i:          0
@@ -78,6 +156,7 @@ module STAND1
           # cena, e não um estado intermediário do movimento.
           aplicar_camera(s[:view], page) if page.use_camera?
           apply_settings(s[:model], s[:ro], s[:mode], s[:style], s[:bg])
+          ia_aplicar(s[:model], s[:ro], s[:ia_chaves]) if s[:ia]
 
           path = caminho_saida(s, page)
 
@@ -292,6 +371,8 @@ module STAND1
         safe_set(ro, 'RenderMode',          saved[:render_mode]) unless saved[:render_mode].nil?
         safe_set(ro, 'Textures',            saved[:texture_on])  unless saved[:texture_on].nil?
         safe_set(ro, 'DisplayColorByLayer', saved[:color_layer]) unless saved[:color_layer].nil?
+        # Estilo IA: devolve cada chave que foi alterada
+        (saved[:ia] || {}).each { |k, v| safe_set(ro, k, v) unless v.nil? }
 
         # Restaura visibilidade de cada tag ao estado original
         model.layers.each do |l|

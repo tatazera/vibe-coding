@@ -27,7 +27,14 @@ A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o esta
 ### Apresentação — exportador de Scenes
 - Resolução 4K padrão (2K / FHD / HD ou customizada): você define a largura e a
   altura acompanha o enquadramento da vista, para o PNG sair exatamente como a cena mostra
-- Fundo branco / preto / transparente, sombras desativadas, eixos e anotações ocultos
+- Fundo branco / preto / transparente
+- **Estilo do print:** *Como está na cena* (padrão) grava a cena exatamente como está no SketchUp.
+  *Otimizado para IA* muda o estilo **só durante o export** (nada é salvo na cena): sombras off,
+  texturas on, sem perfis, profundidade, extensão, pontas e tremido de linha, sem geometria oculta,
+  guias, névoa, marca d'água, céu, chão e horizonte. Arestas finas ficam (separam planos de mesma
+  cor); a opção *Sem linhas* esconde todas. A escolha fica salva
+- Opções de estilo que não existirem na sua versão do SketchUp são ignoradas e listadas nos avisos
+  ao fim do export
 - Export em lote, uma cena por vez, com o nome do arquivo em andamento no rodapé
 - Restaura as configurações originais do modelo ao final
 
