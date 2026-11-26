@@ -61,6 +61,7 @@ module STAND1
       @dialog.add_action_callback('save_api_key')     { |_, key| save_api_key(key)           }
       @dialog.add_action_callback('open_url')         { |_, url| UI.openURL(url)             }
       @dialog.add_action_callback('save_scene_subs')      { |_, msg| save_scene_subs(msg)      }
+      @dialog.add_action_callback('save_core')            { |_, msg| save_core(msg)            }
       @dialog.add_action_callback('get_scene_thumbs')    { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
       @dialog.add_action_callback('mapa_scan')           { |_, _|   MapaArtes.scan_from_dialog(@dialog) }
@@ -248,6 +249,32 @@ module STAND1
       File.open(project_text_file(model, attr), 'w:UTF-8') { |f| f.write(val.to_s) } rescue nil
     end
 
+    # ── CORE do prompt: textos fixos editáveis, GLOBAIS (valem p/ todos os projetos) ──
+    # Arquivo %APPDATA%/STAND1_EVA/core_prompt.json com só o que o usuário editou;
+    # o que faltar (ou ficar vazio) usa PromptBuilder::CORE_DEFAULTS.
+    def self.core_file
+      File.join(backup_dir, 'core_prompt.json')
+    end
+
+    def self.read_core
+      return {} unless File.file?(core_file)
+      h = (JSON.parse(File.read(core_file, encoding: 'UTF-8')) rescue nil)
+      h.is_a?(Hash) ? h : {}
+    rescue
+      {}
+    end
+
+    # msg = JSON com as chaves do core. '{}' restaura o padrão. Guarda só o que
+    # difere do padrão, para que melhorias futuras do padrão cheguem a quem não editou.
+    def self.save_core(msg)
+      h = JSON.parse(msg.to_s) rescue nil
+      return unless h.is_a?(Hash)
+      merged = PromptBuilder.merge_core(h)
+      custom = merged.reject { |k, v| v == PromptBuilder::CORE_DEFAULTS[k] }
+      File.open(core_file, 'w:UTF-8') { |f| f.write(custom.to_json) }
+    rescue
+    end
+
     # Preferências gerais (pasta, fundo, resolução...) num arquivo em %APPDATA%.
     # O SketchUp grava no PrivatePreferences.json sem escapar as aspas internas do
     # JSON ("{"pBg":...}"), então o que vinha do registro nunca era lido de volta e a
@@ -283,6 +310,7 @@ module STAND1
       obj['sceneStore'] = read_scene_store(model).each_with_object({}) do |(sid, entry), h|
         h[sid] = { 'subs' => scene_subs(entry) }
       end
+      obj['core'] = { 'values' => PromptBuilder.merge_core(read_core), 'defaults' => PromptBuilder::CORE_DEFAULTS }
       @dialog.execute_script("window.applySettings(#{obj.to_json})")
     end
 
@@ -457,6 +485,8 @@ module STAND1
         lighting:    config[:lighting]    || 'frio',
         environment: config[:environment] || 'interno',
         people:      config[:people],
+        reference:   !!config[:reference],         # foto de referência do pavilhão
+        core:        read_core,                    # textos fixos editados pelo usuário
         general:     config[:general]     || [],   # ajustes de todas as cenas
         scene_subs:  scene_subs_map                # substituições por cena
       }

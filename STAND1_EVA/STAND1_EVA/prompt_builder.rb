@@ -13,25 +13,39 @@ module STAND1
 
     module PromptBuilder
 
-      # ── Blocos fixos (idênticos em todo prompt do mesmo ambiente) ────────────
+      # ── CORE: blocos fixos, iguais em todos os projetos ──────────────────────
+      #
+      # Estes são os textos PADRÃO. O usuário pode editá-los no painel ("Base do
+      # pavilhão"); o que ele edita fica num arquivo em %APPDATA% (vale para todos os
+      # projetos) e sobrescreve o padrão. Campo vazio = volta ao padrão.
+      # {tom} nas frases de luz vira "frio" ou "quente".
 
-      BASE = {
-        'interno' => 'Imagem foto-realística interna de stand em pavilhão tecnológico de feiras, ' \
-                     'teto em grid metálico preto e luminárias LED, sem estruturas aéreas, ' \
-                     'sem alterar a geometria.',
-        'externo' => 'Imagem foto-realística de stand em feira ao ar livre, sob céu aberto com ' \
-                     'luz natural, outros estandes e tendas ao fundo, sem estruturas aéreas, ' \
-                     'sem alterar a geometria.'
-      }.freeze
-
-      LIGHT = {
-        'interno' => 'Luz geral do pavilhão em branco %s.',
-        'externo' => 'Iluminação do estande em branco %s.'
+      CORE_DEFAULTS = {
+        'base_interno' => 'Imagem foto-realística interna de stand em pavilhão tecnológico de feiras, ' \
+                          'teto em grid metálico preto e luminárias LED, sem estruturas aéreas, ' \
+                          'sem alterar a geometria.',
+        'base_externo' => 'Imagem foto-realística de stand em feira ao ar livre, sob céu aberto com ' \
+                          'luz natural, outros estandes e tendas ao fundo, sem estruturas aéreas, ' \
+                          'sem alterar a geometria.',
+        'luz_interno'  => 'Luz geral do pavilhão em branco {tom}.',
+        'luz_externo'  => 'Iluminação do estande em branco {tom}.',
+        'pessoas'      => 'Adicionar pessoas foto-realísticas circulando.',
+        # Só entra quando o usuário liga "Foto de referência do pavilhão" (2ª imagem anexada).
+        'referencia'   => 'Use a segunda imagem anexada como referência do ambiente do pavilhão ' \
+                          '(teto, iluminação, piso e fundo), sem copiar o estande dela.'
       }.freeze
 
       LIGHT_TONE = { 'frio' => 'frio', 'quente' => 'quente' }.freeze
 
-      PEOPLE = 'Adicionar pessoas foto-realísticas circulando.'.freeze
+      # Padrão + o que o usuário editou (só textos não vazios, só chaves conhecidas).
+      def self.merge_core(custom)
+        custom = {} unless custom.is_a?(Hash)
+        CORE_DEFAULTS.each_with_object({}) do |(k, dflt), h|
+          v = custom[k] || custom[k.to_sym]
+          v = safe_utf8(v).gsub(/\s+/, ' ').strip
+          h[k] = v.empty? ? dflt : v
+        end
+      end
 
       # Aceita as chaves antigas ('feira', 'feira_externa', neutros...) de projetos já salvos.
       def self.normalize_env(key)
@@ -66,20 +80,28 @@ module STAND1
 
       # ── Monta o prompt de UMA cena ───────────────────────────────────────────
       #
+      # Ordem: base do ambiente → [referência] → luz → [pessoas] → ajustes gerais →
+      # ajustes da cena.
+      #
       # opts:
       #   environment => 'interno' | 'externo'
       #   lighting    => 'frio' | 'quente'
       #   people      => true | false   (padrão true)
-      #   general     => array de textos (ajustes de TODAS as cenas)
-      #   subs        => array de { 'de', 'para' } (substituições desta cena)
+      #   reference   => true | false   (foto de referência do pavilhão; padrão false)
+      #   core        => Hash com os textos do core editados pelo usuário (opcional)
+      #   general     => array de textos (ajustes de TODAS as cenas do projeto)
+      #   subs        => array de { 'de', 'para' } (ajustes desta cena)
 
       def self.build(opts)
         env    = normalize_env(opts[:environment])
         tone   = LIGHT_TONE[opts[:lighting].to_s] || 'frio'
         people = opts[:people].nil? ? true : !!opts[:people]
+        core   = merge_core(opts[:core])
 
-        parts = [BASE[env], format(LIGHT[env], tone)]
-        parts << PEOPLE if people
+        parts = [core["base_#{env}"]]
+        parts << core['referencia'] if opts[:reference]
+        parts << core["luz_#{env}"].gsub('{tom}', tone)
+        parts << core['pessoas'] if people
         (opts[:general] || []).each { |l| s = sentence(l); parts << s if s }
         (opts[:subs]    || []).each { |i| s = substitution_sentence(i); parts << s if s }
 

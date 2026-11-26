@@ -154,6 +154,23 @@
     .sub-empty { font-size: 11.5px; color: #aaa; padding: 2px 0 8px; }
     .hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: #999; }
 
+    /* Base do pavilhão (core editável, global) */
+    .core-box > summary {
+      cursor: pointer; user-select: none; list-style: none;
+      font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+      color: var(--azul);
+    }
+    .core-box > summary::-webkit-details-marker { display: none; }
+    .core-box > summary::before { content: '▸ '; }
+    .core-box[open] > summary::before { content: '▾ '; }
+    .core-lbl { font-size: 11px; font-weight: 600; color: #666; margin: 10px 0 4px; }
+    .core-ta {
+      width: 100%; min-height: 54px; padding: 8px 9px; resize: vertical;
+      border: 1.5px solid var(--borda); border-radius: 6px;
+      font-size: 12px; font-family: var(--font); color: #222; background: #fff;
+    }
+    .core-ta:focus { outline: none; border-color: var(--rosa); }
+
     .scene-item input[type="checkbox"] {
       accent-color: var(--rosa);
       width: 15px; height: 15px; flex-shrink: 0; cursor: pointer;
@@ -580,6 +597,7 @@
     /* Overrides de estilos inline hardcoded (textareas/selects) */
     body.dark #criticals,
     body.dark .sub-row input,
+    body.dark .core-ta,
     body.dark .planta-row select {
       background: #24262f !important; border-color: #3a3c47 !important; color: #d3d5e0 !important;
     }
@@ -693,6 +711,16 @@
     </div>
 
     <div class="section">
+      <div class="section-label">Foto de referência do pavilhão
+        <span class="hint">— anexe-a como 2ª imagem</span>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="ref-off" onclick="setRef(false)">Sem referência</button>
+        <button class="toggle-btn" id="ref-on" onclick="setRef(true)">Com referência</button>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">Ajustes gerais
         <span class="hint">— valem para todas as cenas do projeto</span>
       </div>
@@ -702,10 +730,12 @@
     </div>
 
     <div class="section">
-      <div class="section-label">Substituições · <span id="sceneName">—</span></div>
+      <div class="section-label">Ajustes da cena · <span id="sceneName">—</span>
+        <span class="hint">— só desta vista</span>
+      </div>
       <div id="subsBox"><div class="sub-empty">Clique numa cena da lista.</div></div>
-      <button class="btn-small" id="btnAddSub" onclick="addSub()" disabled>＋ Adicionar substituição</button>
-      <div style="font-size:10px;color:#888;margin-top:6px">Salvas na própria cena, dentro do arquivo do SketchUp. Só o campo da direita preenchido vira uma frase livre (ex.: “O painel branco tem contorno LED”).</div>
+      <button class="btn-small" id="btnAddSub" onclick="addSub()" disabled>＋ Adicionar ajuste</button>
+      <div style="font-size:10px;color:#888;margin-top:6px">Salvos na própria cena, dentro do arquivo do SketchUp, e somados aos ajustes gerais. Preencha os dois campos para “substituir X por Y”, ou só o da direita para uma frase livre (ex.: “o painel branco tem contorno LED”).</div>
     </div>
 
     <div class="section">
@@ -713,6 +743,28 @@
       <div id="promptsOutput">
         <div class="empty-scenes">Clique numa cena da lista.</div>
       </div>
+    </div>
+
+    <div class="section">
+      <details class="core-box">
+        <summary>Base do pavilhão <span class="hint">— texto fixo, vale para todos os projetos</span></summary>
+        <div class="core-lbl">Interno</div>
+        <textarea class="core-ta" id="core-base_interno" oninput="coreChanged()"></textarea>
+        <div class="core-lbl">Externo</div>
+        <textarea class="core-ta" id="core-base_externo" oninput="coreChanged()"></textarea>
+        <div class="core-lbl">Iluminação — interno <span class="hint">({tom} vira frio ou quente)</span></div>
+        <textarea class="core-ta" id="core-luz_interno" oninput="coreChanged()" style="min-height:36px"></textarea>
+        <div class="core-lbl">Iluminação — externo</div>
+        <textarea class="core-ta" id="core-luz_externo" oninput="coreChanged()" style="min-height:36px"></textarea>
+        <div class="core-lbl">Pessoas</div>
+        <textarea class="core-ta" id="core-pessoas" oninput="coreChanged()" style="min-height:36px"></textarea>
+        <div class="core-lbl">Referência do pavilhão <span class="hint">(só entra com “Com referência”)</span></div>
+        <textarea class="core-ta" id="core-referencia" oninput="coreChanged()"></textarea>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <button class="btn-small" onclick="resetCore()">Restaurar padrão</button>
+          <span style="font-size:10px;color:#888">Campo vazio também volta ao padrão. Salvo no computador, não dentro do projeto.</span>
+        </div>
+      </details>
     </div>
 
   </div>
@@ -1009,6 +1061,9 @@
   var lighting    = 'frio';
   var environment = 'interno';   // 'interno' | 'externo'
   var people      = true;
+  var refPav      = false;       // foto de referência do pavilhão (2ª imagem anexada)
+  var CORE_KEYS   = ['base_interno','base_externo','luz_interno','luz_externo','pessoas','referencia'];
+  var coreDefaults = {};         // preenchido pelo Ruby (PromptBuilder::CORE_DEFAULTS)
   var promptByName = {};         // nome da cena => prompt (refeito a cada mudança)
   var sceneStore  = {};          // sid => { subs: [{de, para}] }  (salvo no .skp)
   var sceneThumbs = {};          // sid => dataURL
@@ -1051,6 +1106,14 @@
       if (s.lighting)                    setLight(s.lighting);
       if (s.environment)                 setEnv(normEnv(s.environment));
       if (typeof s.people === 'boolean') setPeople(s.people);
+      if (typeof s.refPav === 'boolean') setRef(s.refPav);
+      if (s.core) {
+        coreDefaults = s.core.defaults || {};
+        CORE_KEYS.forEach(function(k) {
+          var el = document.getElementById('core-' + k);
+          if (el && s.core.values) el.value = s.core.values[k] || '';
+        });
+      }
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
       if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
       if (s.pFolder)                     window.setFolder('pres', s.pFolder);
@@ -1081,7 +1144,7 @@
     var pRes = readRes('p');
     var s = {
       pBg: st.p.bg, lighting: lighting, environment: environment,
-      people: people,
+      people: people, refPav: refPav,
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
       criticals: document.getElementById('criticals').value
@@ -1346,7 +1409,7 @@
     var has = box.querySelector('.sub-row');
     var hint = box.querySelector('.sub-empty');
     if (!has && !hint) {
-      box.innerHTML = '<div class="sub-empty">Nenhuma substituição nesta cena.</div>';
+      box.innerHTML = '<div class="sub-empty">Nenhum ajuste nesta cena.</div>';
     }
   }
 
@@ -1475,6 +1538,39 @@
     });
     saveSettings();
     scheduleBuild();
+  }
+
+  function setRef(v) {
+    refPav = !!v;
+    document.getElementById('ref-on').classList.toggle('active', refPav);
+    document.getElementById('ref-off').classList.toggle('active', !refPav);
+    saveSettings();
+    scheduleBuild();
+  }
+
+  // ── Base do pavilhão (core): texto fixo editável, global ───────────────────
+  var _coreT = null;
+  function readCore() {
+    var o = {};
+    CORE_KEYS.forEach(function(k) { o[k] = document.getElementById('core-' + k).value; });
+    return o;
+  }
+  // Salva (no computador, não no projeto) e refaz o prompt — nessa ordem, para o
+  // Ruby ler o core já atualizado.
+  function coreChanged() {
+    clearTimeout(_coreT);
+    _coreT = setTimeout(function() {
+      _coreT = null;
+      su('save_core', JSON.stringify(readCore()));
+      requestBuild();
+    }, 450);
+  }
+  function resetCore() {
+    CORE_KEYS.forEach(function(k) { document.getElementById('core-' + k).value = coreDefaults[k] || ''; });
+    clearTimeout(_coreT); _coreT = null;
+    su('save_core', '{}');
+    requestBuild();
+    setStatusR('Base do pavilhão restaurada ao padrão.', 'ok');
   }
 
   function setPeople(v) {
@@ -1631,7 +1727,7 @@
     if (!names.length) { promptByName = {}; paintPrompt(); return; }
     su('build_prompts', JSON.stringify({
       scenes: names, lighting: lighting, environment: environment,
-      people: people, general: generalLines()
+      people: people, reference: refPav, general: generalLines()
     }));
   }
 
