@@ -12,12 +12,11 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 
 ### Render IA — gerador de prompts
 Um prompt curto, em português, para colar no **Nano Banana** junto do PNG exportado da cena.
-A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o estande.
-- **Core (base do pavilhão):** textos fixos, iguais em todos os projetos. Podem ser editados na
-  seção **Base do pavilhão** (recolhida) e ficam salvos no computador, não no projeto.
-  **Restaurar padrão** volta ao texto original
-- **Alternâncias a cada render:** Interno ou Externo, branco frio ou quente, com ou sem público e
-  **Com referência** (acrescenta a frase para usar a 2ª imagem anexada como referência do pavilhão)
+A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o estande. Todo estande
+é tratado como **interno** (prompt externo é feito à parte).
+- **Base fixa**, igual em todos os projetos: pavilhão tecnológico, teto em grid metálico preto,
+  luminárias LED, sem estruturas aéreas, sem alterar a geometria
+- **Alternâncias a cada render:** branco frio ou quente, com ou sem público
 - **Ajustes gerais:** frases do projeto inteiro, uma por linha (piso, materiais...). Salvos por projeto
 - **Ajustes da cena:** só daquela vista, somados aos gerais. Linhas "elemento → por" (ex.: *linhas
   amarelas das colunas → fita LED branco frio*) ou só a frase livre. Ficam salvos na própria cena,
