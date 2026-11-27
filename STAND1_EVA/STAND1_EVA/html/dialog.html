@@ -641,6 +641,11 @@
       border: 1px solid var(--borda); background: #fafaff; color: #5a5d78; transition: all .1s; }
     .mp-chip:hover { border-color: var(--rosa); color: var(--rosa); background: #fff; }
     .mp-chip.rec { background: #eef1ff; color: var(--azul); border-color: #d3d9ff; }
+    .mp-chip.act { background: #fff; color: var(--rosa); border-style: dashed; border-color: #e7a9c6; }
+    .mp-chip.act:hover { background: #fbe9f3; }
+    .mp-seguir { font-size: 11px; color: #8a8da3; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; }
+    .mp-seguir input { accent-color: var(--rosa); }
+    #mpNomesTxt { width: 100%; resize: vertical; border: 1.5px solid var(--borda); border-radius: 9px; padding: 11px; font-size: 12.5px; line-height: 1.6; font-family: var(--font); color: #333; background: #fafbff; }
     .mp-cap-opts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .mp-obs { flex: 1; min-width: 140px; width: auto; padding: 6px 10px; font-size: 12px; color: #c40000; }
     .mp-obs::placeholder { color: #c98a8a; }
@@ -737,6 +742,8 @@
     body.dark .mp-aviso.perd { background: #3d1b27; color: #ff9db7; }
     body.dark .mp-aviso.info { background: #1f2440; color: #b6c0ff; }
     body.dark .mp-destino { background: #33222c; }
+    body.dark #mpNomesTxt { background: #24262f; border-color: #3a3c47; color: #d3d5e0; }
+    body.dark .mp-chip.act { background: #23252f; border-color: #6b3b52; }
     body.dark .mp-vazio { color: #8b8d9a; }
   </style>
 </head>
@@ -1114,7 +1121,8 @@
         <div class="mp-cap-row">
           <div class="mp-prevbox" id="mpPrev"></div>
           <div class="mp-cap-fields">
-            <div class="mp-cap-trow"><div class="mp-cap-title" id="mpCapTitle"></div><span class="mp-destino" id="mpDestino"></span></div>
+            <div class="mp-cap-trow"><div class="mp-cap-title" id="mpCapTitle"></div><span class="mp-destino" id="mpDestino"></span>
+              <label class="mp-seguir" id="mpSeguirWrap" style="display:none" title="Usa o ambiente que tem o mesmo nome da cena ativa do SketchUp"><input type="checkbox" id="mpSeguir" checked> seguir a cena ativa</label></div>
             <div class="mp-cap-sub" id="mpCapSub"></div>
             <div class="mp-cap-warn" id="mpCapWarn" style="display:none"></div>
             <input type="text" class="mp-input" id="mpNome" maxlength="90" autocomplete="off"
@@ -1165,6 +1173,20 @@
 </footer>
 
 <div class="mp-toast" id="mpToast" style="display:none"></div>
+
+<div class="mp-modal" id="mpNomesModal" style="display:none">
+  <div class="mp-modal-box" style="width:min(460px,92vw)">
+    <div class="mp-modal-h"><span>Nomes rápidos</span><button class="mp-x" id="mpNomesX">✕</button></div>
+    <div class="mp-modal-p">Um nome por linha. Eles aparecem como botões no painel de captura e valem para todos os projetos (ficam salvos neste computador).</div>
+    <textarea id="mpNomesTxt" spellcheck="false" style="min-height:240px"></textarea>
+    <div class="mp-modal-b">
+      <button class="btn-small" id="mpNomesPadrao">Restaurar padrão</button>
+      <span style="flex:1"></span>
+      <button class="btn-small" id="mpNomesCancelar">Cancelar</button>
+      <button class="btn-export" id="mpNomesSalvar" style="padding:9px 20px">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <div class="mp-modal" id="mpModal" style="display:none">
   <div class="mp-modal-box">
@@ -1231,6 +1253,10 @@
       if (typeof s.people === 'boolean') setPeople(s.people);
       if (typeof s.pIA === 'boolean')    setIA(s.pIA);
       if (s.pLinhas)                     document.getElementById('pLinhas').value = s.pLinhas;
+      if (Array.isArray(s.mapaNomes) && s.mapaNomes.length && typeof mp !== 'undefined') {
+        mp.vocab = s.mapaNomes.slice(0, 40).map(String);
+        mpRenderChips();
+      }
       if (typeof s.criticals === 'string') document.getElementById('criticals').value = s.criticals;
       if (s.pRes)                        applyRes('p', s.pRes.w, s.pRes.h);
       if (s.pFolder)                     window.setFolder('pres', s.pFolder);
@@ -1263,6 +1289,7 @@
       pBg: st.p.bg, lighting: lighting,
       people: people,
       pIA: iaStyle, pLinhas: document.getElementById('pLinhas').value,
+      mapaNomes: (typeof mp !== 'undefined' ? mp.vocab : undefined),
       pRes: { w: pRes.width, h: pRes.height },
       pFolder: st.p.folder,
       criticals: document.getElementById('criticals').value
@@ -1286,11 +1313,13 @@
   // Marcação manual: você seleciona no SketchUp e adiciona. A medida é lida do modelo a
   // cada atualização (o projeto muda, a peça acompanha); quantidade e "frente e verso"
   // são digitados. O que mudou desde a última revisão emitida vira lista de alterações.
-  var MP_VOCAB = ['TESTEIRA FRONTAL', 'TESTEIRA LATERAL', 'PAREDE FUNDO', 'PAREDE LATERAL', 'BACKDROP', 'LOGO PVC',
-                  'SETA PVC', 'GRAFISMO PVC', 'PLACA ADESIVADA', 'MOLDURA P/ PORTA', 'FRENTE BALCÃO', 'LATERAL BALCÃO'];
+  // Nomes rápidos: padrão do vocabulário do mapa; o usuário edita e fica salvo no computador.
+  var MP_VOCAB_PADRAO = ['TESTEIRA FRONTAL', 'TESTEIRA LATERAL', 'PAREDE FUNDO', 'PAREDE LATERAL', 'BACKDROP', 'LOGO PVC',
+                         'SETA PVC', 'GRAFISMO PVC', 'PLACA ADESIVADA', 'MOLDURA P/ PORTA', 'FRENTE BALCÃO', 'LATERAL BALCÃO'];
   var mp = { amb: [], pecas: [], ativo: '', sel: null, sujo: false, ocupado: false,
              rev: { n: null, rotulo: null, proxima: 'R00', pendentes: 0, texto: null, removidas: 0, hist: [] },
-             cap: { nome: '', qtd: 1, fv: false, obs: '' }, flash: {}, modalEmitida: false };
+             cap: { nome: '', qtd: 1, fv: false, obs: '' }, flash: {}, modalEmitida: false,
+             vocab: MP_VOCAB_PADRAO.slice(), seguirCena: true };
   var _mpSaveT = null, _mpRemovidos = [], _mpToastT = null;
 
   function $m(id) { return document.getElementById(id); }
@@ -1298,6 +1327,18 @@
   function mpAmbAtivo() { return mp.amb.filter(function(a) { return a.id === mp.ativo; })[0] || mp.amb[0] || null; }
   function mpPecasDe(id) { return mp.pecas.filter(function(p) { return p.amb === id; }); }
   function mpPeca(id) { return mp.pecas.filter(function(p) { return p.id === id; })[0]; }
+
+  // Ambiente de destino: o que casa com a cena ativa do SketchUp (se "seguir a cena" estiver ligado)
+  // ou o ambiente escolhido na lateral.
+  function mpDestino() {
+    var s = mp.sel, a = null, pelaCena = false;
+    if (mp.seguirCena && s && s.cena_amb) {
+      a = mp.amb.filter(function(x) { return x.id === s.cena_amb; })[0] || null;
+      pelaCena = !!a;
+    }
+    if (!a) a = mpAmbAtivo();
+    return { amb: a, pelaCena: pelaCena };
+  }
 
   // ── Gravação: debounce, e sempre antes de qualquer ação que fale com o Ruby ──
   function mpSalvar() { clearTimeout(_mpSaveT); _mpSaveT = setTimeout(mpSalvarAgora, 350); }
@@ -1318,6 +1359,9 @@
     mp.amb = s.ambientes || []; mp.pecas = s.pecas || []; mp.rev = s.rev || mp.rev; mp.ativo = s.ativo;
     if (!mapaAmbValido(mp.ativo)) mp.ativo = mp.amb[0] ? mp.amb[0].id : '';
     mp.flash = {}; (s.novos || []).forEach(function(id) { mp.flash[id] = true; });
+    // Peça adicionada num ambiente diferente do que está na tela (ex.: sugerido pela cena): vai até ele.
+    var nova = s.novos && s.novos.length ? mpPeca(s.novos[0]) : null;
+    if (nova && nova.amb !== mp.ativo && mapaAmbValido(nova.amb)) { mp.ativo = nova.amb; mpSalvar(); }
     mp.sujo = false;
     mpRender();
     if (s.novos && s.novos.length) {
@@ -1471,7 +1515,7 @@
       $m('mpCapEmpty').querySelector('.mp-cap-h').textContent = 'A seleção não tem arte para medir';
       return;
     }
-    var ps = sel.pecas, um = ps.length === 1, a = mpAmbAtivo();
+    var ps = sel.pecas, um = ps.length === 1, dest = mpDestino();
     var prev = $m('mpPrev');
     if (um) {
       prev.innerHTML = mpSvg(ps[0].prev, ps[0].w_m, ps[0].h_m, 150, 104);
@@ -1493,7 +1537,12 @@
     var btn = $m('mpAdd');
     btn.textContent = dup ? '＋ Adicionar mesmo assim' : (um ? '＋ Adicionar' : '＋ Adicionar ' + ps.length + ' peças');
     btn.disabled = !!sel.grande;
-    $m('mpDestino').textContent = a ? '→ ' + a.nome : '';
+    $m('mpDestino').textContent = dest.amb ? '→ ' + dest.amb.nome + (dest.pelaCena ? ' · pela cena' : '') : '';
+    $m('mpDestino').title = dest.pelaCena ? 'Ambiente sugerido pela cena ativa: «' + sel.cena + '»' : 'Ambiente escolhido na lateral';
+    var seg = $m('mpSeguirWrap');
+    seg.style.display = sel.cena_amb ? '' : 'none';
+    if (sel.cena_amb) seg.title = 'A cena ativa «' + sel.cena + '» corresponde a um ambiente';
+    $m('mpSeguir').checked = mp.seguirCena;
     mpRenderChips();
   }
 
@@ -1508,10 +1557,36 @@
     } catch (e) {}
   }
   function mpRenderChips() {
-    var rec = mpRecentes().slice(0, 6), vis = {}, html = '';
+    var rec = mpRecentes().slice(0, 6), vis = {}, html =
+      '<span class="mp-chip act" data-act="editnomes" title="Editar a lista de nomes rápidos">✎ Nomes</span>' +
+      '<span class="mp-chip act" data-act="addnome" title="Salvar o nome digitado nos nomes rápidos">＋ Salvar nome</span>';
     rec.forEach(function(n) { vis[n] = 1; html += '<span class="mp-chip rec" data-n="' + escHtml(n) + '">' + escHtml(n) + '</span>'; });
-    MP_VOCAB.forEach(function(n) { if (!vis[n]) html += '<span class="mp-chip" data-n="' + escHtml(n) + '">' + escHtml(n) + '</span>'; });
+    mp.vocab.forEach(function(n) { if (!vis[n]) html += '<span class="mp-chip" data-n="' + escHtml(n) + '">' + escHtml(n) + '</span>'; });
     $m('mpChips').innerHTML = html;
+  }
+
+  // Lista de nomes: uma por linha, sem repetir (ignora maiúsculas), até 40 nomes de 60 letras.
+  function mpLimparNomes(txt) {
+    var vis = {}, out = [];
+    String(txt || '').split('\n').forEach(function(l) {
+      var n = l.replace(/\s+/g, ' ').trim().slice(0, 60), k = n.toLowerCase();
+      if (n && !vis[k] && out.length < 40) { vis[k] = 1; out.push(n); }
+    });
+    return out;
+  }
+  function mpAplicarNomes(lista) {
+    mp.vocab = lista.length ? lista : MP_VOCAB_PADRAO.slice();
+    saveSettings();          // vai para o arquivo de preferências do computador
+    mpRenderChips();
+  }
+  function mpAbrirNomes() { $m('mpNomesTxt').value = mp.vocab.join('\n'); $m('mpNomesModal').style.display = ''; $m('mpNomesTxt').focus(); }
+  function mpFecharNomes() { $m('mpNomesModal').style.display = 'none'; }
+  function mpSalvarNomeDigitado() {
+    var n = mpLimparNomes($m('mpNome').value)[0];
+    if (!n) { setMapaStatus('Digite um nome no campo para salvá-lo nos nomes rápidos.', 'error'); return; }
+    if (mp.vocab.some(function(x) { return x.toLowerCase() === n.toLowerCase(); })) { mpToast('«' + n + '» já está nos nomes rápidos'); return; }
+    mpAplicarNomes([n].concat(mp.vocab));
+    mpToast('«' + n + '» salvo nos nomes rápidos');
   }
 
   function mpRenderRodape() {
@@ -1566,7 +1641,7 @@
 
   // ── Ações ───────────────────────────────────────────────────────────────────
   function mpAdicionar() {
-    var sel = mp.sel, a = mpAmbAtivo();
+    var sel = mp.sel, a = mpDestino().amb;
     if (!sel || !sel.pecas || !sel.pecas.length || !a) return;
     mpFlush();
     var nome = $m('mpNome').value.trim();
@@ -1631,7 +1706,21 @@
     $m('mpFv').onclick = function() { this.classList.toggle('on'); };
     $m('mpChips').onclick = function(e) {
       var c = e.target.closest ? e.target.closest('.mp-chip') : null; if (!c) return;
+      var act = c.getAttribute('data-act');
+      if (act === 'editnomes') { mpAbrirNomes(); return; }
+      if (act === 'addnome') { mpSalvarNomeDigitado(); return; }
       $m('mpNome').value = c.getAttribute('data-n'); $m('mpNome').focus();
+    };
+    $m('mpNomesX').onclick = $m('mpNomesCancelar').onclick = mpFecharNomes;
+    $m('mpNomesModal').onclick = function(e) { if (e.target === this) mpFecharNomes(); };
+    $m('mpNomesPadrao').onclick = function() { $m('mpNomesTxt').value = MP_VOCAB_PADRAO.join('\n'); };
+    $m('mpNomesSalvar').onclick = function() { mpAplicarNomes(mpLimparNomes($m('mpNomesTxt').value)); mpFecharNomes(); setMapaStatus('Nomes rápidos salvos.', 'ok'); };
+    try { var sg = localStorage.getItem('eva_mapa_seguir'); if (sg !== null) mp.seguirCena = (sg === '1'); } catch (er) {}
+    $m('mpSeguir').checked = mp.seguirCena;
+    $m('mpSeguir').onchange = function() {
+      mp.seguirCena = this.checked;
+      try { localStorage.setItem('eva_mapa_seguir', this.checked ? '1' : '0'); } catch (er) {}
+      mpRenderCaptura();
     };
     $m('mpModalX').onclick = $m('mpFechar').onclick = mpFecharModal;
     $m('mpModal').onclick = function(e) { if (e.target === this) mpFecharModal(); };

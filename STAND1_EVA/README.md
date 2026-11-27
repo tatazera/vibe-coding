@@ -57,6 +57,13 @@ Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do proje
   esse vínculo (não a posição no modelo nem o nome) que separa o Credenciamento da Plenária: cada
   peça carrega o ambiente, e as alterações são lidas peça a peça e agrupadas por ambiente.
   Mover uma peça de ambiente é um clique. Funciona igual num arquivo com vários ambientes ou num só
+- **Ambiente sugerido pela cena ativa:** se a cena ativa do SketchUp tem o nome de um ambiente (acento,
+  caixa e pontuação não contam; "01 CREDENCIAMENTO - vista 2" e "ARTES - 01 CREDENCIAMENTO" servem), o
+  destino já vem marcado ("→ 08 PLENÁRIA · pela cena") e a lista pula para ele ao adicionar. Cena que
+  cabe em mais de um ambiente não sugere nada. Dá para desligar em "seguir a cena ativa"
+- **Nomes rápidos editáveis:** a lista de botões (padrão: o vocabulário do mapa do BTX) é sua — **✎ Nomes**
+  edita um por linha (sem repetidos, até 40), **＋ Salvar nome** guarda o que você digitou, **Restaurar
+  padrão** volta ao original. Ficam salvos neste computador e valem para todos os projetos
 - **Peça ligada ao modelo:** ela guarda a *referência* das faces de origem, não uma cópia da medida.
   **Atualizar do modelo** (e a abertura da aba, e o Gerar) relê as medidas: esticou a testeira, a peça
   acompanha. O painel avisa "modelo alterado" quando o projeto muda

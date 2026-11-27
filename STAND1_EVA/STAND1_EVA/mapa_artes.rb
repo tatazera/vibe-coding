@@ -520,6 +520,37 @@ module STAND1
       # REVISÕES: o que mudou desde a última emitida
       # ══════════════════════════════════════════════════════════════════════
 
+      # Nome sem acento/pontuação para comparar ("01. Credenciamento" == "01 CREDENCIAMENTO").
+      def self.chave_nome(s)
+        normalize(s).gsub(/[^a-z0-9 ]/, ' ').gsub(/\s+/, ' ').strip
+      end
+
+      # Ambiente que corresponde à cena ativa do SketchUp (ou nil se não houver um só).
+      #   nome igual                      -> esse ambiente
+      #   cena CONTÉM o nome do ambiente  -> o ambiente de nome mais longo ("01 CREDENCIAMENTO - vista 2")
+      #   ambiente CONTÉM o nome da cena  -> só se for um único (cena "ARENA" com 2 arenas = ambíguo)
+      def self.ambiente_da_cena(est, cena)
+        c = chave_nome(cena)
+        return nil if c.empty?
+        cands = est['ambientes'].map { |a| [a, chave_nome(a['nome'])] }.reject { |_, k| k.size < 3 }
+        exato = cands.select { |_, k| k == c }
+        return exato[0][0]['id'] if exato.size == 1
+        dentro = cands.select { |_, k| c.include?(k) }
+        unless dentro.empty?
+          maior = dentro.map { |_, k| k.size }.max
+          top = dentro.select { |_, k| k.size == maior }
+          return top.size == 1 ? top[0][0]['id'] : nil
+        end
+        fora = cands.select { |_, k| k.include?(c) }
+        fora.size == 1 ? fora[0][0]['id'] : nil
+      end
+
+      def self.cena_ativa(model)
+        (model.pages.selected_page.name).to_s
+      rescue
+        ''
+      end
+
       def self.nome_amb(est, id)
         (est['ambientes'].find { |a| a['id'] == id } || {})['nome'].to_s
       end
@@ -667,7 +698,9 @@ module STAND1
           { w_m: (g['w'] * POL_M).round(3), h_m: (g['h'] * POL_M).round(3), furos: g['furos'], material: g['material'],
             sugerido: p[:nome], dup: dup, prev: pecas.size > 12 ? nil : prev_de(g) }
         end
-        { n: n, pecas: lista, total: pecas.size, grande: pecas.size > SEL_MAX_PECAS, parcial: st[:estourou] }
+        cena = cena_ativa(model)
+        { n: n, pecas: lista, total: pecas.size, grande: pecas.size > SEL_MAX_PECAS, parcial: st[:estourou],
+          cena: cena, cena_amb: ambiente_da_cena(est, cena) }
       end
 
       # ══════════════════════════════════════════════════════════════════════
@@ -687,21 +720,45 @@ module STAND1
         def onTransactionRedo(_m);   MapaArtes.modelo_mudou; end
       end
 
+      class ViewObs < Sketchup::ViewObserver
+        def onViewChanged(_v); MapaArtes.vista_mudou; end
+      end
+
+      # A vista muda o tempo todo (órbita, zoom); só interessa se a CENA ativa mudou.
+      def self.vista_mudou
+        return unless @dlg && @ativo
+        n = cena_ativa(Sketchup.active_model)
+        return if n == @ultima_cena
+        @ultima_cena = n
+        selecao_mudou
+      end
+
+      def self.remover_observers
+        return unless @obs_model
+        (@obs_model.selection.remove_observer(@sel_obs)) rescue nil
+        (@obs_model.remove_observer(@mod_obs)) rescue nil
+        (@obs_model.active_view.remove_observer(@view_obs)) rescue nil
+        @obs_model = nil
+      end
+
       def self.dialogo_aberto(dlg)
+        remover_observers                # reabrir nunca deixa observador duplicado
         @dlg = dlg
         @ativo = false
         model = Sketchup.active_model
         @obs_model = model
         @sel_obs = SelObs.new
         @mod_obs = ModObs.new
+        @view_obs = ViewObs.new
+        @ultima_cena = cena_ativa(model)
         model.selection.add_observer(@sel_obs)
         model.add_observer(@mod_obs)
+        model.active_view.add_observer(@view_obs)
       rescue
       end
 
       def self.dialogo_fechado
-        (@obs_model.selection.remove_observer(@sel_obs)) rescue nil
-        (@obs_model.remove_observer(@mod_obs)) rescue nil
+        remover_observers
         @dlg = nil
         @ativo = false
       end
