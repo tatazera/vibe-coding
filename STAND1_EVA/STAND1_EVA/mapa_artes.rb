@@ -878,6 +878,11 @@ module STAND1
       # PRANCHA 16:9 (Ruby puro): posição de cada peça
       # ══════════════════════════════════════════════════════════════════════
 
+      # Cores do texto da prancha: títulos e etiquetas em PRETO; observações e destaques
+      # (o que mudou, origem perdida) em VERMELHO.
+      COR_TEXTO  = [0, 0, 0].freeze
+      COR_ALERTA = [213, 0, 0].freeze
+
       LBL_MIN = 0.08 * M
       LBL_MAX = 0.22 * M
       CHAR_W  = 0.62
@@ -895,7 +900,7 @@ module STAND1
       # Linhas da etiqueta: [{texto, h, y, cor}], y = distância do topo da etiqueta.
       def self.etiqueta_linhas(item, lbl)
         l1, l2 = linhas_etiqueta(item)
-        ls = [[l1, lbl, :normal], [l2, 0.8 * lbl, :cinza]]
+        ls = [[l1, lbl, :normal], [l2, 0.8 * lbl, :normal]]
         (item[:notas] || []).each { |t, k| ls << [t, 0.8 * lbl, k] }
         y = 0.0
         ls.map { |t, h, k| y += 1.35 * h; { texto: t, h: h, y: y, cor: k } }
@@ -1026,7 +1031,7 @@ module STAND1
         quadros = est['ambientes'].select { |a| ids.include?(a['id']) }.map do |a|
           itens = est['pecas'].select { |r| r['amb'] == a['id'] }.map do |r|
             notas = []
-            notas << [r['obs'], :normal] unless r['obs'].to_s.empty?
+            notas << [r['obs'], :alerta] unless r['obs'].to_s.empty?
             if destaque && (d = difs[r['id']])
               notas << ["#{prox} — #{d[:tipo] == 'nova' ? 'NOVA' : 'ALTERADA: ' + d[:itens].join('; ')}", :alerta]
             end
@@ -1160,7 +1165,7 @@ module STAND1
         end
         t = lay[:titulo]; r = lay[:rev]
         texto(e, t[:texto], t[:x], t[:z], t[:h])
-        texto(e, r[:texto], r[:x], r[:z], r[:h], :cinza)
+        texto(e, r[:texto], r[:x], r[:z], r[:h])
       end
 
       # Cena 16:9 enquadrando a prancha (câmera paralela, vista Frente). Se a cena já
@@ -1281,10 +1286,8 @@ module STAND1
         g.transform!(Geom::Transformation.rotation(ORIGIN, Geom::Vector3d.new(1, 0, 0), 90.degrees))
         g.transform!(Geom::Transformation.translation(Geom::Vector3d.new(x, 0.0, z)))
         g.name = 'texto'
-        case cor
-        when :alerta then (g.material = Sketchup::Color.new(200, 30, 30)) rescue nil
-        when :cinza  then (g.material = Sketchup::Color.new(110, 110, 110)) rescue nil
-        end
+        c = cor == :alerta ? COR_ALERTA : COR_TEXTO
+        (g.material = Sketchup::Color.new(*c)) rescue nil
         g
       rescue
         nil

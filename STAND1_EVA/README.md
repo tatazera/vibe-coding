@@ -53,7 +53,9 @@ Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do proje
   seleção já está na lista. Dê o nome (ou clique num nome rápido: TESTEIRA FRONTAL, PAREDE FUNDO,
   LOGO PVC...), a **quantidade** e **frente e verso** — digitados por você, o plugin não conta nada —
   e uma observação opcional. Cada grupo/componente e cada conjunto de faces coplanares vira uma peça
-- **Ambientes:** você cria e nomeia (barra lateral); tudo que adicionar entra no ambiente ativo.
+- **Ambientes:** você cria e nomeia (barra lateral); tudo que adicionar entra no ambiente ativo, e é
+  esse vínculo (não a posição no modelo nem o nome) que separa o Credenciamento da Plenária: cada
+  peça carrega o ambiente, e as alterações são lidas peça a peça e agrupadas por ambiente.
   Mover uma peça de ambiente é um clique. Funciona igual num arquivo com vários ambientes ou num só
 - **Peça ligada ao modelo:** ela guarda a *referência* das faces de origem, não uma cópia da medida.
   **Atualizar do modelo** (e a abertura da aba, e o Gerar) relê as medidas: esticou a testeira, a peça
@@ -70,6 +72,9 @@ Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do proje
   altura à esquerda, **cotas em corrente dos recortes** e a etiqueta *NOME – 03 und.* /
   *material · L x A m* (+ observação e, em vermelho, o que mudou desde a revisão — opcional). As
   peças são encaixadas no enquadramento 16:9 mais justo, com texto proporcional à prancha
+- **Cores do texto:** títulos, etiquetas e rótulo de revisão em **preto**; observações e destaques
+  (alteração desde a revisão, origem perdida) em **vermelho**. A cor das cotas segue o estilo de
+  dimensões do modelo
 - **Cena 16:9 por ambiente:** câmera paralela de frente, proporção 16:9, enquadrando a prancha. Gerar
   de novo atualiza a cena **no lugar** (mesmo nome e posição na lista). A aba Apresentação exporta
   essas cenas exatamente em 16:9

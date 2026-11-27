@@ -642,7 +642,8 @@
     .mp-chip:hover { border-color: var(--rosa); color: var(--rosa); background: #fff; }
     .mp-chip.rec { background: #eef1ff; color: var(--azul); border-color: #d3d9ff; }
     .mp-cap-opts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .mp-obs { flex: 1; min-width: 140px; width: auto; padding: 6px 10px; font-size: 12px; }
+    .mp-obs { flex: 1; min-width: 140px; width: auto; padding: 6px 10px; font-size: 12px; color: #c40000; }
+    .mp-obs::placeholder { color: #c98a8a; }
     .mp-step { display: inline-flex; align-items: center; border: 1.5px solid var(--borda); border-radius: 8px; background: #fff; overflow: hidden; }
     .mp-step button { border: none; background: #f6f7fb; width: 26px; height: 28px; font-size: 15px; cursor: pointer; color: #555; }
     .mp-step button:hover { background: #fbe9f3; color: var(--rosa); }
@@ -1125,7 +1126,7 @@
                 <span>und.</span>
               </div>
               <button type="button" class="mp-tog" id="mpFv" title="A arte é impressa dos dois lados">Frente e verso</button>
-              <input type="text" class="mp-input mp-obs" id="mpObs" maxlength="140" autocomplete="off" placeholder="Observação (opcional)">
+              <input type="text" class="mp-input mp-obs" id="mpObs" maxlength="140" autocomplete="off" placeholder="Observação (sai em vermelho)">
               <button class="btn-export mp-add" id="mpAdd">＋ Adicionar</button>
             </div>
           </div>
@@ -1448,7 +1449,7 @@
           '<button class="btn-small" data-act="trocar" title="Selecione a nova arte no SketchUp e clique: troca a ORIGEM mantendo nome, quantidade e ambiente">⟳ Trocar origem</button>' +
         '</div>' +
         '<div class="mp-card-row">' +
-          '<input class="mp-input mp-obs" data-f="obs" maxlength="140" placeholder="Observação (opcional)" value="' + escHtml(p.obs || '') + '">' +
+          '<input class="mp-input mp-obs" data-f="obs" maxlength="140" placeholder="Observação (sai em vermelho)" value="' + escHtml(p.obs || '') + '">' +
           '<select class="mp-mover" data-f="amb" title="Mover para outro ambiente">' + opts + '</select>' +
         '</div>' + aviso +
       '</div>';
