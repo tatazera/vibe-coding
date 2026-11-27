@@ -12,12 +12,18 @@ Por isso o código, o `.rbz` e o `latest.json` precisam subir **juntos**.
 1. Se houve mudança, suba a versão em `STAND1_EVA/STAND1_EVA_loader.rb` (`eva_ext.version`).
 2. Gere o pacote e o manifesto:
    ```bash
-   python3 STAND1_EVA/build.py --notas "o que mudou, em português, direto ao ponto"
+   python3 STAND1_EVA/build.py --notas "resumo CURTO do que mudou (até 400 caracteres)" \
+                               --detalhe "texto completo da versão (opcional)"
    ```
    O `build.py` faz o mesmo que o `build.ps1`: gera `STAND1_EVA_v<versão>.rbz`, move o `.rbz`
-   anterior para `versoes_anteriores/`, atualiza `latest.json` (UTF-8 sem BOM, notas novas no início
-   e histórico preservado) e **aborta, sem mexer no `latest.json`, se o pacote estiver quebrado**
-   (loader fora da raiz, barra invertida, sintaxe Ruby inválida).
+   anterior para `versoes_anteriores/`, atualiza `latest.json` (UTF-8 sem BOM) e **aborta, sem mexer
+   no `latest.json`, se o pacote estiver quebrado** (loader fora da raiz, barra invertida, sintaxe
+   Ruby inválida).
+   - **`--notas` tem que ser curto:** o plugin mostra o campo `notas` INTEIRO no banner de
+     atualização (notas de 2.500 caracteres ocuparam 70% da janela). O `build.py` recusa mais de 400
+     caracteres. O texto completo e o histórico das versões ficam no campo `historico` do
+     `latest.json`, que o plugin ignora.
+   - Para corrigir só o manifesto, sem refazer o `.rbz`: `python3 STAND1_EVA/build.py --so-manifesto --notas "..."`.
 3. Commite tudo num commit só (código + `.rbz` novo + `.rbz` arquivado + `latest.json`). O
    `latest.json` nunca pode apontar para um `.rbz` que não está no `main`.
 4. `git push origin HEAD:main` (se a branch de trabalho estiver à frente do `main`, é um avanço

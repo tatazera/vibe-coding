@@ -1,5 +1,35 @@
 {
     "versao": "2.7.0",
     "rbz": "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.7.0.rbz",
-    "notas": "v2.7.0: RENDER IA: prompt único, curto e em português (base fixa do pavilhão, luz fria ou quente, pessoas, ajustes gerais do projeto e ajustes por cena salvos no arquivo); saem o ângulo de câmera, os ambientes neutros e o tipo de estande. APRESENTAÇÃO: novo estilo Otimizado para IA no export (sombras off, texturas on, sem perfis, profundidade e geometria oculta; só durante o export, nada é salvo na cena). MAPA DE ARTES refeito: você seleciona a arte no SketchUp e adiciona a um ambiente (nome, quantidade e frente e verso digitados); a peça fica ligada ao modelo e acompanha as mudanças de medida; revisões R00, R01 com lista de alterações; uma prancha 16:9 por ambiente, com a cena criada ou atualizada no lugar; títulos e etiquetas em preto, observações e destaques em vermelho; ambiente sugerido pela cena ativa; nomes rápidos editáveis; não trava em arquivo grande. v2.6.4: CORRIGIDO o export da planta em arquivos com os eixos do modelo movidos: o projeto sumia do PNG e só ficavam as linhas (o corte ia parar no lugar errado). No modo Livre, o grid agora cobre o piso inteiro quando ele é feito de várias peças. v2.6.3: CORRIGIDO o travamento ao gerar planta com projeções e grid no modo Livre em arquivos com vários espaços 3D: a leitura agora fica só no quadro da cena (ignora os outros espaços), o grid ignora o piso geral do pavilhão e há limites de segurança que avisam em vez de travar o SketchUp. v2.6.2: PLANTA no modo Livre: CORRIGIDA a projeção de peças que cruzam o corte desenhadas como um grupo só (ex.: pórtico com pernas no piso e travessa no alto), que saía incompleta. O grid de 1 m agora acha o piso sem depender da tag ESTRUTURAS. v2.6.1: CORRIGIDO o aviso de atualização, que ficava em \"Baixando atualização...\" para sempre; agora mostra que foi instalada e pede para reiniciar o SketchUp. v2.6.0: PLANTA: novo seletor \"Leitura das peças\". Memorial (tags) é o padrão e segue igual. Livre (sem tags) projeta as estruturas acima do corte sem depender das tags ESTRUTURAS: elétrica, pontos do EVA e peças em \"Ignorar seleção\" ficam de fora. Grid e elétrica continuam lendo pelas tags. v2.5.3: CORRIGIDO a pasta de destino das exportacoes, que voltava vazia a cada abertura (as preferencias agora ficam salvas num arquivo proprio). PLANTA: linhas, tracejados, simbolos de eletrica e legenda crescem sozinhos conforme o tamanho da planta, com ajuste manual em \"Espessura e tamanho\" (o DXF continua em tamanho real). Nova opcao \"Posicao da legenda\": automatica, ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem."
+    "notas": "Render IA: prompt único e curto em português, com ajustes por cena. Apresentação: estilo Otimizado para IA no export. Mapa de Artes refeito: marcação manual, peças ligadas ao modelo, revisões e pranchas 16:9 por ambiente. Não trava em arquivo grande.",
+    "historico": [
+        {
+            "versao": "2.7.0",
+            "notas": "RENDER IA: prompt único, curto e em português (base fixa do pavilhão, luz fria ou quente, pessoas, ajustes gerais do projeto e ajustes por cena salvos no arquivo); saem o ângulo de câmera, os ambientes neutros e o tipo de estande. APRESENTAÇÃO: novo estilo Otimizado para IA no export (sombras off, texturas on, sem perfis, profundidade e geometria oculta; só durante o export, nada é salvo na cena). MAPA DE ARTES refeito: você seleciona a arte no SketchUp e adiciona a um ambiente (nome, quantidade e frente e verso digitados); a peça fica ligada ao modelo e acompanha as mudanças de medida; revisões R00, R01 com lista de alterações; uma prancha 16:9 por ambiente, com a cena criada ou atualizada no lugar; títulos e etiquetas em preto, observações e destaques em vermelho; ambiente sugerido pela cena ativa; nomes rápidos editáveis; não trava em arquivo grande."
+        },
+        {
+            "versao": "2.6.4",
+            "notas": "CORRIGIDO o export da planta em arquivos com os eixos do modelo movidos: o projeto sumia do PNG e só ficavam as linhas (o corte ia parar no lugar errado). No modo Livre, o grid agora cobre o piso inteiro quando ele é feito de várias peças."
+        },
+        {
+            "versao": "2.6.3",
+            "notas": "CORRIGIDO o travamento ao gerar planta com projeções e grid no modo Livre em arquivos com vários espaços 3D: a leitura agora fica só no quadro da cena (ignora os outros espaços), o grid ignora o piso geral do pavilhão e há limites de segurança que avisam em vez de travar o SketchUp."
+        },
+        {
+            "versao": "2.6.2",
+            "notas": "PLANTA no modo Livre: CORRIGIDA a projeção de peças que cruzam o corte desenhadas como um grupo só (ex.: pórtico com pernas no piso e travessa no alto), que saía incompleta. O grid de 1 m agora acha o piso sem depender da tag ESTRUTURAS."
+        },
+        {
+            "versao": "2.6.1",
+            "notas": "CORRIGIDO o aviso de atualização, que ficava em \"Baixando atualização...\" para sempre; agora mostra que foi instalada e pede para reiniciar o SketchUp."
+        },
+        {
+            "versao": "2.6.0",
+            "notas": "PLANTA: novo seletor \"Leitura das peças\". Memorial (tags) é o padrão e segue igual. Livre (sem tags) projeta as estruturas acima do corte sem depender das tags ESTRUTURAS: elétrica, pontos do EVA e peças em \"Ignorar seleção\" ficam de fora. Grid e elétrica continuam lendo pelas tags."
+        },
+        {
+            "versao": "2.5.3",
+            "notas": "CORRIGIDO a pasta de destino das exportacoes, que voltava vazia a cada abertura (as preferencias agora ficam salvas num arquivo proprio). PLANTA: linhas, tracejados, simbolos de eletrica e legenda crescem sozinhos conforme o tamanho da planta, com ajuste manual em \"Espessura e tamanho\" (o DXF continua em tamanho real). Nova opcao \"Posicao da legenda\": automatica, ao lado da planta (direita, esquerda, acima, abaixo) ou num canto da imagem."
+        }
+    ]
 }
