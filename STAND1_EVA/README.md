@@ -178,6 +178,15 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 Gera o `.rbz` versionado e atualiza o `latest.json`. A versão é lida de
 `eva_ext.version` no loader.
 
+Sem PowerShell (macOS, Linux ou publicação pelo Claude), use o equivalente em Python — faz o
+mesmo e ainda confere o pacote antes de mexer no `latest.json`:
+
+```bash
+python3 STAND1_EVA/build.py --notas "o que mudou nesta versão"
+```
+
+O passo a passo completo de publicação (build, commit e push no `main`) está no `CLAUDE.md`.
+
 ---
 
 © 2025 Stand1 Produções
