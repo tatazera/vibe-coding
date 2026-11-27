@@ -65,6 +65,7 @@ module STAND1
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
       @dialog.add_action_callback('mapa_ativo')          { |_, v|   MapaArtes.aba_ativa(v) }
       @dialog.add_action_callback('mapa_estado')         { |_, msg| MapaArtes.estado_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_junto')          { |_, v|   MapaArtes.junto_from_dialog(v, @dialog) }
       @dialog.add_action_callback('mapa_salvar')         { |_, msg| MapaArtes.salvar_from_dialog(msg, @dialog) }
       @dialog.add_action_callback('mapa_add')            { |_, msg| MapaArtes.add_from_dialog(msg, @dialog) }
       @dialog.add_action_callback('mapa_trocar')         { |_, msg| MapaArtes.trocar_from_dialog(msg, @dialog) }

@@ -47,13 +47,21 @@ A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o esta
 
 ### Mapa de Artes — pranchas 16:9 por ambiente, ligadas ao modelo
 Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do projeto.
-- **Marcação manual (nada é deduzido do nome do material):** selecione no SketchUp uma **face**
-  (clique triplo pega as vizinhas), um **grupo** ou um **componente** — vários de uma vez, ou dentro
-  de um grupo aberto. O painel mostra **ao vivo** a medida, a forma (com recortes) e avisa se a
-  seleção já está na lista. Dê o nome (ou clique num nome rápido: TESTEIRA FRONTAL, PAREDE FUNDO,
-  LOGO PVC...), a **quantidade** e **frente e verso** — digitados por você, o plugin não conta nada —
-  e uma observação opcional. Cada grupo/componente e cada conjunto de faces coplanares vira uma peça
-- **Ambientes:** você cria e nomeia (barra lateral); tudo que adicionar entra no ambiente ativo, e é
+- **Marcação manual (nada é deduzido do nome do material):** selecione no SketchUp um **grupo**,
+  um **componente**, uma **imagem importada (PNG/JPG colocado direto)** ou **faces** (clique triplo
+  pega as vizinhas) — vários de uma vez, ou dentro de um grupo aberto. O painel mostra **ao vivo** a
+  medida, a forma e avisa se a seleção já está na lista. Dê o nome (ou clique num nome rápido:
+  TESTEIRA FRONTAL, PAREDE FUNDO, LOGO PVC...), a **quantidade** e **frente e verso** — digitados por
+  você, o plugin não conta nada — e uma observação opcional
+- **Item inteiro = uma peça, pela caixa envolvente:** cada grupo, componente ou imagem selecionado
+  vira **uma peça só**, medida pela **largura total × altura máxima** do item no plano frontal —
+  vale para uma frase em PVC com várias letras (que não vira uma peça por letra), peças curvas,
+  letras extrudadas (só a face da frente entra) e PNGs. Para uma peça com recorte (porta, nicho),
+  as cotas em corrente continuam. **Faces soltas** que se encostam formam uma peça; marque
+  **Peça única** para juntar TUDO o que está selecionado numa peça só (caixa do conjunto)
+- **Ambientes:** você cria e nomeia (barra lateral) e **renomeia quando quiser**: lápis ✎ em cada
+  ambiente, botão **✎ Renomear** no título, ou clique no nome do ambiente que já está ativo (Enter
+  confirma, Esc cancela). Tudo que adicionar entra no ambiente ativo, e é
   esse vínculo (não a posição no modelo nem o nome) que separa o Credenciamento da Plenária: cada
   peça carrega o ambiente, e as alterações são lidas peça a peça e agrupadas por ambiente.
   Mover uma peça de ambiente é um clique. Funciona igual num arquivo com vários ambientes ou num só
@@ -64,24 +72,29 @@ Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do proje
 - **Nomes rápidos editáveis:** a lista de botões (padrão: o vocabulário do mapa do BTX) é sua — **✎ Nomes**
   edita um por linha (sem repetidos, até 40), **＋ Salvar nome** guarda o que você digitou, **Restaurar
   padrão** volta ao original. Ficam salvos neste computador e valem para todos os projetos
-- **Peça ligada ao modelo:** ela guarda a *referência* das faces de origem, não uma cópia da medida.
-  **Atualizar do modelo** (e a abertura da aba, e o Gerar) relê as medidas: esticou a testeira, a peça
-  acompanha. O painel avisa "modelo alterado" quando o projeto muda
+- **Peça ligada ao modelo:** ela guarda a *referência* do objeto (grupo, componente ou imagem; ou das
+  faces soltas), não uma cópia da medida. **Atualizar do modelo** (e a abertura da aba, e o Gerar)
+  relê as medidas: esticou a testeira ou uma letra, a peça acompanha. Como a referência é o objeto,
+  editar o desenho por dentro (apagar e refazer a face, trocar a textura) não a desliga. O painel
+  avisa "modelo alterado" quando o projeto muda
 - **Substituir sem refazer:** **⟳ Trocar origem** (selecione a arte nova e clique) mantém nome,
-  quantidade e ambiente. Se a face for apagada numa edição, o EVA reencontra a arte pelo objeto que
-  a continha; se não achar, a peça fica marcada como *origem perdida* e usa a última medida lida
+  quantidade e ambiente. Se o objeto (ou as faces soltas) for apagado, a peça fica marcada como
+  *origem perdida*, avisa o que fazer e usa a última medida lida
 - **Revisões (R00, R01...):** **Emitir** congela as medidas e quantidades como a revisão enviada.
   Dali em diante cada peça mostra *nova* ou *alterada (antes → depois)*, e a **lista de alterações**
   sai pronta para copiar e mandar à produção, por ambiente ("altura 3,20 → 3,40 m (+0,20)",
   "quantidade 1 → 3 und.", "REMOVIDA"...). Voltar à medida antiga apaga a alteração da lista
 - **Gerar:** uma **prancha 16:9 por ambiente** no grupo "KV - Mapa de Artes" (tag KV), à esquerda do
-  modelo: título "ARTES - AMBIENTE" e rótulo da revisão, cada peça de frente com largura no topo,
+  modelo, **sem fundo nem retângulo** (exporte com fundo transparente e edite no Canva): título
+  "ARTES - AMBIENTE" e rótulo da revisão, cada peça de frente com largura no topo,
   altura à esquerda, **cotas em corrente dos recortes** e a etiqueta *NOME – 03 und.* /
   *material · L x A m* (+ observação e, em vermelho, o que mudou desde a revisão — opcional). As
   peças são encaixadas no enquadramento 16:9 mais justo, com texto proporcional à prancha
 - **Cores do texto:** títulos, etiquetas e rótulo de revisão em **preto**; observações e destaques
   (alteração desde a revisão, origem perdida) em **vermelho**. A cor das cotas segue o estilo de
   dimensões do modelo
+- **Texturas:** a imagem de cada face é ancorada em 3 ou 4 vértices bem espalhados do contorno
+  (nunca nos primeiros, que podiam ser quase alinhados e entortavam a arte em riscos diagonais)
 - **Cena 16:9 por ambiente:** câmera paralela de frente, proporção 16:9, enquadrando a prancha. Gerar
   de novo atualiza a cena **no lugar** (mesmo nome e posição na lista). A aba Apresentação exporta
   essas cenas exatamente em 16:9

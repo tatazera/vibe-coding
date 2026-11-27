@@ -612,6 +612,17 @@
     .mp-x:hover { color: #e0436b; background: #fdecf1; }
     .mp-amb .mp-x { opacity: 0; }
     .mp-amb:hover .mp-x { opacity: 1; }
+    .mp-edit { border: none; background: none; color: #b5b7c4; cursor: pointer; font-size: 13px; line-height: 1; padding: 3px 5px; border-radius: 5px; }
+    .mp-edit:hover { color: var(--rosa); background: #fbe9f3; }
+    .mp-amb .mp-edit { opacity: .35; }
+    .mp-amb:hover .mp-edit, .mp-amb.on .mp-edit { opacity: 1; }
+    .mp-edit-t { font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: middle; color: #8a8da3; }
+    .mp-head-t { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 0 4px; }
+    .mp-head-t .mp-eyebrow { flex-basis: 100%; }
+    .mp-junto { font-size: 11.5px; font-weight: 700; color: #666; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap;
+      border: 1.5px solid var(--borda); border-radius: 8px; padding: 6px 10px; background: #fff; }
+    .mp-junto:hover { border-color: var(--rosa); color: var(--rosa); }
+    .mp-junto input { accent-color: var(--rosa); }
     .mp-side-foot { border-top: 1px solid var(--borda); padding: 11px 14px; font-size: 11px; color: #888; line-height: 1.5; }
 
     .mp-main { padding-bottom: 6px; }
@@ -730,7 +741,8 @@
     body.dark .mp-ambnome, body.dark .mp-cap-title, body.dark .mp-nome, body.dark .mp-head h2, body.dark .mp-modal-h { color: #e3e5f0; }
     body.dark .mp-input, body.dark .mp-step input, body.dark #mpModalTxt, body.dark .mp-mover, body.dark .mp-ambnome:not([readonly]) { background: #24262f; border-color: #3a3c47; color: #d3d5e0; }
     body.dark .mp-prevbox, body.dark .mp-thumb, body.dark .mp-step button, body.dark .mp-hist pre { background: #23252f; border-color: #34363f; }
-    body.dark .mp-chip, body.dark .mp-tog { background: #23252f; border-color: #3a3c47; color: #b9bccb; }
+    body.dark .mp-chip, body.dark .mp-tog, body.dark .mp-junto { background: #23252f; border-color: #3a3c47; color: #b9bccb; }
+    body.dark .mp-edit:hover { background: #33222c; }
     body.dark .mp-tog.on { background: var(--azul); color: #fff; }
     body.dark .mp-med, body.dark .mp-cap-p, body.dark .mp-modal-p { color: #a7aabd; }
 
@@ -1134,6 +1146,7 @@
                 <span>und.</span>
               </div>
               <button type="button" class="mp-tog" id="mpFv" title="A arte é impressa dos dois lados">Frente e verso</button>
+              <label class="mp-junto" title="Junta TUDO o que está selecionado numa peça só (largura total × altura máxima do conjunto). Útil para uma frase com várias letras soltas."><input type="checkbox" id="mpJunto"> Peça única</label>
               <input type="text" class="mp-input mp-obs" id="mpObs" maxlength="140" autocomplete="off" placeholder="Observação (sai em vermelho)">
               <button class="btn-export mp-add" id="mpAdd">＋ Adicionar</button>
             </div>
@@ -1147,7 +1160,7 @@
     <div class="mp-head">
       <div class="mp-head-t">
         <div class="mp-eyebrow">Ambiente</div>
-        <h2 id="mpAmbTitulo">—</h2>
+        <h2 id="mpAmbTitulo">—</h2><button class="mp-edit mp-edit-t" id="mpAmbRenomear" title="Renomear este ambiente">✎ Renomear</button>
       </div>
       <div class="mp-head-a">
         <span class="mp-sujo" id="mpSujo" style="display:none">● Modelo alterado</span>
@@ -1404,8 +1417,9 @@
       var row = document.createElement('div');
       row.className = 'mp-amb' + (a.id === mp.ativo ? ' on' : '');
       row.setAttribute('data-id', a.id);
-      row.innerHTML = '<span class="mp-dot"></span><input class="mp-ambnome" readonly title="Duplo clique para renomear">' +
+      row.innerHTML = '<span class="mp-dot"></span><input class="mp-ambnome" readonly title="Clique no nome do ambiente ativo, ou no lápis, para renomear">' +
                       '<span class="mp-badge">' + mpPecasDe(a.id).length + '</span>' +
+                      '<button class="mp-edit" data-act="renamb" title="Renomear ambiente">✎</button>' +
                       '<button class="mp-x" data-act="delamb" title="Remover ambiente">✕</button>';
       row.querySelector('input').value = a.nome;
       box.appendChild(row);
@@ -1481,7 +1495,7 @@
           '<div class="mp-thumb">' + mpSvg(p.prev, p.w_m, p.h_m, 76, 56) + '</div>' +
           '<div class="mp-card-main">' +
             '<input class="mp-nome" data-f="nome" maxlength="90" value="' + escHtml(p.nome) + '" title="Clique para renomear">' +
-            '<div class="mp-med">' + mpMedTxt(p) + ' <span class="mp-meta">' + (p.furos ? '· ' + p.furos + ' recorte(s) ' : '') + '· ' + escHtml(p.material || '') + '</span></div>' +
+            '<div class="mp-med" title="' + (p.modo === 'bbox' ? 'Caixa envolvente do item: largura total × altura máxima' : 'Medida das faces selecionadas') + '">' + mpMedTxt(p) + ' <span class="mp-meta">' + (p.furos ? '· ' + p.furos + ' recorte(s) ' : '') + '· ' + escHtml(p.material || '') + (p.modo === 'bbox' ? ' · item inteiro' : '') + '</span></div>' +
             dif +
           '</div>' +
           '<button class="mp-x" data-act="del" title="Remover peça">✕</button>' +
@@ -1524,8 +1538,8 @@
     }
     $m('mpCapTitle').textContent = um ? mpMedTxt(ps[0]) : sel.total + ' peças na seleção';
     $m('mpCapSub').textContent = um
-      ? (ps[0].furos ? ps[0].furos + ' recorte(s) · ' : '') + (ps[0].material || '')
-      : 'Cada grupo/componente e cada conjunto de faces coplanares vira uma peça';
+      ? (ps[0].furos ? ps[0].furos + ' recorte(s) · ' : '') + (ps[0].material || '') + (ps[0].bbox ? ' · caixa envolvente do item (largura total × altura máxima)' : '')
+      : 'Cada grupo, componente ou imagem vira uma peça; faces soltas encostadas formam uma só';
     var warn = $m('mpCapWarn'), dup = ps.filter(function(p) { return p.dup; })[0];
     if (sel.grande) { warn.textContent = '⚠ Seleção grande (' + sel.total + ' peças): selecione só a arte.'; warn.style.display = ''; }
     else if (sel.parcial) { warn.textContent = '⚠ Seleção muito grande para pré-visualizar por inteiro (' + sel.parcial + ').'; warn.style.display = ''; }
@@ -1647,8 +1661,10 @@
     var nome = $m('mpNome').value.trim();
     var qtd = Math.max(1, parseInt($m('mpQtd').value, 10) || 1);
     mpLembrarNome(nome);
-    su('mapa_add', JSON.stringify({ amb: a.id, nome: nome, qtd: qtd, fv: $m('mpFv').classList.contains('on'), obs: $m('mpObs').value.trim() }));
+    su('mapa_add', JSON.stringify({ amb: a.id, nome: nome, qtd: qtd, fv: $m('mpFv').classList.contains('on'), obs: $m('mpObs').value.trim(),
+                                    junto: $m('mpJunto').checked }));
     $m('mpNome').value = ''; $m('mpObs').value = ''; $m('mpQtd').value = 1; $m('mpFv').classList.remove('on');
+    if ($m('mpJunto').checked) { $m('mpJunto').checked = false; su('mapa_junto', '0'); }   // não fica ligado sem querer
   }
 
   function mpRemover(id) {
@@ -1664,6 +1680,18 @@
     var a = { id: 'a' + (n + 1), nome: 'AMBIENTE ' + (mp.amb.length + 1) };
     mp.amb.push(a); mp.ativo = a.id; mpSalvarAgora(); mpRender();
     var inp = document.querySelector('.mp-amb[data-id="' + a.id + '"] input'); if (inp) mpEditarNome(inp);
+  }
+
+  // Troca o ambiente ativo SEM redesenhar a lista (redesenhar no clique desfazia o duplo clique).
+  function mpAtivarAmbiente(id) {
+    mp.ativo = id; mpSalvar();
+    var rows = document.querySelectorAll('#mpAmbs .mp-amb');
+    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('on', rows[i].getAttribute('data-id') === id);
+    mpRenderHead(); mpRenderGrid(); mpRenderCaptura(); mpRenderRodape();
+  }
+  function mpRenomearAtivo() {
+    var inp = document.querySelector('#mpAmbs .mp-amb.on input');
+    if (inp) mpEditarNome(inp);
   }
 
   function mpEditarNome(inp) {
@@ -1704,6 +1732,7 @@
     $m('mpQm').onclick = function() { var q = $m('mpQtd'); q.value = Math.max(1, (parseInt(q.value, 10) || 1) - 1); };
     $m('mpQp').onclick = function() { var q = $m('mpQtd'); q.value = (parseInt(q.value, 10) || 0) + 1; };
     $m('mpFv').onclick = function() { this.classList.toggle('on'); };
+    $m('mpJunto').onchange = function() { su('mapa_junto', this.checked ? '1' : '0'); };
     $m('mpChips').onclick = function(e) {
       var c = e.target.closest ? e.target.closest('.mp-chip') : null; if (!c) return;
       var act = c.getAttribute('data-act');
@@ -1743,9 +1772,16 @@
         if (mp.ativo === id) mp.ativo = mp.amb[0].id;
         mpSalvarAgora(); mpRender(); return;
       }
-      if (e.target.tagName === 'INPUT' && !e.target.readOnly) return;
-      mp.ativo = id; mpSalvar(); mpRender();
+      if (e.target.getAttribute('data-act') === 'renamb') { e.stopPropagation(); mpAtivarAmbiente(id); mpEditarNome(row.querySelector('input')); return; }
+      if (e.target.tagName === 'INPUT' && e.target.readOnly) {
+        // 1º clique escolhe o ambiente; clicar no nome do que JÁ está ativo edita.
+        if (id === mp.ativo) mpEditarNome(e.target); else mpAtivarAmbiente(id);
+        return;
+      }
+      if (e.target.tagName === 'INPUT') return;           // já editando: deixa o cursor trabalhar
+      mpAtivarAmbiente(id);
     };
+    $m('mpAmbRenomear').onclick = mpRenomearAtivo;
     $m('mpAmbs').ondblclick = function(e) { if (e.target.tagName === 'INPUT' && e.target.readOnly) mpEditarNome(e.target); };
 
     var grid = $m('mpGrid');
@@ -1772,7 +1808,7 @@
         p.qtd = Math.max(1, p.qtd + (act === 'qp' ? 1 : -1));
         card.querySelector('input[data-f="qtd"]').value = p.qtd; mpSalvar(); return;
       }
-      if (act === 'trocar') { mpFlush(); setMapaStatus('Trocando a origem...', 'info'); su('mapa_trocar', JSON.stringify({ id: id })); }
+      if (act === 'trocar') { mpFlush(); setMapaStatus('Trocando a origem...', 'info'); su('mapa_trocar', JSON.stringify({ id: id, junto: $m('mpJunto').checked })); }
     };
   }
   function mpAmbNome(id) { var a = mp.amb.filter(function(x) { return x.id === id; })[0]; return a ? a.nome : ''; }
