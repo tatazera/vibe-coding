@@ -238,6 +238,10 @@ module STAND1
       # entrar conteúdo lateral que a cena não mostra.
       def self.fit_resolution(view, width, height)
         w  = width.to_i
+        # Cena com proporção própria (ex.: as pranchas 16:9 do Mapa de Artes): a imagem
+        # sai exatamente nessa proporção, seja qual for o formato da janela.
+        asp = ((view.camera.aspect_ratio).to_f rescue 0.0)
+        return limitar(w, (w / asp).round) if asp > 0.01
         vw = view.vpwidth.to_i
         vh = view.vpheight.to_i
         return limitar(w, height.to_i > 0 ? height.to_i : (w * 9 / 16)) if vw <= 0 || vh <= 0
@@ -251,6 +255,7 @@ module STAND1
       def self.clonar_camera(c)
         nova = Sketchup::Camera.new(c.eye, c.target, c.up, c.perspective?, c.fov)
         (nova.height = c.height) rescue nil unless c.perspective?
+        (nova.aspect_ratio = c.aspect_ratio) rescue nil     # proporção fixa da cena (16:9 do mapa)
         nova
       rescue
         c

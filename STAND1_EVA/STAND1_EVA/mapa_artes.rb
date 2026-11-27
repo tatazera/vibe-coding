@@ -1,27 +1,25 @@
 # encoding: UTF-8
 # =============================================================================
 # EVA Stand1 — mapa_artes.rb
-# Aba "Mapa de Artes": um quadro por ambiente com as peças de comunicação visual
-# de frente, cotadas e com quantidade — no formato do mapa de artes que vai
-# para conferência e produção (impressão / confecção).
+# Aba "Mapa de Artes": monta o mapa de artes (peças de comunicação visual de
+# frente, cotadas, com nome e quantidade) — uma prancha 16:9 por ambiente.
 #
-# FLUXO
-#   1. Ler      — varre o modelo UMA vez, rápido e com limite (não trava):
-#                 componentes repetidos são lidos uma vez só, o que não tem arte
-#                 é pulado inteiro, e passou do limite de tempo/peças, para e avisa.
-#   2. Peças    — faces vizinhas no mesmo plano e do mesmo material viram UMA
-#                 peça (com recortes e linhas de módulo); frente e verso viram
-#                 uma peça só; peças iguais viram "N und.".
-#   3. Ambientes — peças próximas formam um ambiente (num arquivo com vários
-#                 espaços, cada espaço é um ambiente; num estande só, um só).
-#                 O nome vem da cena que olha para ele.
-#   4. Desenho  — um quadro por ambiente no grupo "KV - Mapa de Artes": título,
-#                 peças de frente (leitura pela vista Frente), cota de largura no
-#                 topo, altura à esquerda, cotas em corrente dos recortes e a
-#                 etiqueta "NOME – N und.". Desenha em etapas (o SketchUp continua
-#                 respondendo) e tudo sai num Ctrl+Z só.
+# IDEIA CENTRAL: a marcação é manual e a peça fica LIGADA ao modelo.
+#   • Você seleciona no SketchUp (face, grupo ou componente) e adiciona a peça a um
+#     ambiente. Nome, quantidade e "frente e verso" são digitados — nada é contado
+#     ou deduzido pelo plugin.
+#   • A peça guarda a REFERÊNCIA às faces de origem (não uma cópia da medida). A cada
+#     atualização a medida é relida do modelo: o projeto muda, a peça acompanha.
+#   • O que mudou desde a última REVISÃO emitida (R00, R01...) é detectado e vira
+#     uma lista de alterações pronta para mandar à produção.
+#   • Origem substituída? "Trocar pela seleção" mantém nome, quantidade e ambiente.
+#     Face apagada numa edição? O plugin tenta reencontrar a arte pelo objeto que a
+#     continha.
 #
-# O modelo real nunca é alterado: as peças são cópias.
+# Tudo é gravado no próprio .skp (e num arquivo ao lado, por projeto). O modelo real
+# nunca é alterado: as pranchas ficam no grupo "KV - Mapa de Artes" (tag KV), à
+# esquerda do modelo, e a cena 16:9 de cada ambiente é criada/atualizada no lugar.
+# O desenho é feito em etapas (o SketchUp continua respondendo) e vale 1 Ctrl+Z.
 # =============================================================================
 
 require 'json'
@@ -30,143 +28,79 @@ module STAND1
   module EVA
     module MapaArtes
 
-      ATTR_NS = 'EVA'    # namespace de atributos
-      KV_TAG  = 'KV'     # tag do grupo KV
-      POL_M   = 0.0254   # polegada -> metro
-      M       = 1.0 / POL_M
-
-      # ── Reconhecimento de materiais de comunicação visual ───────────────────
-      # Casa por "contém", sobre o nome normalizado (minúsculo, sem acento).
-      KEYWORDS = [
-        'adesivo', 'adesivado', 'vinil', 'plotter', 'plotagem', 'decalque', 'sticker',
-        'lona', 'banner', 'tecido impresso', 'backdrop', 'front light', 'back light',
-        'pvc', 'acm', 'acrilico', 'mdf impresso',
-        'letra caixa', 'letracaixa', 'letra-caixa',
-        'impress',                 # impresso / impressa / impressão
-        'comunicacao visual', 'logo', 'testeira', 'painel grafico'
-      ].freeze
-
-      # Falsos positivos comuns — se o nome casar com algo daqui, não é arte.
-      EXCLUDE = ['pvc branco liso', 'pvc estrutural'].freeze
-
-      # Nomes que não dizem nada (o nome da peça cai no material).
-      NOME_GENERICO = /\A\s*(grupo|group|componente|component|ret[aâ]ngulo|rectangle|face|sem nome|untitled|copy|c[oó]pia)?\s*(#\s*\d+)?\s*\z/i
+      ATTR_NS = 'EVA'
+      KV_TAG  = 'KV'
+      POL_M   = 0.0254        # polegada -> metro
+      M       = 1.0 / POL_M   # polegadas por metro
 
       # ── Limites (o SketchUp não pode travar) ────────────────────────────────
-      LER_MAX_NOS   = 80_000   # grupos/componentes visitados por leitura
-      LER_MAX_SEG   = 25.0     # segundos por leitura
-      LER_MAX_FACES = 25_000   # faces de arte lidas
-      LOTE_SEG      = 0.15     # tempo de desenho por etapa (depois devolve o controle)
+      LER_MAX_NOS   = 80_000
+      LER_MAX_SEG   = 15.0
+      LER_MAX_FACES = 25_000
+      SEL_MAX_NOS   = 4_000   # pré-visualização ao vivo da seleção
+      SEL_MAX_SEG   = 1.5
+      CLUSTER_MAX   = 800     # faces coplanares comparadas duas a duas
+      LOTE_SEG      = 0.15    # tempo de desenho por etapa; depois devolve o controle
+      SEL_MAX_PECAS = 40      # seleção com mais peças que isso: sem prévia
 
-      # Padrões da aba
-      GAP_PADRAO_M  = 3.0      # distância que separa dois ambientes
-      MIN_LADO_CM   = 3.0      # peça mais estreita que isso = espessura (borda de PVC/ACM de até 2 cm, perfil)
+      MIN_LADO_CM = 3.0       # face mais estreita que isso = espessura (borda de PVC/ACM)
+      TOL_PLANO   = 0.04      # ~1 mm entre planos
+      TOL_TOQUE   = 0.08      # ~2 mm para faces vizinhas
+      TOL_MEDIDA  = 0.4       # ~1 cm: medidas "iguais" / medida que mudou
+      FV_MAX      = 0.30 * M  # faces opostas até 30 cm = a mesma chapa
 
-      # Tolerâncias (polegadas)
-      TOL_PLANO = 0.04         # ~1 mm entre planos
-      TOL_TOQUE = 0.08         # ~2 mm para faces vizinhas
-      FV_MIN    = 0.03 * M     # mais perto que isso = a mesma chapa (PVC, ACM): conta uma vez
-      FV_MAX    = 0.30 * M     # frente e verso: placas a até 30 cm uma da outra
+      BOARD_ASPECT = 16.0 / 9.0
+      SEM_MATERIAL = { key: '', nome: 'Sem material', name: '', mat: nil, tex: false }.freeze
 
       # ══════════════════════════════════════════════════════════════════════
-      # ENTRADAS PÚBLICAS (callbacks do diálogo e toolbar)
+      # ESTADO (persistido por projeto: .skp + arquivo ao lado)
       # ══════════════════════════════════════════════════════════════════════
+      #
+      # { ambientes: [{id,nome}], ativo, n_p,
+      #   pecas: [{ id, amb, nome, qtd, fv, obs, fontes, ger, st, aviso }],
+      #   rev_n (nil = nenhuma emitida), base { id => valores na última revisão }, hist [] }
+      #
+      #   fontes = referências às faces de origem: { ip: [ids das instâncias do caminho],
+      #            pid: id da face, cont: id do objeto selecionado, cip: caminho dele }
+      #   ger    = última geometria lida (medidas, contorno, recortes, textura)
 
-      # Aba → "Ler ambientes". cfg: { gap, min_cm }.
-      def self.ler_from_dialog(msg, dlg = nil)
-        cfg   = parse_cfg(msg)
-        model = Sketchup.active_model
-        return notify('Nenhum modelo aberto.', false, dlg) unless model
-        t0 = Time.now
-        @leitura = ler_modelo(model, cfg)
-        res = resumo(@leitura)
-        res[:segundos] = (Time.now - t0).round(1)
-        dlg.execute_script("window.mapaAmbientes(#{res.to_json})") if dlg && dlg.visible?
-        res
-      rescue => e
-        notify("Erro na leitura: #{e.message}", false, dlg)
+      def self.estado_vazio
+        { 'v' => 1, 'ambientes' => [{ 'id' => 'a1', 'nome' => 'AMBIENTE 1' }], 'ativo' => 'a1',
+          'pecas' => [], 'n_p' => 0, 'rev_n' => nil, 'base' => {}, 'hist' => [] }
       end
 
-      # Aba → "Gerar mapa". cfg: { ambientes: [ids], nomes: {id=>nome}, mats: [keys], labels }.
-      def self.gerar_from_dialog(msg, dlg = nil)
-        cfg   = parse_cfg(msg)
-        model = Sketchup.active_model
-        return notify('Nenhum modelo aberto.', false, dlg) unless model
-        return notify('Já existe um mapa sendo desenhado.', false, dlg) if @job
-
-        lt = @leitura
-        unless lt && lt[:model] == model && leitura_valida?(lt)
-          lt = @leitura = ler_modelo(model, cfg)
-          if dlg && dlg.visible?
-            dlg.execute_script("window.mapaAmbientes(#{resumo(lt).to_json})")
-            return notify('O modelo mudou desde a leitura: a lista foi atualizada, confira e gere de novo.', false, dlg)
+      def self.carregar(model)
+        return @estado if @estado && @estado_model.equal?(model)
+        raw = begin
+          if STAND1::EVA.respond_to?(:read_project_text)
+            STAND1::EVA.read_project_text(model, 'mapa_artes')
+          else
+            model.get_attribute(ATTR_NS, 'mapa_artes', '').to_s
           end
+        rescue
+          ''
         end
-
-        ids  = (cfg['ambientes'] || []).map(&:to_i)
-        envs = lt[:ambientes].select { |a| ids.include?(a[:id]) }
-        return notify('Marque ao menos um ambiente.', false, dlg) if envs.empty?
-
-        nomes = cfg['nomes'].is_a?(Hash) ? cfg['nomes'] : {}
-        mats  = cfg['mats'].is_a?(Array) ? cfg['mats'].map(&:to_s) : nil
-        quadros = envs.map do |a|
-          nome  = nomes[a[:id].to_s].to_s.strip
-          nome  = a[:nome] if nome.empty?
-          pecas = mats ? a[:pecas].select { |p| mats.include?(p[:mat_key]) } : a[:pecas]
-          { nome: nome, itens: agrupar_iguais(pecas) }
-        end.reject { |q| q[:itens].empty? }
-        return notify('Nenhuma peça nos ambientes/materiais marcados.', false, dlg) if quadros.empty?
-
-        iniciar_desenho(model, quadros, cfg['labels'] != false, dlg)
-      rescue => e
-        @job = nil
-        notify("Erro: #{e.message}", false, dlg)
+        h = raw.to_s.empty? ? nil : (JSON.parse(raw) rescue nil)
+        h = estado_vazio unless h.is_a?(Hash) && h['ambientes'].is_a?(Array) && !h['ambientes'].empty?
+        h['pecas'] = [] unless h['pecas'].is_a?(Array)
+        h['base']  = {} unless h['base'].is_a?(Hash)
+        h['hist']  = [] unless h['hist'].is_a?(Array)
+        h['n_p']   = h['pecas'].map { |p| p['id'].to_s[/\d+/].to_i }.push(h['n_p'].to_i).max
+        h['ativo'] = h['ambientes'][0]['id'] unless h['ambientes'].any? { |a| a['id'] == h['ativo'] }
+        @estado = h
+        @estado_model = model
+        h
       end
 
-      # Aba → "Diagramar seleção": o que está selecionado vira um quadro só.
-      def self.diagramar_from_dialog(msg, dlg = nil)
-        cfg   = parse_cfg(msg)
-        model = Sketchup.active_model
-        return notify('Nenhum modelo aberto.', false, dlg) unless model
-        return notify('Já existe um mapa sendo desenhado.', false, dlg) if @job
-        sel = model.selection.to_a
-        return notify('Selecione faces, grupos ou componentes no SketchUp.', false, dlg) if sel.empty?
-
-        lt = ler_selecao(model, sel, cfg)
-        # Nada de comunicação visual na seleção: o usuário escolheu aquilo de
-        # propósito, então vale qualquer face com material.
-        lt = ler_selecao(model, sel, cfg.merge('qualquer' => true)) if lt[:pecas].empty?
-        return notify('Nada diagramável na seleção (sem faces com material).', false, dlg) if lt[:pecas].empty?
-
-        iniciar_desenho(model, [{ nome: 'SELEÇÃO', itens: agrupar_iguais(lt[:pecas]) }],
-                        cfg['labels'] != false, dlg)
-      rescue => e
-        @job = nil
-        notify("Erro: #{e.message}", false, dlg)
-      end
-
-      # Toolbar (sem diálogo): lê e desenha todos os ambientes.
-      def self.diagramar_auto(_threshold_m = nil, dlg = nil)
-        model = Sketchup.active_model
-        return notify('Nenhum modelo aberto.', false, dlg) unless model
-        return notify('Já existe um mapa sendo desenhado.', false, dlg) if @job
-        lt = @leitura = ler_modelo(model, {})
-        if lt[:pecas].empty?
-          return notify('Nenhuma peça de comunicação visual encontrada (adesivo / lona / PVC / letra caixa).', false, dlg)
-        end
-        quadros = lt[:ambientes].map { |a| { nome: a[:nome], itens: agrupar_iguais(a[:pecas]) } }
-        iniciar_desenho(model, quadros, true, dlg)
-      rescue => e
-        @job = nil
-        notify("Erro: #{e.message}", false, dlg)
-      end
-
-      def self.cancelar(dlg = nil)
-        if @job
-          @job[:cancelar] = true
+      def self.persistir(model)
+        @ignorar_ate = Time.now + 1.5          # gravar atributo não é "alteração do projeto"
+        json = @estado.to_json
+        if STAND1::EVA.respond_to?(:write_project_text)
+          STAND1::EVA.write_project_text(model, 'mapa_artes', json)
         else
-          notify('Nada sendo desenhado.', true, dlg)
+          model.set_attribute(ATTR_NS, 'mapa_artes', json)
         end
+      rescue
       end
 
       def self.parse_cfg(msg)
@@ -178,108 +112,73 @@ module STAND1
       # LEITURA
       # ══════════════════════════════════════════════════════════════════════
 
-      def self.novo_estado(cfg)
-        @mat_cache  = {}
-        @memo_faces = {}
-        @memo_tem   = {}
-        {
-          t0: Time.now, nos: 0, faces: 0, unit_seq: 0, estourou: nil,
-          qualquer: !!cfg['qualquer'],
-          min_lado: ((cfg['min_cm'] || MIN_LADO_CM).to_s.tr(',', '.').to_f.then { |v| v > 0 ? v : MIN_LADO_CM }) / 100.0 * M,
-          gap: ((cfg['gap'] || GAP_PADRAO_M).to_s.tr(',', '.').to_f.then { |v| v > 0 ? v : GAP_PADRAO_M }) * M
-        }
-      end
-
-      # Modelo inteiro → { pecas, ambientes, avisos, model }.
-      def self.ler_modelo(model, cfg)
-        st    = novo_estado(cfg)
-        faces = []
-        # Geometria solta na raiz: uma unidade só (não há definição para memorizar).
-        raiz = model.entities.grep(Sketchup::Face).select { |f| visivel?(f) }
-                    .map { |f| face_local(f, nil, st) }.compact
-        ler_nivel(model.entities, raiz, IDENT, nil, 0, nil, faces, st, true)
-        pecas = montar_pecas(faces, st)
-        ambientes = separar_ambientes(pecas, st[:gap])
-        nomear_ambientes(ambientes, cameras_das_cenas(model))
-        { model: model, pecas: pecas, ambientes: ambientes, avisos: avisos(st) }
-      end
-
-      # Seleção → as peças de dentro dela (sem separar ambientes).
-      def self.ler_selecao(model, sel, cfg)
-        st    = novo_estado(cfg)
-        faces = []
-        tw    = (model.edit_transform.to_a rescue IDENT)
-        sel.each do |e|
-          if e.is_a?(Sketchup::Face)
-            fi = face_local(e, nil, st)
-            emitir(fi, tw, 0, nil, faces, st) if fi
-          elsif e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
-            next if kv_group?(e)
-            h  = herdar(e, nil)
-            em = mmul(tw, e.transformation.to_a)
-            st[:unit_seq] += 1
-            ler_nivel(e.definition.entities, faces_da_def(e.definition, h, st), em, h,
-                      st[:unit_seq], nome_de(e), faces, st)
-          end
-        end
-        { model: model, pecas: montar_pecas(faces, st), avisos: avisos(st) }
-      end
-
-      # Um nível: emite as faces de arte dele e desce nos grupos/componentes que
-      # têm arte (os que não têm são pulados sem abrir).
-      def self.ler_nivel(ents, faces_info, m, herdado, unit, nome, out, st, raiz = false)
-        faces_info.each { |fi| emitir(fi, m, unit, nome, out, st) }
-        ents.each do |e|
-          next unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
-          return if estourou?(st)
-          next if kv_group?(e) || !visivel?(e)
-          h = herdar(e, herdado)
-          d = e.definition
-          next unless def_tem_arte?(d, h, st)
-          em = mmul(m, e.transformation.to_a)
-          # Unidade = cada objeto da raiz e cada componente (uma cópia de estande);
-          # grupos internos continuam na mesma unidade (módulos de um mesmo painel).
-          u = (raiz || e.is_a?(Sketchup::ComponentInstance)) ? (st[:unit_seq] += 1) : unit
-          ler_nivel(d.entities, faces_da_def(d, h, st), em, h, u, nome_de(e) || nome, out, st)
-        end
+      def self.novo_st(selecao = false)
+        @mat_cache = {}
+        { t0: Time.now, nos: 0, faces: 0, unit_seq: 0, estourou: nil,
+          max_nos: selecao ? SEL_MAX_NOS : LER_MAX_NOS,
+          max_seg: selecao ? SEL_MAX_SEG : LER_MAX_SEG,
+          min_lado: MIN_LADO_CM / 100.0 * M }
       end
 
       def self.estourou?(st)
         return true if st[:estourou]
         st[:nos] += 1
-        if st[:nos] > LER_MAX_NOS
-          st[:estourou] = "a leitura passou de #{LER_MAX_NOS} grupos/componentes"
+        if st[:nos] > st[:max_nos]
+          st[:estourou] = "passou de #{st[:max_nos]} grupos/componentes"
         elsif st[:faces] > LER_MAX_FACES
-          st[:estourou] = "a leitura passou de #{LER_MAX_FACES} faces de arte"
-        elsif st[:nos] % 200 == 0 && Time.now - st[:t0] > LER_MAX_SEG
-          st[:estourou] = "a leitura passou de #{LER_MAX_SEG.round} s"
+          st[:estourou] = "passou de #{LER_MAX_FACES} faces"
+        elsif st[:nos] % 100 == 0 && Time.now - st[:t0] > st[:max_seg]
+          st[:estourou] = "passou de #{st[:max_seg].round(1)} s"
         end
         !st[:estourou].nil?
       end
 
-      def self.avisos(st)
-        st[:estourou] ? ["Leitura parcial: #{st[:estourou]}. Use \"Diagramar seleção\" para um ambiente específico."] : []
-      end
+      # Resolve ids persistentes em entidades. Tenta o caminho rápido da API; o que
+      # não achar procura numa varredura única (com limite) do modelo.
+      class Resolvedor
+        def initialize(model); @model = model; @mapa = nil; end
 
-      # Faces de arte DIRETAS de uma definição (coordenadas locais), memorizadas
-      # por definição + material herdado: 150 estandes iguais = 1 leitura.
-      def self.faces_da_def(defn, herdado, st)
-        k = [defn, herdado && herdado[:key]]
-        @memo_faces[k] ||= defn.entities.grep(Sketchup::Face)
-                                        .select { |f| visivel?(f) }
-                                        .map { |f| face_local(f, herdado, st) }.compact
-      end
+        def [](pid)
+          return nil if pid.nil?
+          e = (@model.find_entity_by_persistent_id(pid) rescue nil)
+          e = e.first if e.is_a?(Array)
+          return e if e && (e.respond_to?(:valid?) ? e.valid? : true)
+          mapa[pid]
+        end
 
-      def self.def_tem_arte?(defn, herdado, st)
-        k = [defn, herdado && herdado[:key]]
-        return @memo_tem[k] if @memo_tem.key?(k)
-        @memo_tem[k] = false # trava recursão circular
-        tem = !faces_da_def(defn, herdado, st).empty? ||
-              defn.entities.any? do |e|
-                (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) &&
-                  !kv_group?(e) && visivel?(e) && def_tem_arte?(e.definition, herdar(e, herdado), st)
+        def mapa
+          return @mapa if @mapa
+          @mapa = {}
+          t0 = Time.now; n = 0; vistos = {}
+          pilha = [@model.entities]
+          until pilha.empty?
+            ents = pilha.pop
+            ents.each do |e|
+              n += 1
+              return @mapa if n > 200_000 || (n % 500 == 0 && Time.now - t0 > 10.0)
+              if e.is_a?(Sketchup::Face)
+                @mapa[(e.persistent_id rescue nil)] = e
+              elsif e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+                @mapa[(e.persistent_id rescue nil)] = e
+                d = e.definition
+                next if vistos[d]
+                vistos[d] = true
+                pilha << d.entities
               end
-        @memo_tem[k] = tem
+            end
+          end
+          @mapa
+        end
+      end
+
+      def self.mat_info(m)
+        return nil unless m
+        @mat_cache ||= {}
+        @mat_cache[m] ||= begin
+          nome = (m.display_name.to_s rescue m.name.to_s).strip
+          { key: normalize(m.name.to_s), nome: nome.empty? ? m.name.to_s : nome, name: m.name.to_s,
+            mat: m, tex: !!(m.respond_to?(:texture) && m.texture) }
+        end
       end
 
       # Material do grupo/componente vale para as faces sem material dentro dele.
@@ -289,42 +188,10 @@ module STAND1
         herdado
       end
 
-      # Qual lado da face tem a arte: { face, info, lado, outer, holes } ou nil.
-      def self.face_local(f, herdado, st)
-        fm = mat_info(f.material)
-        bm = mat_info(f.back_material)
-        info, lado =
-          if aceito?(fm, st)                then [fm, :front]
-          elsif aceito?(bm, st)             then [bm, :back]
-          elsif fm.nil? && aceito?(herdado, st) then [herdado, :herdado]
-          end
-        return nil unless info
-        outer = f.outer_loop.vertices.map { |v| v.position.to_a }
-        holes = f.loops.reject(&:outer?).map { |l| l.vertices.map { |v| v.position.to_a } }
-        { face: f, info: info, lado: lado, outer: outer, holes: holes }
-      rescue
-        nil
-      end
-
-      def self.aceito?(info, st)
-        return false unless info
-        st[:qualquer] || info[:cv]
-      end
-
-      def self.mat_info(m)
-        return nil unless m
-        @mat_cache[m] ||= begin
-          key = normalize(m.name.to_s)
-          nome = (m.display_name.to_s rescue m.name.to_s).strip
-          cv = !key.empty? && EXCLUDE.none? { |x| key.include?(x) } && KEYWORDS.any? { |k| key.include?(k) }
-          { cv: cv, key: key, nome: nome.empty? ? m.name.to_s : nome, mat: m }
-        end
-      end
-
       def self.nome_de(e)
         n = e.name.to_s.strip
         n = e.definition.name.to_s.sub(/#\d+\z/, '').strip if n.empty? && e.is_a?(Sketchup::ComponentInstance)
-        (n.empty? || n =~ NOME_GENERICO) ? nil : n
+        (n.empty? || n =~ /\A\s*(grupo|group|componente|component|ret[aâ]ngulo|rectangle|face|sem nome|untitled|copy|c[oó]pia)?\s*(#\s*\d+)?\s*\z/i) ? nil : n
       rescue
         nil
       end
@@ -343,105 +210,176 @@ module STAND1
         false
       end
 
-      # Face local → face no mundo, no referencial de quem OLHA a arte:
-      # n = normal do lado com arte; right/up = eixos da peça vista de frente
-      # (sem espelhar, mesmo quando a arte está no verso da face).
-      def self.emitir(fi, m, unit, nome, out, st)
+      def self.normalize(s)
+        s.to_s.downcase.unicode_normalize(:nfkd).gsub(/\p{Mn}/, '').gsub(/\s+/, ' ').strip
+      rescue
+        s.to_s.downcase.strip
+      end
+
+      # Lado com a arte: frente com material; senão verso; senão o material herdado
+      # do grupo; senão a face sem material (o usuário escolheu, então vale).
+      def self.face_local(f, herdado, _st)
+        fm = mat_info(f.material)
+        bm = mat_info(f.back_material)
+        info, lado =
+          if fm then [fm, :front]
+          elsif bm then [bm, :back]
+          elsif herdado then [herdado, :herdado]
+          else [SEM_MATERIAL, :none]
+          end
+        outer = f.outer_loop.vertices.map { |v| v.position.to_a }
+        holes = f.loops.reject(&:outer?).map { |l| l.vertices.map { |v| v.position.to_a } }
+        { face: f, info: info, lado: lado, outer: outer, holes: holes }
+      rescue
+        nil
+      end
+
+      def self.fonte_de(ip, pid, cont, cip)
+        { 'ip' => ip, 'pid' => pid, 'cont' => cont, 'cip' => cip }
+      end
+
+      # Face -> mundo. A normal é a do lado COM a arte (quem olha a arte está nela),
+      # sem espelhar: nem a cópia espelhada de um componente, nem a arte no verso.
+      def self.emitir(fi, m, unit, nome, out, st, fonte)
         st[:faces] += 1
         ow = fi[:outer].map { |p| mpt(m, p) }
-        n  = newell(ow)
+        n  = vnorm(newell(ow))
         return if vlen(n) < 1e-9
-        n  = vnorm(n)
-        n  = vscl(n, -1.0) if mdet3(m) < 0          # cópia espelhada inverte o giro do loop
-        n  = vscl(n, -1.0) if fi[:lado] == :back
-        up = vnorm(vsub([0.0, 0.0, 1.0], vscl(n, n[2])))
-        up = vnorm(vsub([0.0, 1.0, 0.0], vscl(n, n[1]))) if vlen(up) < 1e-6
-        return if vlen(up) < 1e-6
-        right = vnorm(vcross(up, n))
-
-        uv    = ->(p) { [vdot(p, right), vdot(p, up)] }
-        ouv   = ow.map(&uv)
-        huv   = fi[:holes].map { |h| h.map { |p| uv.call(mpt(m, p)) } }
-        us = ouv.map(&:first); vs = ouv.map(&:last)
-        return if us.max - us.min < 1e-3 || vs.max - vs.min < 1e-3
+        ref = mdir(m, fi[:face].normal.to_a)
+        n = vscl(n, -1.0) if vdot(n, ref) < 0
+        n = vscl(n, -1.0) if fi[:lado] == :back
+        hw = fi[:holes].map { |h| h.map { |p| mpt(m, p) } }
         xs = ow.map { |p| p[0] }; ys = ow.map { |p| p[1] }; zs = ow.map { |p| p[2] }
-
         out << {
-          src: fi[:face], info: fi[:info], lado: fi[:lado], local: fi[:outer],
-          unit: unit, nome: nome, n: n, right: right, up: up, d: vdot(ow[0], n),
-          nk: n.map { |c| (c * 50).round },
-          ouv: ouv, huv: huv,
-          umin: us.min, umax: us.max, vmin: vs.min, vmax: vs.max,
-          area: poly_area(ouv) - huv.sum { |h| poly_area(h) },
+          face: fi[:face], info: fi[:info], lado: fi[:lado], fonte: fonte, nome: nome, unit: unit,
+          ow: ow, hw: hw, n: n, d: vdot(ow[0], n),
+          area: [vlen(newell(ow)) / 2.0 - hw.sum { |h| vlen(newell(h)) / 2.0 }, 0.0].max,
           bb: [xs.min, ys.min, zs.min, xs.max, ys.max, zs.max]
         }
+      end
+
+      # Percorre um grupo/componente e emite as faces de dentro (recursivo).
+      def self.coletar(inst, mp, herdado, ipc, unit, out, st, top, topip, nome_pai = nil, prof = 0)
+        return if prof > 12 || estourou?(st)
+        m     = mmul(mp, inst.transformation.to_a)
+        h     = herdar(inst, herdado)
+        chain = ipc + [inst.persistent_id]
+        nome  = nome_de(inst) || nome_pai
+        inst.definition.entities.each do |e|
+          if e.is_a?(Sketchup::Face)
+            next unless visivel?(e)
+            fi = face_local(e, h, st)
+            emitir(fi, m, unit, nome, out, st, fonte_de(chain, e.persistent_id, top, topip)) if fi
+          elsif (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) && !kv_group?(e) && visivel?(e)
+            coletar(e, m, h, chain, unit, out, st, top, topip, nome, prof + 1)
+          end
+        end
+      end
+
+      # Seleção do SketchUp -> peças (cada grupo/componente selecionado é uma unidade;
+      # faces soltas coplanares e encostadas formam uma peça só).
+      def self.capturar_selecao(model, st)
+        sel  = model.selection.to_a
+        path = (model.active_path || []) rescue []
+        ip   = path.map(&:persistent_id)
+        tw   = (model.edit_transform.to_a rescue IDENT)
+        h0   = nil
+        path.each { |i| h0 = herdar(i, h0) }
+        faces = []
+        sel.each do |e|
+          break if estourou?(st)
+          if e.is_a?(Sketchup::Face)
+            fi = face_local(e, h0, st)
+            emitir(fi, tw, 0, nil, faces, st, fonte_de(ip, e.persistent_id, nil, nil)) if fi
+          elsif (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) && !kv_group?(e)
+            st[:unit_seq] += 1
+            coletar(e, tw, h0, ip, st[:unit_seq], faces, st, e.persistent_id, ip)
+          end
+        end
+        [montar_pecas(faces, st), sel.size]
       end
 
       # ══════════════════════════════════════════════════════════════════════
       # PEÇAS (Ruby puro)
       # ══════════════════════════════════════════════════════════════════════
 
-      # Faces → peças: mesma unidade, mesmo material, mesmo plano e encostadas.
-      def self.montar_pecas(faces, st)
-        pecas = []
-        faces.group_by { |f| [f[:unit], f[:info][:key], f[:nk], (f[:d] / TOL_PLANO).round] }.each_value do |grupo|
-          uf = UnionFind.new(grupo.size)
-          grupo.each_with_index do |a, i|
-            (i + 1...grupo.size).each do |j|
-              b = grupo[j]
-              uf.unir(i, j) if a[:umin] <= b[:umax] + TOL_TOQUE && b[:umin] <= a[:umax] + TOL_TOQUE &&
-                               a[:vmin] <= b[:vmax] + TOL_TOQUE && b[:vmin] <= a[:vmax] + TOL_TOQUE
-            end
-          end
-          uf.grupos.each { |idx| pecas << nova_peca(idx.map { |i| grupo[i] }) }
-        end
-        pecas.reject! { |p| [p[:w], p[:h]].min < st[:min_lado] }   # borda/espessura, não arte
-        juntar_frente_verso(pecas)
+      def self.frame_de(n)
+        up = vnorm(vsub([0.0, 0.0, 1.0], vscl(n, n[2])))
+        up = vnorm(vsub([0.0, 1.0, 0.0], vscl(n, n[1]))) if vlen(up) < 1e-6
+        [vnorm(vcross(up, n)), up]
       end
 
-      def self.nova_peca(fs)
+      # Faces -> peças: mesma unidade, mesmo plano e encostadas.
+      def self.montar_pecas(faces, st)
+        clusters = []
+        faces.each do |f|
+          c = clusters.find { |k| k[:unit] == f[:unit] && vdot(k[:n], f[:n]) > 0.9998 && (k[:d] - f[:d]).abs < TOL_PLANO }
+          c ? c[:fs] << f : clusters << { unit: f[:unit], n: f[:n], d: f[:d], fs: [f] }
+        end
+
+        pecas = []
+        clusters.each do |c|
+          right, up = frame_de(c[:n])
+          fs = c[:fs].each do |f|
+            f[:ouv] = f[:ow].map { |p| [vdot(p, right), vdot(p, up)] }
+            f[:huv] = f[:hw].map { |h| h.map { |p| [vdot(p, right), vdot(p, up)] } }
+            us = f[:ouv].map(&:first); vs = f[:ouv].map(&:last)
+            f[:umin] = us.min; f[:umax] = us.max; f[:vmin] = vs.min; f[:vmax] = vs.max
+          end.reject { |f| f[:umax] - f[:umin] < 1e-3 || f[:vmax] - f[:vmin] < 1e-3 }
+          next if fs.empty?
+
+          uf = UnionFind.new(fs.size)
+          if fs.size <= CLUSTER_MAX
+            fs.each_with_index do |a, i|
+              (i + 1...fs.size).each do |j|
+                b = fs[j]
+                uf.unir(i, j) if a[:umin] <= b[:umax] + TOL_TOQUE && b[:umin] <= a[:umax] + TOL_TOQUE &&
+                                 a[:vmin] <= b[:vmax] + TOL_TOQUE && b[:vmin] <= a[:vmax] + TOL_TOQUE
+              end
+            end
+          else
+            (1...fs.size).each { |i| uf.unir(0, i) }
+          end
+          uf.grupos.each { |idx| pecas << nova_peca(idx.map { |i| fs[i] }, c) }
+        end
+        pecas.reject! { |p| [p[:w], p[:h]].min < st[:min_lado] }   # borda/espessura, não arte
+        unir_opostas(pecas)
+      end
+
+      def self.nova_peca(fs, c)
         umin = fs.map { |f| f[:umin] }.min; umax = fs.map { |f| f[:umax] }.max
         vmin = fs.map { |f| f[:vmin] }.min; vmax = fs.map { |f| f[:vmax] }.max
-        bb = fs.map { |f| f[:bb] }.transpose
-        f0 = fs.first
-        nome = fs.map { |f| f[:nome] }.compact.first
+        bb   = fs.map { |f| f[:bb] }.transpose
+        dom  = fs.max_by { |f| f[:area] }
         {
-          faces: fs, mat_key: f0[:info][:key], material: f0[:info][:nome],
-          nome: nome || f0[:info][:nome], unit: f0[:unit], n: f0[:n], d: f0[:d], lado: f0[:lado],
+          faces: fs, fontes: fs.map { |f| f[:fonte] }.compact, n: c[:n], d: c[:d], unit: c[:unit],
           umin: umin, vmin: vmin, w: umax - umin, h: vmax - vmin,
-          area: fs.sum { |f| f[:area] },
-          furos: fs.sum { |f| f[:huv].size },
-          bb: [bb[0].min, bb[1].min, bb[2].min, bb[3].max, bb[4].max, bb[5].max],
-          fv: false
+          area: fs.sum { |f| f[:area] }, furos: fs.sum { |f| f[:huv].size },
+          info: dom[:info], material: dom[:info][:nome], tex: fs.any? { |f| f[:info][:tex] },
+          nome: fs.map { |f| f[:nome] }.compact.first,
+          bb: [bb[0].min, bb[1].min, bb[2].min, bb[3].max, bb[4].max, bb[5].max]
         }
       end
 
-      # Duas faces opostas, mesmo material e mesma medida:
-      #   a menos de FV_MIN  -> é a mesma chapa (logo em PVC com espessura): fica uma,
-      #                         a que tem a arte do lado da frente da face;
-      #   até FV_MAX         -> placa impressa dos dois lados: uma peça FRENTE E VERSO.
-      def self.juntar_frente_verso(pecas)
+      # Faces opostas, mesma medida, até 30 cm: é a mesma chapa (logo em PVC com
+      # espessura, placa de dois lados). Fica UMA — frente e verso é decidido por
+      # você ("frente e verso" na peça), não deduzido.
+      def self.unir_opostas(pecas)
         fora = {}
-        # Só compara peças do mesmo material na mesma unidade (estande/objeto).
-        pecas.each_with_index.group_by { |p, _| [p[:mat_key], p[:unit]] }.each_value do |grupo|
-          grupo.each_with_index do |(a, _), gi|
-            next if a[:fv] || fora[a.object_id]
-            grupo[(gi + 1)..-1].each do |b, _|
-              next if fora[b.object_id] || b[:fv]
-              next unless vdot(a[:n], b[:n]) < -0.99
-              next unless (a[:w] - b[:w]).abs < 0.4 && (a[:h] - b[:h]).abs < 0.4   # ~1 cm
+        pecas.group_by { |p| p[:unit] }.each_value do |g|
+          g.each_with_index do |a, i|
+            next if fora[a.object_id]
+            g[(i + 1)..-1].each do |b|
+              next if fora[b.object_id]
+              next unless vdot(a[:n], b[:n]) < -0.9998
+              next unless (a[:w] - b[:w]).abs < TOL_MEDIDA && (a[:h] - b[:h]).abs < TOL_MEDIDA
               next unless bb_perto?(a[:bb], b[:bb], FV_MAX)
-              dist = (a[:d] + b[:d]).abs               # normais opostas: soma = distância entre planos
-              next if dist > FV_MAX
-              if dist < FV_MIN
-                fica, sai = (a[:lado] == :back && b[:lado] != :back) ? [b, a] : [a, b]
-                fora[sai.object_id] = true
-                break if sai.equal?(a)
-              else
-                a[:fv] = true
-                fora[b.object_id] = true
-              end
-              break
+              next if (a[:d] + b[:d]).abs > FV_MAX
+              pa = [a[:tex] ? 1 : 0, a[:n][1] < 0 ? 1 : 0]
+              pb = [b[:tex] ? 1 : 0, b[:n][1] < 0 ? 1 : 0]
+              perde = (pb <=> pa) > 0 ? a : b
+              fora[perde.object_id] = true
+              break if perde.equal?(a)
             end
           end
         end
@@ -452,166 +390,501 @@ module STAND1
         3.times.all? { |k| a[k] <= b[k + 3] + tol && b[k] <= a[k + 3] + tol }
       end
 
-      # Peças iguais (mesmo nome, material e recortes; medida a ±1 cm e área a ±1%)
-      # → 1 item com qtd. Comparação com tolerância, não arredondamento: arredondar
-      # separa cópias idênticas que caem dos dois lados de uma casa decimal.
-      def self.agrupar_iguais(pecas)
-        out = []
-        pecas.group_by { |p| [p[:nome], p[:mat_key], p[:furos], p[:fv]] }.each_value do |ps|
-          grupos = []
-          ps.each do |p|
-            g = grupos.find do |g0|
-              q = g0[:peca]
-              (q[:w] - p[:w]).abs < 0.4 && (q[:h] - p[:h]).abs < 0.4 &&
-                (q[:area] - p[:area]).abs <= 0.01 * [q[:area], p[:area]].max + 1.0
-            end
-            g ? g[:qtd] += 1 : grupos << { peca: p, qtd: 1 }
+      # ── Peça <-> registro persistido ────────────────────────────────────────
+
+      def self.uv4_de(f)
+        return nil unless f[:info][:tex] && f[:lado] != :herdado && f[:lado] != :none
+        tw  = Sketchup.create_texture_writer
+        uvh = f[:face].get_UVHelper(true, true, tw)
+        vs  = f[:face].outer_loop.vertices
+        [vs.size, 4].min.times.map do |i|
+          pos = vs[i].position
+          q = f[:lado] == :back ? uvh.get_back_UVQ(pos) : uvh.get_front_UVQ(pos)
+          [q.x / q.z, q.y / q.z]
+        end
+      rescue
+        nil
+      end
+
+      # Geometria guardada: contorno e recortes relativos ao canto da peça.
+      def self.geometria(p)
+        u0 = p[:umin]; v0 = p[:vmin]
+        rel = ->(pts) { pts.map { |u, v| [(u - u0).round(3), (v - v0).round(3)] } }
+        {
+          'w' => p[:w].round(3), 'h' => p[:h].round(3), 'area' => p[:area].round(2),
+          'furos' => p[:furos], 'material' => p[:material], 'n' => p[:n].map { |c| c.round(4) },
+          'faces' => p[:faces].map do |f|
+            { 'ouv' => rel.call(f[:ouv]), 'huv' => f[:huv].map { |h| rel.call(h) },
+              'mat' => (f[:info][:name].to_s.empty? ? nil : f[:info][:name]), 'uv4' => uv4_de(f) }
           end
-          out.concat(grupos)
+        }
+      end
+
+      def self.novo_registro(est, p, amb, nome, qtd, fv)
+        est['n_p'] += 1
+        { 'id' => "p#{est['n_p']}", 'amb' => amb, 'nome' => nome, 'qtd' => qtd, 'fv' => fv, 'obs' => '',
+          'fontes' => p[:fontes], 'ger' => geometria(p), 'st' => 'ok', 'aviso' => nil }
+      end
+
+      # Registro -> peça pronta para desenhar.
+      def self.peca_de(rec, model)
+        g = rec['ger']
+        { nome: rec['nome'], material: g['material'], w: g['w'], h: g['h'], umin: 0.0, vmin: 0.0,
+          furos: g['furos'], fv: rec['fv'],
+          faces: g['faces'].map do |f|
+            { ouv: f['ouv'], huv: f['huv'], uv4: f['uv4'], mat: (f['mat'] ? (model.materials[f['mat']] rescue nil) : nil) }
+          end }
+      end
+
+      # ══════════════════════════════════════════════════════════════════════
+      # ATUALIZAR DO MODELO (o projeto mudou → a peça acompanha)
+      # ══════════════════════════════════════════════════════════════════════
+
+      # Relê as faces de origem de UMA peça. Atualiza 'ger' e 'st'. Devolve o status.
+      def self.reler(model, rec, rv, st)
+        faces = []
+        invalidas = 0
+        rec['fontes'].each do |fo|
+          face  = rv[fo['pid']]
+          chain = (fo['ip'] || []).map { |pid| rv[pid] }
+          if !face.is_a?(Sketchup::Face) || chain.any? { |c| c.nil? || (c.respond_to?(:valid?) && !c.valid?) }
+            invalidas += 1
+            next
+          end
+          m = IDENT; h = nil
+          chain.each { |i| m = mmul(m, i.transformation.to_a); h = herdar(i, h) }
+          fi = face_local(face, h, st)
+          fi ? emitir(fi, m, 0, nil, faces, st, fo) : (invalidas += 1)
+        end
+
+        pecas = faces.empty? ? [] : montar_pecas(faces, st)
+        if pecas.empty?
+          p = relinkar(model, rec, rv, st)
+          if p
+            aplicar_leitura(rec, p, 'ok', 'Origem refeita: a face antiga sumiu e a arte foi reencontrada no mesmo objeto.')
+            return 'ok'
+          end
+          rec['st'] = 'perdida'
+          rec['aviso'] = 'Origem perdida — selecione a arte no modelo e clique em "Trocar pela seleção". Usando a última medida lida.'
+          return 'perdida'
+        end
+
+        p   = pecas.max_by { |q| q[:area] }
+        avs = []
+        avs << "#{invalidas} face(s) da origem não existem mais" if invalidas > 0
+        avs << "a origem agora tem #{pecas.size} peças (usada a maior)" if pecas.size > 1
+        aplicar_leitura(rec, p, invalidas > 0 ? 'parcial' : 'ok', avs.empty? ? nil : avs.join('; ').capitalize + '.')
+        rec['st']
+      end
+
+      def self.aplicar_leitura(rec, p, status, aviso)
+        rec['fontes'] = p[:fontes]
+        rec['ger']    = geometria(p)
+        rec['st']     = status
+        rec['aviso']  = aviso
+      end
+
+      # Face apagada na edição: reencontra a arte pelo objeto que a continha.
+      def self.relinkar(model, rec, rv, st)
+        ref = rec['ger'] && rec['ger']['n']
+        return nil unless ref
+        rec['fontes'].map { |f| [f['cont'], f['cip']] }.uniq.each do |cont, cip|
+          next unless cont
+          inst  = rv[cont]
+          chain = (cip || []).map { |pid| rv[pid] }
+          next unless inst && inst.valid? && chain.none?(&:nil?)
+          m = IDENT; h = nil
+          chain.each { |i| m = mmul(m, i.transformation.to_a); h = herdar(i, h) }
+          faces = []
+          st[:unit_seq] += 1
+          coletar(inst, m, h, cip || [], st[:unit_seq], faces, st, cont, cip)
+          cand = montar_pecas(faces, st).select { |p| vdot(p[:n], ref) > 0.98 }
+          best = cand.min_by { |p| (p[:area] - rec['ger']['area'].to_f).abs }
+          return best if best
+        end
+        nil
+      end
+
+      def self.atualizar_pecas(model, ids = nil)
+        est = carregar(model)
+        rv  = Resolvedor.new(model)
+        st  = novo_st(false)
+        est['pecas'].each do |rec|
+          next if ids && !ids.include?(rec['id'])
+          (reler(model, rec, rv, st) rescue (rec['st'] = 'perdida'))
+        end
+        est
+      end
+
+      # ══════════════════════════════════════════════════════════════════════
+      # REVISÕES: o que mudou desde a última emitida
+      # ══════════════════════════════════════════════════════════════════════
+
+      def self.nome_amb(est, id)
+        (est['ambientes'].find { |a| a['id'] == id } || {})['nome'].to_s
+      end
+
+      def self.valores(est, rec)
+        g = rec['ger']
+        { 'nome' => rec['nome'].to_s, 'amb' => rec['amb'], 'amb_nome' => nome_amb(est, rec['amb']),
+          'qtd' => rec['qtd'].to_i, 'fv' => !!rec['fv'], 'obs' => rec['obs'].to_s,
+          'w' => (g['w'] * POL_M * 100).round, 'h' => (g['h'] * POL_M * 100).round,
+          'furos' => g['furos'].to_i, 'material' => g['material'].to_s }
+      end
+
+      def self.cm_txt(cm)
+        format('%.2f', cm / 100.0).tr('.', ',')
+      end
+
+      def self.delta_txt(de, para)
+        d = para - de
+        "#{d >= 0 ? '+' : '−'}#{cm_txt(d.abs)}"
+      end
+
+      def self.comparar(b, c)
+        it = []
+        it << "renomeada: #{b['nome']} → #{c['nome']}" if b['nome'] != c['nome']
+        it << "largura #{cm_txt(b['w'])} → #{cm_txt(c['w'])} m (#{delta_txt(b['w'], c['w'])})" if (b['w'] - c['w']).abs >= 1
+        it << "altura #{cm_txt(b['h'])} → #{cm_txt(c['h'])} m (#{delta_txt(b['h'], c['h'])})" if (b['h'] - c['h']).abs >= 1
+        it << "quantidade #{b['qtd']} → #{c['qtd']} und." if b['qtd'] != c['qtd']
+        it << (c['fv'] ? 'passou a FRENTE E VERSO' : 'deixou de ser FRENTE E VERSO') if b['fv'] != c['fv']
+        it << "recortes #{b['furos']} → #{c['furos']}" if b['furos'] != c['furos']
+        it << "material #{b['material']} → #{c['material']}" if b['material'] != c['material']
+        it << "movida de #{b['amb_nome']} para #{c['amb_nome']}" if b['amb'] != c['amb']
+        it << 'observação alterada' if b['obs'] != c['obs']
+        it
+      end
+
+      def self.med_txt(v)
+        "#{cm_txt(v['w'])} x #{cm_txt(v['h'])} m"
+      end
+
+      # Lista de diferenças (vazia até a primeira revisão ser emitida).
+      def self.diferencas(est)
+        return [] if est['rev_n'].nil?
+        out = []
+        est['pecas'].each do |r|
+          cur = valores(est, r)
+          b   = est['base'][r['id']]
+          if b.nil?
+            out << { id: r['id'], tipo: 'nova', amb: cur['amb_nome'], nome: cur['nome'],
+                     itens: ["NOVA — #{med_txt(cur)} · #{cur['qtd']} und."] }
+          else
+            it = comparar(b, cur)
+            out << { id: r['id'], tipo: 'alterada', amb: cur['amb_nome'], nome: cur['nome'], itens: it } unless it.empty?
+          end
+        end
+        est['base'].each do |id, b|
+          next if est['pecas'].any? { |r| r['id'] == id }
+          out << { id: id, tipo: 'removida', amb: b['amb_nome'], nome: b['nome'], itens: ['REMOVIDA'] }
         end
         out
       end
 
-      def self.cm(inches)
-        (inches * POL_M * 100).round
+      def self.rev_rotulo(n)
+        format('R%02d', n)
+      end
+
+      def self.texto_alteracoes(est, difs)
+        return nil if est['rev_n'].nil?
+        proxima = est['rev_n'] + 1
+        linhas = ["ARTES — REVISÃO #{rev_rotulo(proxima)} (alterações desde #{rev_rotulo(est['rev_n'])})"]
+        if difs.empty?
+          linhas << '' << 'Nenhuma alteração.'
+        else
+          difs.group_by { |d| d[:amb].to_s }.each do |amb, ds|
+            linhas << '' << amb.upcase
+            ds.each { |d| linhas << " • #{d[:nome]} — #{d[:itens].join('; ')}" }
+          end
+        end
+        linhas.join("\n")
+      end
+
+      # Congela os valores atuais como a revisão emitida (R00, R01...).
+      def self.emitir_revisao(model)
+        est  = carregar(model)
+        difs = diferencas(est)
+        texto = texto_alteracoes(est, difs)
+        est['rev_n'] = est['rev_n'].nil? ? 0 : est['rev_n'] + 1
+        est['base'] = est['pecas'].each_with_object({}) { |r, h| h[r['id']] = valores(est, r) }
+        est['hist'] << { 'n' => est['rev_n'], 'em' => Time.now.strftime('%d/%m/%Y %H:%M'),
+                         'alteracoes' => difs.size,
+                         'texto' => texto || "ARTES — REVISÃO #{rev_rotulo(est['rev_n'])} (primeira emissão)" }
+        est['hist'] = est['hist'].last(30)
+        persistir(model)
+        est
       end
 
       # ══════════════════════════════════════════════════════════════════════
-      # AMBIENTES (Ruby puro)
+      # ESTADO PARA A TELA
       # ══════════════════════════════════════════════════════════════════════
 
-      # Peças a menos de `gap` umas das outras (em planta) = mesmo ambiente.
-      # Grade espacial: cada peça só é comparada com as vizinhas.
-      def self.separar_ambientes(pecas, gap)
-        return [] if pecas.empty?
-        half = gap / 2.0
-        cel  = [gap, 1.0 * M].max
-        grade = Hash.new { |h, k| h[k] = [] }
-        uf = UnionFind.new(pecas.size)
-        pecas.each_with_index do |p, i|
-          x0 = p[:bb][0] - half; y0 = p[:bb][1] - half
-          x1 = p[:bb][3] + half; y1 = p[:bb][4] + half
-          ((x0 / cel).floor..(x1 / cel).floor).each do |cx|
-            ((y0 / cel).floor..(y1 / cel).floor).each do |cy|
-              grade[[cx, cy]].each do |j|
-                q = pecas[j]
-                if x0 <= q[:bb][3] + half && q[:bb][0] - half <= x1 &&
-                   y0 <= q[:bb][4] + half && q[:bb][1] - half <= y1
-                  uf.unir(i, j)
-                end
-              end
-              grade[[cx, cy]] << i
-            end
-          end
+      def self.prev_de(ger)
+        total = ger['faces'].sum { |f| f['ouv'].size + f['huv'].sum(&:size) }
+        if total > 800
+          return [{ 'o' => [[0, 0], [ger['w'], 0], [ger['w'], ger['h']], [0, ger['h']]].map { |u, v| [(u * POL_M).round(2), (v * POL_M).round(2)] }, 'h' => [] }]
         end
-        uf.grupos.map do |idx|
-          ps = idx.map { |i| pecas[i] }
-          bb = ps.map { |p| p[:bb] }.transpose
-          { pecas: ps, bb: [bb[0].min, bb[1].min, bb[2].min, bb[3].max, bb[4].max, bb[5].max] }
-        end
+        mt = ->(pts) { pts.map { |u, v| [(u * POL_M).round(3), (v * POL_M).round(3)] } }
+        ger['faces'].map { |f| { 'o' => mt.call(f['ouv']), 'h' => f['huv'].map { |h| mt.call(h) } } }
       end
 
-      # Câmeras das cenas: [{ nome, ordem, eye, dir }].
-      def self.cameras_das_cenas(model)
-        model.pages.to_a.each_with_index.map do |pg, i|
-          c = pg.camera
-          next nil unless c
-          eye = c.eye.to_a
-          dir = vnorm(vsub(c.target.to_a, eye))
-          next nil if vlen(dir) < 1e-9
-          { nome: pg.name.to_s, ordem: i, eye: eye, dir: dir }
-        end.compact
-      rescue
-        []
+      def self.ui_peca(rec, dif)
+        g = rec['ger']
+        { id: rec['id'], amb: rec['amb'], nome: rec['nome'], qtd: rec['qtd'], fv: !!rec['fv'], obs: rec['obs'].to_s,
+          w_m: (g['w'] * POL_M).round(3), h_m: (g['h'] * POL_M).round(3), furos: g['furos'], material: g['material'],
+          st: rec['st'], aviso: rec['aviso'], prev: prev_de(g),
+          dif: dif ? { tipo: dif[:tipo], itens: dif[:itens] } : nil }
       end
 
-      # Cada cena aponta para o ambiente que o raio da câmera atravessa primeiro.
-      # Nome do ambiente = a cena mais próxima dele (vista aérea geral fica longe
-      # e perde para a cena do próprio ambiente). Sem cena: "AMBIENTE N".
-      def self.nomear_ambientes(ambs, cams)
-        folga = 1.0 * M
-        cams.each do |c|
-          melhor = nil
-          ambs.each do |a|
-            t = raio_caixa(c[:eye], c[:dir], a[:bb], folga)
-            melhor = [t, a] if t && (melhor.nil? || t < melhor[0])
-          end
-          next unless melhor
-          (melhor[1][:cenas] ||= []) << c.merge(dist: melhor[0])
-        end
-        ambs.each do |a|
-          cs = a[:cenas] || []
-          # Cenas próximas do ambiente (descarta vistas gerais lá de longe); entre
-          # elas vale a primeira da lista de cenas ("01 CREDENCIAMENTO" e não "... 2").
-          dmin  = cs.map { |c| c[:dist] }.min
-          perto = dmin && cs.select { |c| c[:dist] <= [2 * dmin, dmin + 10.0 * M].max }.min_by { |c| c[:ordem] }
-          a[:nome]  = perto ? perto[:nome] : nil
-          a[:ordem] = perto ? perto[:ordem] : nil
-          a[:cenas] = cs.sort_by { |c| c[:ordem] }.map { |c| c[:nome] }
-        end
-        ambs.sort_by! { |a| [a[:ordem] ? 0 : 1, a[:ordem] || 0, a[:bb][0], a[:bb][1]] }
-        sem = 0
-        ambs.each_with_index do |a, i|
-          a[:id] = i
-          a[:nome] ||= "AMBIENTE #{sem += 1}"
-        end
-        ambs
-      end
-
-      # Distância ao longo do raio até entrar na caixa (0 se o olho está dentro), ou nil.
-      def self.raio_caixa(o, d, bb, folga)
-        tmin = 0.0; tmax = Float::INFINITY
-        3.times do |k|
-          lo = bb[k] - folga; hi = bb[k + 3] + folga
-          if d[k].abs < 1e-12
-            return nil if o[k] < lo || o[k] > hi
-          else
-            t1 = (lo - o[k]) / d[k]; t2 = (hi - o[k]) / d[k]
-            t1, t2 = t2, t1 if t1 > t2
-            tmin = t1 if t1 > tmin
-            tmax = t2 if t2 < tmax
-            return nil if tmin > tmax
-          end
-        end
-        tmin
-      end
-
-      # Lista para a aba.
-      def self.resumo(lt)
-        mats = Hash.new { |h, k| h[k] = { key: k, nome: '', pecas: 0, m2: 0.0 } }
-        lt[:pecas].each do |p|
-          m = mats[p[:mat_key]]
-          m[:nome] = p[:material]
-          m[:pecas] += 1
-          m[:m2] += p[:area] * POL_M * POL_M * (p[:fv] ? 2 : 1)
-        end
+      def self.ui_estado(model)
+        est  = carregar(model)
+        difs = diferencas(est)
+        idx  = difs.each_with_object({}) { |d, h| h[d[:id]] = d unless d[:tipo] == 'removida' }
         {
-          ambientes: lt[:ambientes].map do |a|
-            itens = agrupar_iguais(a[:pecas])
-            { id: a[:id], nome: a[:nome], cenas: a[:cenas] || [],
-              pecas: a[:pecas].size, desenhos: itens.size,
-              m2: (a[:pecas].sum { |p| p[:area] * (p[:fv] ? 2 : 1) } * POL_M * POL_M).round(2) }
-          end,
-          materiais: mats.values.sort_by { |m| -m[:m2] }.map { |m| m.merge(m2: m[:m2].round(2)) },
-          avisos: lt[:avisos] || []
+          ambientes: est['ambientes'], ativo: est['ativo'],
+          pecas: est['pecas'].map { |r| ui_peca(r, idx[r['id']]) },
+          rev: { n: est['rev_n'], rotulo: (est['rev_n'].nil? ? nil : rev_rotulo(est['rev_n'])),
+                 proxima: rev_rotulo((est['rev_n'] || -1) + 1),
+                 pendentes: difs.size, texto: texto_alteracoes(est, difs),
+                 removidas: difs.count { |d| d[:tipo] == 'removida' }, hist: est['hist'].last(10) }
         }
       end
 
-      def self.leitura_valida?(lt)
-        lt[:pecas].all? { |p| p[:faces].first[:src].valid? }
-      rescue
-        false
+      def self.enviar_estado(model, dlg, extra = {})
+        return unless dlg && dlg.visible?
+        dlg.execute_script("window.mapaEstado(#{ui_estado(model).merge(extra).to_json})")
+      end
+
+      def self.sel_payload(model)
+        est = carregar(model)
+        st  = novo_st(true)
+        pecas, n = capturar_selecao(model, st)
+        usados = est['pecas'].flat_map { |r| r['fontes'].map { |f| [f['pid'], r['id']] } }.to_h
+        lista = pecas.first(SEL_MAX_PECAS).map do |p|
+          g = geometria(p)
+          dono = p[:fontes].map { |f| usados[f['pid']] }.compact.first
+          dup = dono && (est['pecas'].find { |r| r['id'] == dono } || {})['nome']
+          { w_m: (g['w'] * POL_M).round(3), h_m: (g['h'] * POL_M).round(3), furos: g['furos'], material: g['material'],
+            sugerido: p[:nome], dup: dup, prev: pecas.size > 12 ? nil : prev_de(g) }
+        end
+        { n: n, pecas: lista, total: pecas.size, grande: pecas.size > SEL_MAX_PECAS, parcial: st[:estourou] }
       end
 
       # ══════════════════════════════════════════════════════════════════════
-      # DIAGRAMAÇÃO (Ruby puro): posição de cada peça no quadro
+      # ENTRADAS DO DIÁLOGO
       # ══════════════════════════════════════════════════════════════════════
 
-      # Texto das etiquetas proporcional ao quadro: ~1% da largura, entre 8 e 22 cm.
-      # (Fixo, sumia num backdrop de 12 m e sobrava num balcão de 1 m.)
+      class SelObs < Sketchup::SelectionObserver
+        def onSelectionBulkChange(_s); MapaArtes.selecao_mudou; end
+        def onSelectionCleared(_s);    MapaArtes.selecao_mudou; end
+        def onSelectionAdded(_s, _e);  MapaArtes.selecao_mudou; end
+        def onSelectionRemoved(_s, _e); MapaArtes.selecao_mudou; end
+      end
+
+      class ModObs < Sketchup::ModelObserver
+        def onTransactionCommit(_m); MapaArtes.modelo_mudou; end
+        def onTransactionUndo(_m);   MapaArtes.modelo_mudou; end
+        def onTransactionRedo(_m);   MapaArtes.modelo_mudou; end
+      end
+
+      def self.dialogo_aberto(dlg)
+        @dlg = dlg
+        @ativo = false
+        model = Sketchup.active_model
+        @obs_model = model
+        @sel_obs = SelObs.new
+        @mod_obs = ModObs.new
+        model.selection.add_observer(@sel_obs)
+        model.add_observer(@mod_obs)
+      rescue
+      end
+
+      def self.dialogo_fechado
+        (@obs_model.selection.remove_observer(@sel_obs)) rescue nil
+        (@obs_model.remove_observer(@mod_obs)) rescue nil
+        @dlg = nil
+        @ativo = false
+      end
+
+      def self.aba_ativa(v)
+        @ativo = (v.to_s == '1')
+        empurrar_selecao if @ativo
+      end
+
+      def self.selecao_mudou
+        return if @sel_pendente || !@dlg || !@ativo
+        @sel_pendente = true
+        UI.start_timer(0.25, false) { @sel_pendente = false; empurrar_selecao }
+      end
+
+      def self.empurrar_selecao
+        return unless @dlg && @dlg.visible? && @ativo && !@job
+        @dlg.execute_script("window.mapaSelecao(#{sel_payload(Sketchup.active_model).to_json})")
+      rescue
+      end
+
+      # O projeto mudou: avisa a tela (sem reler nada sozinho).
+      def self.modelo_mudou
+        return if @job || !@dlg || @mudou_pendente
+        return if @ignorar_ate && Time.now < @ignorar_ate
+        @mudou_pendente = true
+        UI.start_timer(0.6, false) do
+          @mudou_pendente = false
+          (@dlg.execute_script('window.mapaSujo()') if @dlg && @dlg.visible?) rescue nil
+        end
+      end
+
+      def self.estado_from_dialog(msg, dlg)
+        model = Sketchup.active_model
+        return unless model
+        cfg = parse_cfg(msg)
+        if cfg['atualizar']
+          atualizar_pecas(model)
+          persistir(model)
+        end
+        enviar_estado(model, dlg)
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      # Campos editados na tela. Exclusões são explícitas (removidos), para uma
+      # gravação atrasada nunca apagar uma peça recém-adicionada.
+      def self.salvar_from_dialog(msg, dlg = nil)
+        model = Sketchup.active_model
+        cfg   = parse_cfg(msg)
+        est   = carregar(model)
+        if cfg['ambientes'].is_a?(Array) && !cfg['ambientes'].empty?
+          est['ambientes'] = cfg['ambientes'].map { |a| { 'id' => a['id'].to_s, 'nome' => a['nome'].to_s.strip } }
+          est['ativo'] = cfg['ativo'].to_s if est['ambientes'].any? { |a| a['id'] == cfg['ativo'].to_s }
+        end
+        remov = (cfg['removidos'] || []).map(&:to_s)
+        # Removidas vão para a lixeira da sessão: "Desfazer" devolve a peça inteira
+        # (com a referência ao modelo), no mesmo lugar da lista.
+        @lixeira ||= {}
+        est['pecas'].each_with_index { |r, i| @lixeira[r['id']] = { rec: r, idx: i } if remov.include?(r['id']) }
+        @lixeira.shift while @lixeira.size > 30
+        est['pecas'].reject! { |r| remov.include?(r['id']) }
+        por_id = est['pecas'].each_with_object({}) { |r, h| h[r['id']] = r }
+        (cfg['pecas'] || []).each do |c|
+          r = por_id[c['id'].to_s] or next
+          r['nome'] = c['nome'].to_s.strip unless c['nome'].to_s.strip.empty?
+          r['qtd']  = [c['qtd'].to_i, 1].max
+          r['fv']   = !!c['fv']
+          r['obs']  = c['obs'].to_s.strip
+          r['amb']  = c['amb'].to_s if est['ambientes'].any? { |a| a['id'] == c['amb'].to_s }
+        end
+        ordem = (cfg['ordem'] || []).map(&:to_s)
+        est['pecas'].sort_by!.with_index { |r, i| [ordem.index(r['id']) || ordem.size + i, i] } unless ordem.empty?
+        persistir(model)
+      rescue => e
+        notify("Erro ao salvar: #{e.message}", false, dlg)
+      end
+
+      def self.sel_from_dialog(dlg)
+        empurrar_selecao if dlg
+      end
+
+      # Desfazer da remoção de uma peça (dentro da sessão).
+      def self.restaurar_from_dialog(msg, dlg)
+        model = Sketchup.active_model
+        id    = parse_cfg(msg)['id'].to_s
+        est   = carregar(model)
+        item  = (@lixeira || {}).delete(id)
+        return notify('Não há mais o que desfazer.', false, dlg) unless item
+        return enviar_estado(model, dlg) if est['pecas'].any? { |r| r['id'] == id }
+        est['ambientes'].any? { |a| a['id'] == item[:rec]['amb'] } or item[:rec]['amb'] = est['ativo']
+        est['pecas'].insert([item[:idx], est['pecas'].size].min, item[:rec])
+        persistir(model)
+        enviar_estado(model, dlg, novos: [id])
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      def self.add_from_dialog(msg, dlg)
+        model = Sketchup.active_model
+        cfg   = parse_cfg(msg)
+        est   = carregar(model)
+        pecas, = capturar_selecao(model, novo_st(false))
+        return notify('Selecione no SketchUp a face, o grupo ou o componente da arte.', false, dlg) if pecas.empty?
+        if pecas.size > SEL_MAX_PECAS
+          return notify("A seleção tem #{pecas.size} peças. Selecione só a arte (face, grupo ou componente).", false, dlg)
+        end
+
+        amb  = est['ambientes'].any? { |a| a['id'] == cfg['amb'] } ? cfg['amb'] : est['ativo']
+        nome = cfg['nome'].to_s.strip
+        qtd  = [cfg['qtd'].to_i, 1].max
+        fv   = !!cfg['fv']
+        obs  = cfg['obs'].to_s.strip
+        novas = pecas.each_with_index.map do |p, i|
+          nm = if !nome.empty? then (pecas.size > 1 ? "#{nome} #{i + 1}" : nome)
+               else p[:nome] || "PEÇA #{est['n_p'] + 1}"
+               end
+          rec = novo_registro(est, p, amb, nm, qtd, fv)
+          rec['obs'] = obs
+          est['pecas'] << rec
+          rec
+        end
+        persistir(model)
+        enviar_estado(model, dlg, novos: novas.map { |r| r['id'] })
+        notify("#{novas.size == 1 ? 'Peça adicionada' : "#{novas.size} peças adicionadas"} a #{nome_amb(est, amb)}.", true, dlg)
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      # Substitui a ORIGEM da peça pela seleção atual (nome, quantidade e ambiente ficam).
+      def self.trocar_from_dialog(msg, dlg)
+        model = Sketchup.active_model
+        cfg   = parse_cfg(msg)
+        est   = carregar(model)
+        rec   = est['pecas'].find { |r| r['id'] == cfg['id'].to_s }
+        return notify('Peça não encontrada.', false, dlg) unless rec
+        pecas, = capturar_selecao(model, novo_st(false))
+        return notify('Selecione no SketchUp a nova arte desta peça.', false, dlg) if pecas.empty?
+        return notify("A seleção tem #{pecas.size} peças; selecione só a que substitui \"#{rec['nome']}\".", false, dlg) if pecas.size > 1
+        aplicar_leitura(rec, pecas[0], 'ok', nil)
+        persistir(model)
+        enviar_estado(model, dlg, novos: [rec['id']])
+        notify("Origem de \"#{rec['nome']}\" substituída pela seleção.", true, dlg)
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      def self.atualizar_from_dialog(dlg)
+        model = Sketchup.active_model
+        est   = atualizar_pecas(model)
+        persistir(model)
+        enviar_estado(model, dlg)
+        pend  = diferencas(est).size
+        ruins = est['pecas'].count { |r| r['st'] != 'ok' }
+        msg = 'Medidas atualizadas do modelo.'
+        msg += " #{pend} alteração(ões) desde #{rev_rotulo(est['rev_n'])}." if est['rev_n'] && pend > 0
+        msg += " #{ruins} peça(s) pedem atenção." if ruins > 0
+        notify(msg, ruins == 0, dlg)
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      def self.emitir_from_dialog(dlg)
+        model = Sketchup.active_model
+        atualizar_pecas(model)
+        est = emitir_revisao(model)
+        enviar_estado(model, dlg, emitida: true)
+        notify("Revisão #{rev_rotulo(est['rev_n'])} emitida: é a nova referência para as próximas alterações.", true, dlg)
+      rescue => e
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      # ══════════════════════════════════════════════════════════════════════
+      # PRANCHA 16:9 (Ruby puro): posição de cada peça
+      # ══════════════════════════════════════════════════════════════════════
+
       LBL_MIN = 0.08 * M
       LBL_MAX = 0.22 * M
-      CHAR_W  = 0.62          # largura média de um caractere Arial / altura
+      CHAR_W  = 0.62
+
+      def self.metros(inches)
+        format('%.2f', inches * POL_M).tr('.', ',')
+      end
 
       def self.linhas_etiqueta(item)
         p = item[:peca]
@@ -619,68 +892,111 @@ module STAND1
          "#{p[:material]} · #{metros(p[:w])} x #{metros(p[:h])} m"]
       end
 
-      # Distância da base da peça até o topo da etiqueta (abaixo das cotas da base).
-      def self.recuo_etiqueta(p, lbl)
-        (p[:furos] > 0 ? 0.45 * M : 0.0) + 0.6 * lbl
+      # Linhas da etiqueta: [{texto, h, y, cor}], y = distância do topo da etiqueta.
+      def self.etiqueta_linhas(item, lbl)
+        l1, l2 = linhas_etiqueta(item)
+        ls = [[l1, lbl, :normal], [l2, 0.8 * lbl, :cinza]]
+        (item[:notas] || []).each { |t, k| ls << [t, 0.8 * lbl, k] }
+        y = 0.0
+        ls.map { |t, h, k| y += 1.35 * h; { texto: t, h: h, y: y, cor: k } }
       end
 
-      # Folgas em volta da peça (polegadas): cotas à esquerda/topo/base e etiqueta.
+      def self.recuo_etiqueta(p, lbl)
+        (p[:furos] > 0 ? 0.45 * M : 0.0) + 0.5 * lbl
+      end
+
+      # Folgas em volta da peça: cotas à esquerda/topo/base e a etiqueta inteira.
       def self.folgas(item, labels, lbl)
         p = item[:peca]
-        base = labels ? recuo_etiqueta(p, lbl) + 2.4 * lbl + 0.6 * lbl : (p[:furos] > 0 ? 0.45 * M : 0.10 * M)
-        texto_w = labels ? linhas_etiqueta(item).map(&:size).max * CHAR_W * lbl : 0.0
         esq = (p[:furos] > 0 ? 0.75 : 0.45) * M
-        dir = 0.35 * M
-        {
-          esq: esq, topo: 0.45 * M, base: base,
-          # a etiqueta começa no x da peça: a vaga tem que caber ela também
-          dir: [dir, texto_w - p[:w] + 0.3 * M].max
-        }
+        if labels
+          ls   = etiqueta_linhas(item, lbl)
+          base = recuo_etiqueta(p, lbl) + ls.last[:y] + 0.6 * lbl
+          tw   = ls.map { |l| l[:texto].size * CHAR_W * l[:h] }.max
+          dir  = [0.35 * M, tw - p[:w] + 0.3 * M].max
+        else
+          base = p[:furos] > 0 ? 0.45 * M : 0.10 * M
+          dir  = 0.35 * M
+        end
+        { esq: esq, topo: 0.45 * M, base: base, dir: dir }
       end
 
-      # Prateleiras: peças mais altas primeiro, linhas até a largura-alvo do quadro.
-      # Devolve { itens: [{item, x, z}], w, h, lbl } com (x,z) = canto inferior esquerdo
-      # da peça; o quadro cresce para baixo a partir do título.
-      def self.diagramar(itens, labels)
-        ordem = itens.sort_by { |it| [-it[:peca][:h], -it[:peca][:w]] }
-        area0 = ordem.sum { |it| (it[:peca][:w] + 0.8 * M) * (it[:peca][:h] + 0.9 * M) }
-        larg0 = ordem.map { |it| it[:peca][:w] + 0.8 * M }.max || 0.0
-        lbl   = ([Math.sqrt(area0 * 1.6), larg0].max * 0.01).clamp(LBL_MIN, LBL_MAX)
-
+      # Empacota em prateleiras e devolve o enquadramento 16:9 mais justo.
+      # Retorna { itens: [{item, x, z}], w, h, lbl, titulo:{x,z,h}, rev:{x,z,h} } com
+      # (x,z) = canto inferior esquerdo da peça; origem no canto inferior esquerdo da prancha.
+      def self.encaixar(itens, labels, lbl, titulo, rev)
+        ordem = itens.each_with_index.sort_by { |it, i| [-it[:peca][:h], -it[:peca][:w], i] }.map(&:first)
         slots = ordem.map do |it|
           f = folgas(it, labels, lbl)
           { item: it, f: f, w: it[:peca][:w] + f[:esq] + f[:dir], h: it[:peca][:h] + f[:topo] + f[:base] }
         end
-        area   = slots.sum { |sl| sl[:w] * sl[:h] }
-        largo  = slots.map { |sl| sl[:w] }.max || 0.0
-        alvo   = [Math.sqrt(area * 1.6), largo].max
+        th  = 2.4 * lbl
+        tbl = th + 1.6 * lbl           # bloco do título
+        mg  = 2.0 * lbl
+        largo = slots.map { |s| s[:w] }.max
+        total = slots.sum { |s| s[:w] }
+        cands = if slots.size == 1 then [largo]
+                else (0..27).map { |k| largo * (total / largo)**(k / 27.0) }.uniq
+                end
 
-        linhas = [[]]; x = 0.0
-        slots.each do |sl|
-          if x > 0 && x + sl[:w] > alvo
-            linhas << []
-            x = 0.0
+        melhor = nil
+        cands.each do |cw|
+          linhas = [[]]; x = 0.0
+          slots.each do |s|
+            if x > 0 && x + s[:w] > cw + 1e-6
+              linhas << []
+              x = 0.0
+            end
+            linhas.last << s
+            x += s[:w]
           end
-          linhas.last << sl.merge(x: x)
-          x += sl[:w]
+          wu = linhas.map { |l| l.sum { |s| s[:w] } }.max
+          hu = linhas.sum { |l| l.map { |s| s[:h] }.max }
+          wf = [wu + 2 * mg, (hu + tbl + 2 * mg) * BOARD_ASPECT].max
+          cand = { linhas: linhas, wu: wu, hu: hu, wf: wf }
+          melhor = cand if melhor.nil? || wf < melhor[:wf] - 1e-6 || (wf - melhor[:wf]).abs <= 1e-6 && linhas.size < melhor[:linhas].size
         end
 
-        out = []; topo = 0.0; w = 0.0
-        linhas.each do |ln|
-          alt = ln.map { |sl| sl[:h] }.max || 0.0
-          ln.each do |sl|
-            out << { item: sl[:item], x: sl[:x] + sl[:f][:esq], z: topo - sl[:f][:topo] - sl[:item][:peca][:h] }
+        wf = melhor[:wf]; hf = wf / BOARD_ASPECT
+        topo_conteudo = hf - mg - tbl
+        sobra = (topo_conteudo - mg) - melhor[:hu]
+        cursor = topo_conteudo - [sobra, 0.0].max / 2.0
+        out = []
+        melhor[:linhas].each do |ln|
+          alt = ln.map { |s| s[:h] }.max
+          lw  = ln.sum { |s| s[:w] }
+          x   = (wf - lw) / 2.0
+          ln.each do |s|
+            out << { item: s[:item], x: x + s[:f][:esq], z: cursor - s[:f][:topo] - s[:item][:peca][:h] }
+            x += s[:w]
           end
-          w = [w, ln.sum { |sl| sl[:w] }].max
-          topo -= alt
+          cursor -= alt
         end
-        { itens: out, w: w, h: -topo, lbl: lbl }
+        rh = 1.2 * lbl
+        { itens: out, w: wf, h: hf, lbl: lbl,
+          titulo: { x: mg, z: hf - mg - th, h: th, texto: titulo },
+          rev: { x: wf - mg - rev.size * CHAR_W * rh, z: hf - mg - rh, h: rh, texto: rev } }
       end
 
-      # Quadros lado a lado, à esquerda do modelo: [{ quadro, lay, x0 }].
-      def self.posicionar_quadros(quadros, labels)
-        gap = 3.0 * M
-        lays = quadros.map { |q| diagramar(q[:itens], labels) }
+      # Tamanho do texto proporcional à prancha (~1,1% da largura): converge em 2-3 voltas.
+      def self.diagramar(itens, labels, titulo, rev)
+        area0 = itens.sum { |it| (it[:peca][:w] + 0.8 * M) * (it[:peca][:h] + 0.9 * M) }
+        larg0 = itens.map { |it| it[:peca][:w] + 0.8 * M }.max
+        lbl   = ([Math.sqrt(area0 * 1.8), larg0].max * 0.011).clamp(LBL_MIN, LBL_MAX)
+        lay   = nil
+        3.times do
+          lay = encaixar(itens, labels, lbl, titulo, rev)
+          novo = (lay[:w] * 0.011).clamp(LBL_MIN, LBL_MAX)
+          break if (novo - lbl).abs < 0.02 * lbl
+          lbl = novo
+        end
+        lay
+      end
+
+      # Pranchas lado a lado, à esquerda do modelo: [{ quadro, lay, x0 }].
+      def self.posicionar_quadros(quadros, labels, rev)
+        gap  = 3.0 * M
+        lays = quadros.map { |q| diagramar(q[:itens], labels, "ARTES - #{q[:nome].to_s.upcase}", rev) }
         total = lays.sum { |l| l[:w] } + gap * [lays.size - 1, 0].max
         x = -total
         quadros.each_with_index.map do |q, i|
@@ -691,25 +1007,64 @@ module STAND1
       end
 
       # ══════════════════════════════════════════════════════════════════════
-      # DESENHO NO SKETCHUP (em etapas)
+      # GERAR (desenho em etapas + cenas)
       # ══════════════════════════════════════════════════════════════════════
 
-      TITULO_H = 0.30 * M
+      def self.gerar_from_dialog(msg, dlg)
+        model = Sketchup.active_model
+        return notify('Nenhum modelo aberto.', false, dlg) unless model
+        return notify('Já existe um mapa sendo desenhado.', false, dlg) if @job
+        cfg = parse_cfg(msg)
+        est = atualizar_pecas(model)           # o mapa sempre sai com as medidas atuais do modelo
+        persistir(model)
+        ids = (cfg['ambientes'] || []).map(&:to_s)
+        labels  = cfg['labels'] != false
+        destaque = cfg['destaque'] != false
+        difs = diferencas(est).each_with_object({}) { |d, h| h[d[:id]] = d unless d[:tipo] == 'removida' }
+        prox = rev_rotulo((est['rev_n'] || -1) + 1)
 
-      def self.iniciar_desenho(model, quadros, labels, dlg)
+        quadros = est['ambientes'].select { |a| ids.include?(a['id']) }.map do |a|
+          itens = est['pecas'].select { |r| r['amb'] == a['id'] }.map do |r|
+            notas = []
+            notas << [r['obs'], :normal] unless r['obs'].to_s.empty?
+            if destaque && (d = difs[r['id']])
+              notas << ["#{prox} — #{d[:tipo] == 'nova' ? 'NOVA' : 'ALTERADA: ' + d[:itens].join('; ')}", :alerta]
+            end
+            notas << ['⚠ ORIGEM PERDIDA — medida da última leitura', :alerta] if r['st'] == 'perdida'
+            { peca: peca_de(r, model), qtd: r['qtd'].to_i, notas: notas }
+          end
+          { nome: a['nome'], itens: itens }
+        end.reject { |q| q[:itens].empty? }
+        return notify('Nenhuma peça nos ambientes marcados.', false, dlg) if quadros.empty?
+
+        iniciar_desenho(model, quadros, labels, cfg['cenas'] != false, est['rev_n'].nil? ? 'REV 00' : "REV #{format('%02d', est['rev_n'])}", dlg)
+      rescue => e
+        @job = nil
+        notify("Erro: #{e.message}", false, dlg)
+      end
+
+      def self.cancelar(dlg = nil)
+        if @job
+          @job[:cancelar] = true
+        else
+          notify('Nada sendo desenhado.', true, dlg)
+        end
+      end
+
+      def self.iniciar_desenho(model, quadros, labels, cenas, rev, dlg)
         bb   = model_bounds(model)
-        pos  = posicionar_quadros(quadros, labels)
+        pos  = posicionar_quadros(quadros, labels, rev)
         base = bb.empty? ? [0.0, 0.0, 0.0] : [bb.min.x - 3.0 * M, bb.min.y, bb.min.z]
-
         jobs = [[:limpar]]
         pos.each do |q|
           jobs << [:quadro, q]
           q[:lay][:itens].each { |li| jobs << [:item, q, li] }
         end
-        @job = { model: model, dlg: dlg, labels: labels, jobs: jobs, i: 0, base: base,
-                 primeiro: true, cancelar: false, grupos: {}, t0: Time.now,
-                 total_itens: pos.sum { |q| q[:lay][:itens].size }, feitos: 0,
-                 n_quadros: pos.size }
+        pos.each { |q| jobs << [:cena, q] } if cenas
+        @job = { model: model, dlg: dlg, labels: labels, jobs: jobs, i: 0, base: base, primeiro: true,
+                 cancelar: false, grupos: {}, t0: Time.now, feitos: 0, cenas: [],
+                 total: pos.sum { |q| q[:lay][:itens].size }, n_quadros: pos.size }
+        @ignorar_ate = Time.now + 3600
         progresso
         UI.start_timer(0.05, false) { passo }
       end
@@ -719,6 +1074,7 @@ module STAND1
         return unless j
         model = j[:model]
         if j[:cancelar]
+          @ignorar_ate = Time.now + 1.5
           @job = nil
           return notify("Cancelado: #{j[:feitos]} peça(s) desenhadas. Ctrl+Z desfaz.", true, j[:dlg])
         end
@@ -726,7 +1082,7 @@ module STAND1
         model.start_operation('EVA — Mapa de Artes', true, false, !j[:primeiro])
         j[:primeiro] = false
         t = Time.now
-        loop do                       # pelo menos uma tarefa por etapa: sempre avança
+        loop do                      # pelo menos uma tarefa por etapa: sempre avança
           executar(j, j[:jobs][j[:i]])
           j[:i] += 1
           break if j[:i] >= j[:jobs].size || (Time.now - t) >= LOTE_SEG
@@ -734,16 +1090,19 @@ module STAND1
         model.commit_operation
 
         if j[:i] >= j[:jobs].size
+          @ignorar_ate = Time.now + 1.5
           @job = nil
           seg = (Time.now - j[:t0]).round(1)
-          notify("Mapa gerado: #{j[:n_quadros]} quadro(s), #{j[:feitos]} desenho(s) em #{seg} s. " \
-                 'Quadros à esquerda do modelo, lidos pela vista Frente. Ctrl+Z desfaz.', true, j[:dlg])
+          cs  = j[:cenas].empty? ? '' : " Cena(s): #{j[:cenas].join(', ')}."
+          enviar_estado(model, j[:dlg])
+          notify("Mapa gerado: #{j[:n_quadros]} prancha(s), #{j[:feitos]} peça(s) em #{seg} s.#{cs} Ctrl+Z desfaz.", true, j[:dlg])
         else
           progresso
           UI.start_timer(0.05, false) { passo }
         end
       rescue => e
         (model.abort_operation rescue nil)
+        @ignorar_ate = Time.now + 1.5
         @job = nil
         notify("Erro ao desenhar: #{e.message}", false, j && j[:dlg])
       end
@@ -751,11 +1110,10 @@ module STAND1
       def self.progresso
         j = @job
         return unless j
-        msg = "Desenhando #{j[:feitos]}/#{j[:total_itens]} peça(s)..."
         if j[:dlg] && j[:dlg].visible?
-          j[:dlg].execute_script("window.mapaProgresso(#{j[:feitos]}, #{j[:total_itens]})")
+          j[:dlg].execute_script("window.mapaProgresso(#{j[:feitos]}, #{j[:total]})")
         else
-          Sketchup.status_text = "EVA Mapa de Artes: #{msg}"
+          Sketchup.status_text = "EVA Mapa de Artes: desenhando #{j[:feitos]}/#{j[:total]}..."
         end
       rescue
       end
@@ -770,22 +1128,66 @@ module STAND1
         when :quadro
           q  = job[1]
           g  = j[:kv].entities.add_group
-          g.name = q[:quadro][:nome]
-          b = j[:base]
-          g.transformation = Geom::Transformation.translation(Geom::Vector3d.new(b[0] + q[:x0], b[1], b[2] + q[:lay][:h] + 0.0))
-          th = [TITULO_H, 2.5 * q[:lay][:lbl]].max
-          texto(g.entities, q[:quadro][:nome], 0.0, 0.5 * th, th)
+          g.name = "ARTES - #{q[:quadro][:nome]}"
+          b  = j[:base]
+          g.transformation = Geom::Transformation.translation(Geom::Vector3d.new(b[0] + q[:x0], b[1], b[2]))
+          desenhar_moldura(g.entities, q[:lay])
           j[:grupos][q.object_id] = g
         when :item
-          g = j[:grupos][job[1].object_id]
+          g  = j[:grupos][job[1].object_id]
           li = job[2]
-          (desenhar_item(g.entities, li[:item], li[:x], li[:z], j[:labels], job[1][:lay][:lbl]) rescue nil)
+          (desenhar_item(g.entities, li[:item], li[:x], li[:z], j[:labels], job[1][:lay][:lbl], j[:model]) rescue nil)
           j[:feitos] += 1
+        when :cena
+          q = job[1]
+          g = j[:grupos][q.object_id]
+          t = g.transformation.to_a
+          centro = [t[12] + q[:lay][:w] / 2.0, t[13], t[14] + q[:lay][:h] / 2.0]
+          nome = criar_cena(j[:model], "ARTES - #{q[:quadro][:nome]}", centro, q[:lay][:h])
+          j[:cenas] << nome if nome
         end
       end
 
-      # Uma peça: cópia das faces (de frente para -Y), recortes, cotas e etiqueta.
-      def self.desenhar_item(ents, it, x0, z0, labels, lbl = LBL_MIN)
+      # Fundo branco (1 cm atrás das peças), título e rótulo de revisão.
+      def self.desenhar_moldura(e, lay)
+        y = 0.01 * M
+        pts = [[0, y, 0], [lay[:w], y, 0], [lay[:w], y, lay[:h]], [0, y, lay[:h]]].map { |p| Geom::Point3d.new(*p) }
+        bg = (e.add_face(pts) rescue nil)
+        if bg && bg.valid?
+          branco = Sketchup::Color.new(255, 255, 255)
+          bg.material = branco
+          bg.back_material = branco
+        end
+        t = lay[:titulo]; r = lay[:rev]
+        texto(e, t[:texto], t[:x], t[:z], t[:h])
+        texto(e, r[:texto], r[:x], r[:z], r[:h], :cinza)
+      end
+
+      # Cena 16:9 enquadrando a prancha (câmera paralela, vista Frente). Se a cena já
+      # existe, é atualizada NO LUGAR (mantém nome e posição na lista de cenas).
+      def self.criar_cena(model, nome, centro, altura)
+        view = model.active_view
+        eye  = Geom::Point3d.new(centro[0], centro[1] - 40.0 * M, centro[2])
+        cam  = Sketchup::Camera.new(eye, Geom::Point3d.new(*centro), Geom::Vector3d.new(0, 0, 1), false)
+        (cam.height = altura) rescue nil
+        (cam.aspect_ratio = BOARD_ASPECT) rescue nil
+        (model.layers[KV_TAG].visible = true) rescue nil
+        pg = (model.pages[nome] rescue nil)
+        if pg
+          model.pages.selected_page = pg
+          view.camera = cam
+          pg.update(33)          # câmera + visibilidade das tags
+        else
+          view.camera = cam
+          pg = model.pages.add(nome, 33)
+        end
+        nome
+      rescue
+        nil
+      end
+
+      # Uma peça: faces de frente (olhando pela vista Frente), recortes, cotas e etiqueta.
+      def self.desenhar_item(ents, it, x0, z0, labels, lbl, model)
         p  = it[:peca]
         ig = ents.add_group
         e  = ig.entities
@@ -795,7 +1197,7 @@ module STAND1
           pts = f[:ouv].map { |u, v| ponto.call(u, v) }
           nf = (e.add_face(pts) rescue nil)
           next unless nf && nf.valid?
-          nf.reverse! if nf.normal.y > 0                       # frente para quem olha da vista Frente
+          nf.reverse! if nf.normal.y > 0                       # frente para quem olha pela vista Frente
           aplicar_material(nf, f, pts)
           f[:huv].each do |h|
             hf = (e.add_face(h.map { |u, v| ponto.call(u, v) }) rescue nil)
@@ -809,20 +1211,15 @@ module STAND1
         ig
       end
 
-      # Textura na posição certa: os pontos novos correspondem, na ordem, aos
-      # vértices da face original (local), então o UV de cada um vale para o novo.
+      # Textura pelos 4 primeiros cantos: ponto novo ↔ UV guardado do vértice original.
       def self.aplicar_material(nf, f, pts)
-        mat = f[:info][:mat]
-        if f[:lado] != :herdado && mat.respond_to?(:texture) && mat.texture
+        mat = f[:mat]
+        return unless mat
+        if f[:uv4] && mat.respond_to?(:texture) && mat.texture
           begin
-            tw  = Sketchup.create_texture_writer
-            uvh = f[:src].get_UVHelper(true, true, tw)
+            n = [f[:uv4].size, pts.size, 4].min
             mapping = []
-            [f[:local].size, 4].min.times do |i|
-              q = f[:lado] == :back ? uvh.get_back_UVQ(Geom::Point3d.new(*f[:local][i])) :
-                                      uvh.get_front_UVQ(Geom::Point3d.new(*f[:local][i]))
-              mapping << pts[i] << Geom::Point3d.new(q.x / q.z, q.y / q.z, 0.0)
-            end
+            n.times { |i| mapping << pts[i] << Geom::Point3d.new(f[:uv4][i][0], f[:uv4][i][1], 0.0) }
             if nf.position_material(mat, mapping, true)
               nf.back_material = mat
               return
@@ -834,8 +1231,8 @@ module STAND1
         nf.back_material = mat
       end
 
-      # Largura no topo; à esquerda a altura (ou a corrente dos recortes); na base
-      # a corrente dos recortes na horizontal — como no mapa de referência.
+      # Largura no topo; à esquerda a altura (ou a corrente dos recortes); na base a
+      # corrente dos recortes na horizontal — como no mapa de referência.
       def self.cotas(e, p, x0, z0)
         w = p[:w]; h = p[:h]
         off = 0.25 * M
@@ -843,7 +1240,6 @@ module STAND1
         cima  = Geom::Vector3d.new(0, 0, off)
         esq   = Geom::Vector3d.new(-off, 0, 0)
         baixo = Geom::Vector3d.new(0, 0, -off)
-
         (e.add_dimension_linear(pt.call(0, h), pt.call(w, h), cima) rescue nil)
         us, vs = quebras_dos_furos(p)
         if vs.size > 2
@@ -856,7 +1252,6 @@ module STAND1
         end
       end
 
-      # Pontos de quebra (relativos à peça) das bordas dos recortes, em u e em v.
       def self.quebras_dos_furos(p)
         us = [0.0, p[:w]]; vs = [0.0, p[:h]]
         p[:faces].each do |f|
@@ -873,32 +1268,27 @@ module STAND1
         vals.sort.each_with_object([]) { |v, acc| acc << v if acc.empty? || v - acc.last > TOL_TOQUE }
       end
 
-      # Duas linhas, cada uma um texto (posição exata, sem depender de como o
-      # SketchUp empilha texto de várias linhas): NOME – N und. / material · L x A.
+      # NOME – N und. / material · L x A m / observações e marcas de revisão.
       def self.etiqueta(e, it, x0, z0, lbl)
-        l1, l2 = linhas_etiqueta(it)
         topo = z0 - recuo_etiqueta(it[:peca], lbl)
-        texto(e, l1, x0, topo - lbl, lbl)
-        texto(e, l2, x0, topo - 2.3 * lbl, 0.8 * lbl)
+        etiqueta_linhas(it, lbl).each { |l| texto(e, l[:texto], x0, topo - l[:y], l[:h], l[:cor]) }
       end
 
-      def self.metros(inches)
-        format('%.2f', inches * POL_M).tr('.', ',')
-      end
-
-      # Texto 3D no plano do quadro, legível pela vista Frente (olhando para +Y).
-      def self.texto(e, txt, x, z, altura)
+      # Texto 3D no plano da prancha, legível pela vista Frente (olhando para +Y).
+      def self.texto(e, txt, x, z, altura, cor = :normal)
         g = e.add_group
         g.entities.add_3d_text(txt.to_s, TextAlignLeft, 'Arial', false, false, altura, 0.0, 0.0, true, 0.0)
         g.transform!(Geom::Transformation.rotation(ORIGIN, Geom::Vector3d.new(1, 0, 0), 90.degrees))
         g.transform!(Geom::Transformation.translation(Geom::Vector3d.new(x, 0.0, z)))
         g.name = 'texto'
+        case cor
+        when :alerta then (g.material = Sketchup::Color.new(200, 30, 30)) rescue nil
+        when :cinza  then (g.material = Sketchup::Color.new(110, 110, 110)) rescue nil
+        end
         g
       rescue
         nil
       end
-
-      # ── Grupo KV (isolado, tag própria) ─────────────────────────────────────
 
       def self.ensure_kv_group(model)
         kv = model.entities.grep(Sketchup::Group).find { |g| g.valid? && kv_group?(g) }
@@ -910,7 +1300,6 @@ module STAND1
         kv
       end
 
-      # Caixa do modelo IGNORANDO o próprio quadro KV.
       def self.model_bounds(model)
         bb = Geom::BoundingBox.new
         model.entities.each do |ent|
@@ -918,26 +1307,6 @@ module STAND1
           (bb.add(ent.bounds) rescue nil)
         end
         bb
-      end
-
-      # Gira 90° (no plano do quadro) os grupos selecionados dentro do KV.
-      def self.girar_90(dlg = nil)
-        model = Sketchup.active_model
-        return notify('Nenhum modelo aberto.', false, dlg) unless model
-        groups = model.selection.grep(Sketchup::Group)
-        return notify('Selecione um item do KV (grupo) para girar.', false, dlg) if groups.empty?
-        model.start_operation('EVA — girar 90° KV', true)
-        begin
-          groups.each do |g|
-            next unless g.valid?
-            g.transform!(Geom::Transformation.rotation(g.bounds.center, Geom::Vector3d.new(0, 1, 0), 90.degrees))
-          end
-          model.commit_operation
-          notify('Item girado 90°.', true, dlg)
-        rescue => e
-          model.abort_operation
-          notify("Erro ao girar: #{e.message}", false, dlg)
-        end
       end
 
       # ── Status → diálogo (ou barra/messagebox se acionado pela toolbar) ─────
@@ -952,12 +1321,6 @@ module STAND1
         nil
       rescue
         nil
-      end
-
-      def self.normalize(s)
-        s.to_s.downcase.unicode_normalize(:nfkd).gsub(/\p{Mn}/, '').gsub(/\s+/, ' ').strip
-      rescue
-        s.to_s.downcase.strip
       end
 
       # ══════════════════════════════════════════════════════════════════════
@@ -987,13 +1350,12 @@ module STAND1
          (m[2] * x + m[6] * y + m[10] * z + m[14]) / w]
       end
 
-      def self.mdet3(m)
-        m[0] * (m[5] * m[10] - m[9] * m[6]) -
-          m[4] * (m[1] * m[10] - m[9] * m[2]) +
-          m[8] * (m[1] * m[6] - m[5] * m[2])
+      def self.mdir(m, v)
+        [m[0] * v[0] + m[4] * v[1] + m[8] * v[2],
+         m[1] * v[0] + m[5] * v[1] + m[9] * v[2],
+         m[2] * v[0] + m[6] * v[1] + m[10] * v[2]]
       end
 
-      # Normal pelo método de Newell (robusta para polígono côncavo).
       def self.newell(pts)
         nx = ny = nz = 0.0
         pts.each_with_index do |a, i|
@@ -1003,15 +1365,6 @@ module STAND1
           nz += (a[0] - b[0]) * (a[1] + b[1])
         end
         [nx, ny, nz]
-      end
-
-      def self.poly_area(uv)
-        s = 0.0
-        uv.each_with_index do |a, i|
-          b = uv[(i + 1) % uv.size]
-          s += a[0] * b[1] - b[0] * a[1]
-        end
-        (s / 2.0).abs
       end
 
       def self.vdot(a, b);   a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; end
@@ -1026,7 +1379,6 @@ module STAND1
         m < 1e-12 ? [0.0, 0.0, 0.0] : vscl(a, 1.0 / m)
       end
 
-      # União-busca simples (agrupar faces em peças e peças em ambientes).
       class UnionFind
         def initialize(n); @p = (0...n).to_a; end
         def achar(i)

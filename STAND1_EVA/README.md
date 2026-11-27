@@ -28,6 +28,7 @@ A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o esta
 - Resolução 4K padrão (2K / FHD / HD ou customizada): você define a largura e a
   altura acompanha o enquadramento da vista, para o PNG sair exatamente como a cena mostra
 - Fundo branco / preto / transparente
+- Cenas com proporção própria (as pranchas 16:9 do Mapa de Artes) exportam exatamente em 16:9
 - **Estilo do print:** *Como está na cena* (padrão) grava a cena exatamente como está no SketchUp.
   *Otimizado para IA* muda o estilo **só durante o export** (nada é salvo na cena): sombras off,
   texturas on, sem perfis, profundidade, extensão, pontas e tremido de linha, sem geometria oculta,
@@ -44,34 +45,38 @@ A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o esta
 - Conta-gotas global (captura a cor de qualquer pixel da tela, dentro ou fora do SketchUp)
 - Drag-and-drop de PNG/JPEG e exportação do PNG final
 
-### Mapa de Artes — um quadro por ambiente, cotado e com quantidade
-No formato do mapa de artes de conferência e produção: cada peça de comunicação visual de
-frente, com as medidas e a quantidade.
-- **Ler ambientes** (botão; abrir a aba não lê nada): acha as peças de adesivo, lona, PVC,
-  letra caixa e correlatos e separa os **ambientes pela distância** entre elas (*Distância
-  entre ambientes*, padrão 3 m; estande único num arquivo vira um ambiente só). O nome de
-  cada ambiente vem da **cena que olha para ele** (vista geral distante não conta) e pode ser
-  editado; sem cena, "AMBIENTE N"
-- **Não trava:** componente repetido é lido uma vez só (150 estandes iguais = 1 leitura),
-  grupos sem arte são pulados sem abrir, e a leitura tem limite de tempo e de peças: passou,
-  para e avisa. O desenho é feito em etapas, com progresso e **Cancelar**
-- **Peças:** faces vizinhas no mesmo plano e do mesmo material viram **uma peça** (módulos
-  aparecem como linhas); recortes (porta, nicho de TV) entram como furo; faces mais estreitas
-  que a *Largura mínima* (padrão 3 cm) são espessura e ficam de fora; chapa de PVC/ACM conta
-  uma vez; placa impressa dos dois lados (3 a 30 cm) vira **FRENTE E VERSO**; peças iguais
-  (nome, material, medida ±1 cm) viram um desenho **"– N und."**. Face sem material herda o
-  material do grupo; ocultos e tags desligadas não entram
-- **Nome da peça:** o grupo/componente com nome mais próximo da face (ex.: "BACKDROP
-  CREDENCIAMENTO"); sem nome, o material
-- **Desenho:** grupo "KV - Mapa de Artes" (tag KV), um quadro por ambiente à esquerda do
-  modelo, lido pela vista **Frente**: título, largura no topo, altura à esquerda, **cotas em
-  corrente dos recortes** (vertical à esquerda, horizontal na base) e etiqueta
-  *NOME – N und.* / *material · L x A m*, com texto proporcional ao quadro. Refeito a cada
-  geração; um Ctrl+Z desfaz tudo
-- **Diagramar seleção:** um quadro só com o que está selecionado (sem arte na seleção, vale
-  qualquer material). **Girar 90°** gira o item do KV selecionado
+### Mapa de Artes — pranchas 16:9 por ambiente, ligadas ao modelo
+Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do projeto.
+- **Marcação manual (nada é deduzido do nome do material):** selecione no SketchUp uma **face**
+  (clique triplo pega as vizinhas), um **grupo** ou um **componente** — vários de uma vez, ou dentro
+  de um grupo aberto. O painel mostra **ao vivo** a medida, a forma (com recortes) e avisa se a
+  seleção já está na lista. Dê o nome (ou clique num nome rápido: TESTEIRA FRONTAL, PAREDE FUNDO,
+  LOGO PVC...), a **quantidade** e **frente e verso** — digitados por você, o plugin não conta nada —
+  e uma observação opcional. Cada grupo/componente e cada conjunto de faces coplanares vira uma peça
+- **Ambientes:** você cria e nomeia (barra lateral); tudo que adicionar entra no ambiente ativo.
+  Mover uma peça de ambiente é um clique. Funciona igual num arquivo com vários ambientes ou num só
+- **Peça ligada ao modelo:** ela guarda a *referência* das faces de origem, não uma cópia da medida.
+  **Atualizar do modelo** (e a abertura da aba, e o Gerar) relê as medidas: esticou a testeira, a peça
+  acompanha. O painel avisa "modelo alterado" quando o projeto muda
+- **Substituir sem refazer:** **⟳ Trocar origem** (selecione a arte nova e clique) mantém nome,
+  quantidade e ambiente. Se a face for apagada numa edição, o EVA reencontra a arte pelo objeto que
+  a continha; se não achar, a peça fica marcada como *origem perdida* e usa a última medida lida
+- **Revisões (R00, R01...):** **Emitir** congela as medidas e quantidades como a revisão enviada.
+  Dali em diante cada peça mostra *nova* ou *alterada (antes → depois)*, e a **lista de alterações**
+  sai pronta para copiar e mandar à produção, por ambiente ("altura 3,20 → 3,40 m (+0,20)",
+  "quantidade 1 → 3 und.", "REMOVIDA"...). Voltar à medida antiga apaga a alteração da lista
+- **Gerar:** uma **prancha 16:9 por ambiente** no grupo "KV - Mapa de Artes" (tag KV), à esquerda do
+  modelo: título "ARTES - AMBIENTE" e rótulo da revisão, cada peça de frente com largura no topo,
+  altura à esquerda, **cotas em corrente dos recortes** e a etiqueta *NOME – 03 und.* /
+  *material · L x A m* (+ observação e, em vermelho, o que mudou desde a revisão — opcional). As
+  peças são encaixadas no enquadramento 16:9 mais justo, com texto proporcional à prancha
+- **Cena 16:9 por ambiente:** câmera paralela de frente, proporção 16:9, enquadrando a prancha. Gerar
+  de novo atualiza a cena **no lugar** (mesmo nome e posição na lista). A aba Apresentação exporta
+  essas cenas exatamente em 16:9
+- **Não trava:** a leitura roda só sobre o que você marcou (nunca varre o arquivo inteiro), e o
+  desenho é feito em etapas, com progresso e **Cancelar**. Um Ctrl+Z desfaz a geração inteira
+- Tudo fica salvo no `.skp` (e num arquivo ao lado, por projeto). O modelo real nunca é alterado
 - Ainda não faz: apliques em PVC desenhados sobre o painel com cotas de posição até o piso
-  (próxima etapa)
 
 ### Planta — projeções, grid, elétrica e DXF (aba Apresentação)
 Seção **Planta · cenas de topo**, no mesmo fluxo do export. O EVA lê a câmera de cada cena:
@@ -144,7 +149,7 @@ STAND1_EVA/
     ├── dictionary.rb         # dicionário PT→EN
     ├── exporter.rb           # export padronizado de Scenes
     ├── prompt_builder.rb     # montagem do prompt (blocos fixos + ajustes e substituições)
-    ├── mapa_artes.rb         # mapa de artes: leitura, peças, ambientes, quadros e cotas
+    ├── mapa_artes.rb         # mapa de artes: peças ligadas ao modelo, revisões, pranchas 16:9 e cenas
     ├── planta.rb             # projeções, grid, elétrica, tomadas e DXF
     ├── autoupdate.rb         # checagem/instalação de update via GitHub
     ├── icons/                # ícones da toolbar (EVA e Mapa de Artes)

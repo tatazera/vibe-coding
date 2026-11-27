@@ -63,11 +63,16 @@ module STAND1
       @dialog.add_action_callback('save_scene_subs')      { |_, msg| save_scene_subs(msg)      }
       @dialog.add_action_callback('get_scene_thumbs')    { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
-      @dialog.add_action_callback('mapa_ler')            { |_, msg| MapaArtes.ler_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_ativo')          { |_, v|   MapaArtes.aba_ativa(v) }
+      @dialog.add_action_callback('mapa_estado')         { |_, msg| MapaArtes.estado_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_salvar')         { |_, msg| MapaArtes.salvar_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_add')            { |_, msg| MapaArtes.add_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_trocar')         { |_, msg| MapaArtes.trocar_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_restaurar')      { |_, msg| MapaArtes.restaurar_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_atualizar')      { |_, _|   MapaArtes.atualizar_from_dialog(@dialog) }
+      @dialog.add_action_callback('mapa_emitir')         { |_, _|   MapaArtes.emitir_from_dialog(@dialog) }
       @dialog.add_action_callback('mapa_gerar')          { |_, msg| MapaArtes.gerar_from_dialog(msg, @dialog) }
       @dialog.add_action_callback('mapa_cancelar')       { |_, _|   MapaArtes.cancelar(@dialog) }
-      @dialog.add_action_callback('mapa_diagramar')      { |_, msg| MapaArtes.diagramar_from_dialog(msg, @dialog) }
-      @dialog.add_action_callback('mapa_girar')          { |_, _|   MapaArtes.girar_90(@dialog) }
       @dialog.add_action_callback('planta_get_cfg')      { |_, _|   planta_enviar_cfg }
       @dialog.add_action_callback('planta_save_cfg')     { |_, msg| planta_salvar_cfg(msg) }
       @dialog.add_action_callback('planta_tomada')       { |_, _|   Planta.ativar_tomada(@dialog) }
@@ -75,10 +80,20 @@ module STAND1
       @dialog.add_action_callback('planta_limpar')       { |_, _|   planta_limpar }
       @dialog.add_action_callback('planta_ignorar')      { |_, _|   planta_ignorar }
       @dialog.add_action_callback('planta_tecla')        { |_, k|   Planta.tecla_tomada(k) }
+      @dialog.set_on_closed { MapaArtes.dialogo_fechado }
       @dialog.show
+      MapaArtes.dialogo_aberto(@dialog)
 
       # Checagem silenciosa de atualização ao abrir (não bloqueia a UI).
       UI.start_timer(2.0, false) { AutoUpdate.check(@dialog, false) } rescue nil
+    end
+
+    # Abre (ou traz para frente) o diálogo já na aba pedida. Usado pela toolbar.
+    def self.mostrar_aba(tab)
+      open_dialog
+      UI.start_timer(0.7, false) do
+        @dialog.execute_script("switchTab('#{tab}')") if @dialog && @dialog.visible?
+      end
     end
 
     # ── Planta (projeções, grid, elétrica, DXF): config POR PROJETO ────────────
@@ -829,9 +844,9 @@ module STAND1
       # Comando: Diagramar KV (Mapa de Artes) — modo AUTOMÁTICO por nome do material.
       icon_kv_small = File.join(icons_dir, 'eva_kv_small.png')
       icon_kv_large = File.join(icons_dir, 'eva_kv_large.png')
-      cmd_kv = UI::Command.new('Diagramar KV — Mapa de Artes (auto)') { STAND1::EVA::MapaArtes.diagramar_auto(2.0, nil) }
-      cmd_kv.tooltip         = 'Mapa de Artes — um quadro por ambiente (automático)'
-      cmd_kv.status_bar_text = 'Lê as peças de adesivo/lona/PVC/letra caixa, separa os ambientes e desenha um quadro cotado por ambiente à esquerda do modelo'
+      cmd_kv = UI::Command.new('Mapa de Artes') { STAND1::EVA.mostrar_aba('mapa') }
+      cmd_kv.tooltip         = 'Mapa de Artes — selecione a arte, adicione ao ambiente e gere as pranchas 16:9'
+      cmd_kv.status_bar_text = 'Abre o EVA na aba Mapa de Artes: peças ligadas ao modelo, revisões e uma prancha 16:9 por ambiente'
       cmd_kv.small_icon = (File.exist?(icon_kv_small) ? icon_kv_small : icon_small)
       cmd_kv.large_icon = (File.exist?(icon_kv_large) ? icon_kv_large : icon_large)
 
