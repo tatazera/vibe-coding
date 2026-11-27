@@ -946,54 +946,70 @@
     <div class="section" style="background:#f4f6ff;border:1px solid #dde3ff;border-radius:8px;padding:12px 14px">
       <div style="font-size:12px;color:var(--azul);font-weight:700">🎯 Como usar</div>
       <div style="font-size:11px;color:#555;margin-top:5px;line-height:1.5">
-        <b>Por material:</b> varra o modelo, marque na lista o que é arte e diagrame.<br>
-        <b>Por seleção:</b> selecione no SketchUp <b>faces, grupos e/ou componentes</b> — vários de
-        uma vez — e diagrame só eles.<br>
-        Em ambos, cada face é <b>copiada</b> (o modelo real não muda), posta de frente, arranjada
-        (peças à esquerda, paredes em fileiras), <b>cotada</b> L×A e etiquetada. O quadro nasce à
-        <b>esquerda do modelo</b>, alinhado ao eixo do estande — enquadre e salve a cena do jeito
-        que você quiser. Um Ctrl+Z desfaz tudo.
+        <b>1. Ler ambientes:</b> o EVA acha as peças de comunicação visual (adesivo, lona, PVC,
+        letra caixa...) e separa os ambientes pela distância. O nome vem da cena que olha para
+        cada um — dá para editar.<br>
+        <b>2. Gerar mapa:</b> um quadro por ambiente, à esquerda do modelo: peças de frente, largura
+        no topo, altura à esquerda, recortes em corrente e <b>NOME – N und.</b> Peças iguais viram
+        um desenho só. O modelo real não muda e um Ctrl+Z desfaz tudo.
       </div>
     </div>
 
     <div class="section">
       <div class="section-label-row" style="margin-bottom:8px">
-        <span class="section-label" style="margin:0">Materiais de arte no modelo</span>
+        <span class="section-label" style="margin:0">Ambientes do arquivo</span>
         <span>
-          <button class="btn-small" onclick="doMapaScan()">↻ Varrer modelo</button>
-          <button class="btn-small" onclick="mapaMarkAll(true)">Marcar todos</button>
-          <button class="btn-small" onclick="mapaMarkAll(false)">Limpar</button>
+          <button class="btn-small" id="btnMapaLer" onclick="doMapaLer()">↻ Ler ambientes</button>
+          <button class="btn-small" onclick="mapaMarcarAmb(true)">Todos</button>
+          <button class="btn-small" onclick="mapaMarcarAmb(false)">Nenhum</button>
         </span>
       </div>
-      <div class="mat-box" id="mapaMats" style="max-height:210px">
-        <div class="empty-scenes">Clique em <b>Varrer modelo</b> para listar adesivo, lona, PVC, letra caixa e correlatos.</div>
+      <div class="res-row" style="flex-wrap:wrap;gap:8px 14px;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#666"
+               title="Peças mais afastadas que isso (em planta) ficam em ambientes diferentes. Estande único: use um valor alto.">
+          Distância entre ambientes
+          <input type="number" id="mapaGap" value="3" min="0.5" max="200" step="0.5" onchange="saveMapaCfg()" style="width:70px"> m
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#666"
+               title="Faces mais estreitas que isso são espessura (borda de PVC/ACM, perfil) e não entram.">
+          Largura mínima da peça
+          <input type="number" id="mapaMinCm" value="3" min="0.5" max="50" step="0.5" onchange="saveMapaCfg()" style="width:70px"> cm
+        </label>
       </div>
-      <div style="font-size:10px;color:#999;margin-top:5px">
-        Só entram materiais com nome de comunicação visual — as texturas genéricas do modelo ficam de fora.
+      <div class="mat-box" id="mapaAmbs" style="max-height:230px">
+        <div class="empty-scenes">Clique em <b>Ler ambientes</b>. Nada é lido ao abrir a aba.</div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Limite parede × peça</div>
-      <div class="res-row">
-        <input type="number" id="mapaThreshold" value="2" min="0.1" max="50" step="0.1"
-               onchange="saveMapaThr()" style="width:90px">
-        <span>m</span>
-        <span style="color:#999;font-size:11px">— faces com maior dimensão ≥ este valor entram na zona de paredes; abaixo, na coluna de peças.</span>
+      <div class="section-label-row" style="margin-bottom:8px">
+        <span class="section-label" style="margin:0">Materiais de arte</span>
+        <span>
+          <button class="btn-small" onclick="mapaMarcarMat(true)">Todos</button>
+          <button class="btn-small" onclick="mapaMarcarMat(false)">Nenhum</button>
+        </span>
+      </div>
+      <div class="mat-box" id="mapaMats" style="max-height:170px">
+        <div class="empty-scenes">Aparecem depois da leitura.</div>
       </div>
       <label class="mat-filter" style="margin-top:10px;margin-bottom:0">
-        <input type="checkbox" id="mapaLabels" checked onchange="saveMapaThr()">
-        Etiquetar cada peça com o nome do material e a medida
+        <input type="checkbox" id="mapaLabels" checked onchange="saveMapaCfg()">
+        Etiquetar cada peça (nome, quantidade, material e medida)
       </label>
     </div>
 
     <div class="section">
-      <button class="btn-export" id="btnMapaMats" onclick="doMapaMats()" style="width:100%">
-        ✨ Diagramar materiais marcados
-      </button>
+      <div class="logo-actions">
+        <button class="btn-export" id="btnMapaGerar" onclick="doMapaGerar()" style="flex:1.6" disabled>
+          ✨ Gerar mapa dos ambientes marcados
+        </button>
+        <button class="btn-export btn-regen" id="btnMapaCancelar" onclick="su('mapa_cancelar')" style="flex:1;display:none">
+          ✕ Cancelar
+        </button>
+      </div>
       <div class="logo-actions" style="margin-top:10px">
         <button class="btn-export btn-regen" id="btnMapa" onclick="doMapa()" style="flex:1.4"
-                title="Diagrama as faces, grupos e componentes selecionados no SketchUp">
+                title="Um quadro só com o que está selecionado no SketchUp (faces, grupos e componentes)">
           🗺️ Diagramar seleção do SketchUp
         </button>
         <button class="btn-export btn-regen" id="btnMapaGirar" onclick="doMapaGirar()" style="flex:1"
@@ -1005,9 +1021,9 @@
     </div>
 
     <div class="section" style="color:#999;font-size:11px;line-height:1.5">
-      O quadro fica no grupo <b>“KV - Mapa de Artes”</b>, na tag <b>KV</b>. Nenhuma cena é criada
-      automaticamente: posicione a câmera, salve a cena e exporte pela aba Apresentação na proporção
-      A4 paisagem. As cotas herdam a cor/estilo do seu modelo (Model Info → Dimensions).
+      Os quadros ficam no grupo <b>“KV - Mapa de Artes”</b>, na tag <b>KV</b>, e são refeitos a cada
+      geração. Leia pela vista <b>Frente</b>. Nenhuma cena é criada: enquadre cada quadro, salve a cena e
+      exporte pela aba Apresentação. As cotas seguem o estilo do modelo (Model Info → Dimensions).
     </div>
 
   </div>
@@ -1103,96 +1119,139 @@
 
   // ── Abas ───────────────────────────────────────────────────────────────────
   function switchTab(tab) {
-    // A aba Mapa de Artes se popula sozinha na primeira abertura.
-    if (tab === 'mapa' && !mapaMats.length) doMapaScan();
     ['render','pres','logos','mapa'].forEach(function(t) {
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
       document.getElementById('content-' + t).classList.toggle('active', t === tab);
     });
   }
 
-  // ── Mapa de Artes (diagramar + cotar a comunicação visual) ──────────────────
-  var mapaMats = [];   // [{ name, key, faces, area_m2 }]
+  // ── Mapa de Artes: ler ambientes → gerar um quadro por ambiente ────────────
+  var mapaAmb = [];    // [{ id, nome, cenas, pecas, desenhos, m2 }]
+  var mapaMats = [];   // [{ key, nome, pecas, m2 }]
+  var mapaOcupado = false;
 
-  function mapaCfg(extra) {
-    var cfg = {
-      thr:    document.getElementById('mapaThreshold').value || '2',
-      labels: document.getElementById('mapaLabels').checked
-    };
-    if (extra) for (var k in extra) cfg[k] = extra[k];
-    return JSON.stringify(cfg);
+  function mapaNum(id, padrao) {
+    var v = parseFloat(String(document.getElementById(id).value).replace(',', '.'));
+    return v > 0 ? v : padrao;
+  }
+  function mapaBase() {
+    return { gap: mapaNum('mapaGap', 3), min_cm: mapaNum('mapaMinCm', 3),
+             labels: document.getElementById('mapaLabels').checked };
+  }
+  function m2(v) { return Number(v).toFixed(2).replace('.', ','); }
+
+  function doMapaLer() {
+    if (mapaOcupado) return;
+    setMapaStatus('Lendo o modelo...', 'info');
+    document.getElementById('btnMapaLer').disabled = true;
+    su('mapa_ler', JSON.stringify(mapaBase()));
   }
 
-  function doMapaScan() {
-    setMapaStatus('Varrendo o modelo...', 'info');
-    su('mapa_scan');
-  }
+  // Ruby devolve a leitura: ambientes, materiais e avisos.
+  window.mapaAmbientes = function(res) {
+    document.getElementById('btnMapaLer').disabled = false;
+    res = res || {};
+    mapaAmb = res.ambientes || [];
+    mapaMats = res.materiais || [];
 
-  // Ruby devolve os materiais de arte encontrados no modelo.
-  window.setMapaMats = function(list) {
-    mapaMats = list || [];
-    var box = document.getElementById('mapaMats');
-    if (!mapaMats.length) {
-      box.innerHTML = '<div class="empty-scenes">Nenhum material de arte encontrado ' +
+    var box = document.getElementById('mapaAmbs');
+    if (!mapaAmb.length) {
+      box.innerHTML = '<div class="empty-scenes">Nenhuma peça de comunicação visual encontrada ' +
                       '(adesivo, lona, PVC, letra caixa...).</div>';
-      setMapaStatus('Varredura concluída — nada encontrado.', 'info');
-      return;
+    } else {
+      box.innerHTML = '';
+      mapaAmb.forEach(function(a) {
+        var row = document.createElement('div');
+        row.className = 'mat-item';
+        row.style.cssText = 'display:flex;align-items:center;gap:8px';
+        var chk = document.createElement('input');
+        chk.type = 'checkbox'; chk.checked = true; chk.id = 'mapaAmb-' + a.id;
+        chk.style.cssText = 'accent-color:var(--rosa);width:15px;height:15px;flex-shrink:0';
+        var nome = document.createElement('input');
+        nome.type = 'text'; nome.value = a.nome; nome.id = 'mapaAmbNome-' + a.id;
+        nome.title = a.cenas && a.cenas.length ? 'Cenas que olham para este ambiente: ' + a.cenas.join(', ')
+                                               : 'Nenhuma cena olha para este ambiente';
+        nome.style.cssText = 'flex:1;min-width:0;padding:4px 7px;border:1.5px solid var(--borda);border-radius:5px;font-size:12px';
+        var info = document.createElement('span');
+        info.style.cssText = 'color:#aaa;font-size:11px;white-space:nowrap';
+        info.textContent = a.desenhos + ' desenho(s) · ' + a.pecas + ' peça(s) · ' + m2(a.m2) + ' m²';
+        row.appendChild(chk); row.appendChild(nome); row.appendChild(info);
+        box.appendChild(row);
+      });
     }
-    box.innerHTML = mapaMats.map(function(m, i) {
-      return '<label class="mat-item" style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
-             '<input type="checkbox" checked id="mapaMat-' + i + '" style="accent-color:var(--rosa);width:15px;height:15px;flex-shrink:0">' +
-             '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(m.name) + '</span>' +
-             '<span style="color:#aaa;font-size:11px;white-space:nowrap">' + m.faces + ' face(s) &middot; ' +
-             Number(m.area_m2).toFixed(2).replace('.', ',') + ' m&sup2;</span>' +
-             '</label>';
-    }).join('');
-    setMapaStatus(mapaMats.length + ' material(is) de arte encontrado(s).', 'ok');
+
+    var mb = document.getElementById('mapaMats');
+    if (!mapaMats.length) {
+      mb.innerHTML = '<div class="empty-scenes">Nenhum material de arte.</div>';
+    } else {
+      mb.innerHTML = mapaMats.map(function(m, i) {
+        return '<label class="mat-item" style="display:flex;align-items:center;gap:8px;cursor:pointer">' +
+               '<input type="checkbox" checked id="mapaMat-' + i + '" style="accent-color:var(--rosa);width:15px;height:15px;flex-shrink:0">' +
+               '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(m.nome) + '</span>' +
+               '<span style="color:#aaa;font-size:11px;white-space:nowrap">' + m.pecas + ' peça(s) &middot; ' + m2(m.m2) + ' m&sup2;</span>' +
+               '</label>';
+      }).join('');
+    }
+
+    document.getElementById('btnMapaGerar').disabled = !mapaAmb.length;
+    var msg = mapaAmb.length + ' ambiente(s) e ' + mapaMats.length + ' material(is) de arte';
+    if (typeof res.segundos === 'number') msg += ', lidos em ' + String(res.segundos).replace('.', ',') + ' s';
+    if (res.avisos && res.avisos.length) { setMapaStatus(msg + '. ' + res.avisos.join(' '), 'error'); }
+    else { setMapaStatus(msg + '.', 'ok'); }
   };
 
-  function mapaMarkAll(on) {
-    mapaMats.forEach(function(_, i) {
-      var el = document.getElementById('mapaMat-' + i);
-      if (el) el.checked = on;
+  function mapaMarcarAmb(on) {
+    mapaAmb.forEach(function(a) { var el = document.getElementById('mapaAmb-' + a.id); if (el) el.checked = on; });
+  }
+  function mapaMarcarMat(on) {
+    mapaMats.forEach(function(_, i) { var el = document.getElementById('mapaMat-' + i); if (el) el.checked = on; });
+  }
+
+  function doMapaGerar() {
+    if (mapaOcupado) return;
+    var ids = [], nomes = {};
+    mapaAmb.forEach(function(a) {
+      if (document.getElementById('mapaAmb-' + a.id).checked) ids.push(a.id);
+      nomes[a.id] = document.getElementById('mapaAmbNome-' + a.id).value;
     });
-  }
-
-  function mapaChecked() {
-    return mapaMats.filter(function(_, i) {
-      var el = document.getElementById('mapaMat-' + i);
-      return el && el.checked;
-    }).map(function(m) { return m.name; });
-  }
-
-  function doMapaMats() {
-    var mats = mapaChecked();
-    if (!mats.length) { setMapaStatus('Marque ao menos um material na lista.', 'error'); return; }
-    setMapaStatus('Diagramando ' + mats.length + ' material(is)...', 'info');
-    su('mapa_diagramar_mats', mapaCfg({ mats: mats }));
+    if (!ids.length) { setMapaStatus('Marque ao menos um ambiente.', 'error'); return; }
+    var mats = mapaMats.filter(function(_, i) { return document.getElementById('mapaMat-' + i).checked; })
+                       .map(function(m) { return m.key; });
+    if (!mats.length) { setMapaStatus('Marque ao menos um material.', 'error'); return; }
+    var cfg = mapaBase();
+    cfg.ambientes = ids; cfg.nomes = nomes;
+    if (mats.length < mapaMats.length) cfg.mats = mats;   // todos marcados = sem filtro
+    mapaTravar(true);
+    setMapaStatus('Preparando ' + ids.length + ' quadro(s)...', 'info');
+    su('mapa_gerar', JSON.stringify(cfg));
   }
 
   function doMapa() {
+    if (mapaOcupado) return;
+    mapaTravar(true);
     setMapaStatus('Diagramando a seleção do SketchUp...', 'info');
-    su('mapa_diagramar', mapaCfg());
+    su('mapa_diagramar', JSON.stringify(mapaBase()));
   }
 
   function doMapaGirar() { su('mapa_girar'); }
 
-  function saveMapaThr() {
-    try {
-      localStorage.setItem('eva_mapa_thr', document.getElementById('mapaThreshold').value);
-      localStorage.setItem('eva_mapa_labels', document.getElementById('mapaLabels').checked ? '1' : '0');
-    } catch (e) {}
+  // Enquanto desenha: botões travados e "Cancelar" à vista.
+  function mapaTravar(on) {
+    mapaOcupado = on;
+    ['btnMapaGerar', 'btnMapa', 'btnMapaLer', 'btnMapaGirar'].forEach(function(id) {
+      document.getElementById(id).disabled = on || (id === 'btnMapaGerar' && !mapaAmb.length);
+    });
+    document.getElementById('btnMapaCancelar').style.display = on ? '' : 'none';
   }
-  (function () {
-    try {
-      var v = localStorage.getItem('eva_mapa_thr');
-      if (v) { var el = document.getElementById('mapaThreshold'); if (el) el.value = v; }
-      var l = localStorage.getItem('eva_mapa_labels');
-      if (l !== null) { var c = document.getElementById('mapaLabels'); if (c) c.checked = (l === '1'); }
-    } catch (e) {}
-  })();
+
+  window.mapaProgresso = function(feitos, total) {
+    if (!mapaOcupado) mapaTravar(true);
+    setMapaStatus('Desenhando ' + feitos + '/' + total + ' peça(s)...', 'info');
+  };
 
   window.mapaStatus = function(msg, ok) {
+    mapaTravar(false);
+    document.getElementById('btnMapaLer').disabled = false;
     setMapaStatus(msg, ok ? 'ok' : 'error');
   };
   function setMapaStatus(msg, kind) {
@@ -1201,6 +1260,21 @@
     el.textContent = msg;
     el.style.color = kind === 'ok' ? 'var(--verde)' : (kind === 'error' ? 'var(--rosa)' : 'var(--azul)');
   }
+
+  function saveMapaCfg() {
+    try {
+      localStorage.setItem('eva_mapa_gap', document.getElementById('mapaGap').value);
+      localStorage.setItem('eva_mapa_min', document.getElementById('mapaMinCm').value);
+      localStorage.setItem('eva_mapa_labels', document.getElementById('mapaLabels').checked ? '1' : '0');
+    } catch (e) {}
+  }
+  (function () {
+    try {
+      var g = localStorage.getItem('eva_mapa_gap');   if (g) document.getElementById('mapaGap').value = g;
+      var n = localStorage.getItem('eva_mapa_min');   if (n) document.getElementById('mapaMinCm').value = n;
+      var l = localStorage.getItem('eva_mapa_labels'); if (l !== null) document.getElementById('mapaLabels').checked = (l === '1');
+    } catch (e) {}
+  })();
 
   // ── Lista de cenas (renderizada nas duas abas) ──────────────────────────────
   window.setScenes = function(data) {

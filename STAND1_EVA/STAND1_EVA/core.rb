@@ -63,9 +63,10 @@ module STAND1
       @dialog.add_action_callback('save_scene_subs')      { |_, msg| save_scene_subs(msg)      }
       @dialog.add_action_callback('get_scene_thumbs')    { |_, msg| send_scene_thumbs(msg)    }
       @dialog.add_action_callback('export_prompts_txt')   { |_, msg| export_prompts_txt(msg)   }
-      @dialog.add_action_callback('mapa_scan')           { |_, _|   MapaArtes.scan_from_dialog(@dialog) }
+      @dialog.add_action_callback('mapa_ler')            { |_, msg| MapaArtes.ler_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_gerar')          { |_, msg| MapaArtes.gerar_from_dialog(msg, @dialog) }
+      @dialog.add_action_callback('mapa_cancelar')       { |_, _|   MapaArtes.cancelar(@dialog) }
       @dialog.add_action_callback('mapa_diagramar')      { |_, msg| MapaArtes.diagramar_from_dialog(msg, @dialog) }
-      @dialog.add_action_callback('mapa_diagramar_mats') { |_, msg| MapaArtes.diagramar_from_dialog_mats(msg, @dialog) }
       @dialog.add_action_callback('mapa_girar')          { |_, _|   MapaArtes.girar_90(@dialog) }
       @dialog.add_action_callback('planta_get_cfg')      { |_, _|   planta_enviar_cfg }
       @dialog.add_action_callback('planta_save_cfg')     { |_, msg| planta_salvar_cfg(msg) }
@@ -829,8 +830,8 @@ module STAND1
       icon_kv_small = File.join(icons_dir, 'eva_kv_small.png')
       icon_kv_large = File.join(icons_dir, 'eva_kv_large.png')
       cmd_kv = UI::Command.new('Diagramar KV — Mapa de Artes (auto)') { STAND1::EVA::MapaArtes.diagramar_auto(2.0, nil) }
-      cmd_kv.tooltip         = 'Diagramar KV — Mapa de Artes (automático por nome do material)'
-      cmd_kv.status_bar_text = 'Varre o modelo por adesivo/lona/PVC/letra caixa, copia + cota o quadro KV à esquerda do modelo'
+      cmd_kv.tooltip         = 'Mapa de Artes — um quadro por ambiente (automático)'
+      cmd_kv.status_bar_text = 'Lê as peças de adesivo/lona/PVC/letra caixa, separa os ambientes e desenha um quadro cotado por ambiente à esquerda do modelo'
       cmd_kv.small_icon = (File.exist?(icon_kv_small) ? icon_kv_small : icon_small)
       cmd_kv.large_icon = (File.exist?(icon_kv_large) ? icon_kv_large : icon_large)
 

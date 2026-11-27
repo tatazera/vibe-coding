@@ -44,16 +44,34 @@ A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o esta
 - Conta-gotas global (captura a cor de qualquer pixel da tela, dentro ou fora do SketchUp)
 - Drag-and-drop de PNG/JPEG e exportação do PNG final
 
-### Mapa de Artes — diagramação + cotas
-- **Varredura:** lista os materiais de arte do modelo (adesivo, lona, PVC, letra caixa e
-  correlatos) com nº de faces e área em m²; você marca o que quer diagramar
-- **Seleção:** reconhece faces, **grupos e componentes** selecionados no SketchUp, vários de
-  uma vez
-- Cada face é **copiada** (o modelo real não muda), posta de frente, arranjada (peças à
-  esquerda, paredes em fileiras), cotada L×A com cotas nativas e etiquetada com nome e medida
-- O quadro nasce à **esquerda do modelo**, alinhado ao eixo do estande; nenhuma cena é criada
-  automaticamente — você enquadra e salva a cena do seu jeito
-- Um Ctrl+Z desfaz tudo
+### Mapa de Artes — um quadro por ambiente, cotado e com quantidade
+No formato do mapa de artes de conferência e produção: cada peça de comunicação visual de
+frente, com as medidas e a quantidade.
+- **Ler ambientes** (botão; abrir a aba não lê nada): acha as peças de adesivo, lona, PVC,
+  letra caixa e correlatos e separa os **ambientes pela distância** entre elas (*Distância
+  entre ambientes*, padrão 3 m; estande único num arquivo vira um ambiente só). O nome de
+  cada ambiente vem da **cena que olha para ele** (vista geral distante não conta) e pode ser
+  editado; sem cena, "AMBIENTE N"
+- **Não trava:** componente repetido é lido uma vez só (150 estandes iguais = 1 leitura),
+  grupos sem arte são pulados sem abrir, e a leitura tem limite de tempo e de peças: passou,
+  para e avisa. O desenho é feito em etapas, com progresso e **Cancelar**
+- **Peças:** faces vizinhas no mesmo plano e do mesmo material viram **uma peça** (módulos
+  aparecem como linhas); recortes (porta, nicho de TV) entram como furo; faces mais estreitas
+  que a *Largura mínima* (padrão 3 cm) são espessura e ficam de fora; chapa de PVC/ACM conta
+  uma vez; placa impressa dos dois lados (3 a 30 cm) vira **FRENTE E VERSO**; peças iguais
+  (nome, material, medida ±1 cm) viram um desenho **"– N und."**. Face sem material herda o
+  material do grupo; ocultos e tags desligadas não entram
+- **Nome da peça:** o grupo/componente com nome mais próximo da face (ex.: "BACKDROP
+  CREDENCIAMENTO"); sem nome, o material
+- **Desenho:** grupo "KV - Mapa de Artes" (tag KV), um quadro por ambiente à esquerda do
+  modelo, lido pela vista **Frente**: título, largura no topo, altura à esquerda, **cotas em
+  corrente dos recortes** (vertical à esquerda, horizontal na base) e etiqueta
+  *NOME – N und.* / *material · L x A m*, com texto proporcional ao quadro. Refeito a cada
+  geração; um Ctrl+Z desfaz tudo
+- **Diagramar seleção:** um quadro só com o que está selecionado (sem arte na seleção, vale
+  qualquer material). **Girar 90°** gira o item do KV selecionado
+- Ainda não faz: apliques em PVC desenhados sobre o painel com cotas de posição até o piso
+  (próxima etapa)
 
 ### Planta — projeções, grid, elétrica e DXF (aba Apresentação)
 Seção **Planta · cenas de topo**, no mesmo fluxo do export. O EVA lê a câmera de cada cena:
@@ -126,7 +144,7 @@ STAND1_EVA/
     ├── dictionary.rb         # dicionário PT→EN
     ├── exporter.rb           # export padronizado de Scenes
     ├── prompt_builder.rb     # montagem do prompt (blocos fixos + ajustes e substituições)
-    ├── mapa_artes.rb         # varredura, diagramação e cotas do KV
+    ├── mapa_artes.rb         # mapa de artes: leitura, peças, ambientes, quadros e cotas
     ├── planta.rb             # projeções, grid, elétrica, tomadas e DXF
     ├── autoupdate.rb         # checagem/instalação de update via GitHub
     ├── icons/                # ícones da toolbar (EVA e Mapa de Artes)
