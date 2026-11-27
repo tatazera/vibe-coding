@@ -1,8 +1,12 @@
 {
-    "versao": "2.7.0",
-    "rbz": "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.7.0.rbz",
-    "notas": "Render IA: prompt único e curto em português, com ajustes por cena. Apresentação: estilo Otimizado para IA no export. Mapa de Artes refeito: marcação manual, peças ligadas ao modelo, revisões e pranchas 16:9 por ambiente. Não trava em arquivo grande.",
+    "versao": "2.7.1",
+    "rbz": "https://raw.githubusercontent.com/tatazera/vibe-coding/main/STAND1_EVA/STAND1_EVA_v2.7.1.rbz",
+    "notas": "Mapa de Artes: botão PDF (resumo das peças + prancha 16:9 por ambiente); item inteiro vira uma peça (largura total x altura máxima); PNG direto reconhecido; texturas corrigidas; prancha sem fundo; renomear ambiente. Render IA: tipo de projeto (estande, interna, externo, cenografia).",
     "historico": [
+        {
+            "versao": "2.7.1",
+            "notas": "v2.7.1 — Mapa de Artes: exportar PDF com página de resumo (peças por ambiente, medidas, material, qtd, frente e verso, observações em vermelho, totais) e uma prancha 16:9 por ambiente; grupo/componente/imagem selecionado vira uma peça pela caixa envolvente (frase em PVC com várias letras, peças curvas); PNG colocado direto reconhecido; texturas ancoradas em vértices espalhados; prancha sem retângulo de fundo; opção Peça única; referência ao objeto; renomear ambiente a qualquer momento. Render IA: seletor Tipo de projeto (Estande, Interna de estande, Estande externo, Cenografia) no início do prompt base."
+        },
         {
             "versao": "2.7.0",
             "notas": "RENDER IA: prompt único, curto e em português (base fixa do pavilhão, luz fria ou quente, pessoas, ajustes gerais do projeto e ajustes por cena salvos no arquivo); saem o ângulo de câmera, os ambientes neutros e o tipo de estande. APRESENTAÇÃO: novo estilo Otimizado para IA no export (sombras off, texturas on, sem perfis, profundidade e geometria oculta; só durante o export, nada é salvo na cena). MAPA DE ARTES refeito: você seleciona a arte no SketchUp e adiciona a um ambiente (nome, quantidade e frente e verso digitados); a peça fica ligada ao modelo e acompanha as mudanças de medida; revisões R00, R01 com lista de alterações; uma prancha 16:9 por ambiente, com a cena criada ou atualizada no lugar; títulos e etiquetas em preto, observações e destaques em vermelho; ambiente sugerido pela cena ativa; nomes rápidos editáveis; não trava em arquivo grande."
