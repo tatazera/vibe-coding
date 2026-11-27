@@ -12,8 +12,10 @@ Substitui o fluxo manual: SketchUp → export → fundo no Canva → prompt manu
 
 ### Render IA — gerador de prompts
 Um prompt curto, em português, para colar no **Nano Banana** junto do PNG exportado da cena.
-A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o estande. Todo estande
-é tratado como **interno** (prompt externo é feito à parte).
+A câmera e a geometria vêm da imagem: o texto não descreve ângulo nem o estande.
+- **Tipo de projeto** (início da frase): *Estande*, *Interna de estande*, *Estande externo* ou
+  *Cenografia* — ex.: "Imagem foto-realística interna de estande em pavilhão...". Estande externo
+  sai sem o pavilhão (sem teto em grid) e com "Luz geral em branco frio/quente"
 - **Base fixa**, igual em todos os projetos: pavilhão tecnológico, teto em grid metálico preto,
   luminárias LED, sem estruturas aéreas, sem alterar a geometria
 - **Alternâncias a cada render:** branco frio ou quente, com ou sem público
@@ -95,6 +97,11 @@ Você marca a arte; o EVA mede, cota, diagrama e acompanha as mudanças do proje
   dimensões do modelo
 - **Texturas:** a imagem de cada face é ancorada em 3 ou 4 vértices bem espalhados do contorno
   (nunca nos primeiros, que podiam ser quase alinhados e entortavam a arte em riscos diagonais)
+- **📄 PDF:** gera (ou atualiza) as pranchas e salva **um PDF só**, com um ou vários ambientes
+  (segue o escopo do rodapé): **página de resumo** com todas as peças por ambiente — nome,
+  material, largura × altura, quantidade, frente e verso e observação em vermelho, com totais — e
+  **uma página 16:9 por ambiente** com a prancha (imagem em alta, fundo branco). O estilo da cena e a
+  câmera voltam como estavam e o PDF abre sozinho no fim
 - **Cena 16:9 por ambiente:** câmera paralela de frente, proporção 16:9, enquadrando a prancha. Gerar
   de novo atualiza a cena **no lugar** (mesmo nome e posição na lista). A aba Apresentação exporta
   essas cenas exatamente em 16:9
@@ -175,6 +182,7 @@ STAND1_EVA/
     ├── exporter.rb           # export padronizado de Scenes
     ├── prompt_builder.rb     # montagem do prompt (blocos fixos + ajustes e substituições)
     ├── mapa_artes.rb         # mapa de artes: peças ligadas ao modelo, revisões, pranchas 16:9 e cenas
+    ├── pdf_mapa.rb           # PDF do mapa (Ruby puro): resumo das peças + pranchas
     ├── planta.rb             # projeções, grid, elétrica, tomadas e DXF
     ├── autoupdate.rb         # checagem/instalação de update via GitHub
     ├── icons/                # ícones da toolbar (EVA e Mapa de Artes)

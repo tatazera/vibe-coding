@@ -23,6 +23,9 @@
 # =============================================================================
 
 require 'json'
+require 'tmpdir'
+require 'fileutils'
+require_relative 'pdf_mapa'
 
 module STAND1
   module EVA
@@ -1239,13 +1242,19 @@ module STAND1
               notas << ["#{prox} — #{d[:tipo] == 'nova' ? 'NOVA' : 'ALTERADA: ' + d[:itens].join('; ')}", :alerta]
             end
             notas << ['⚠ ORIGEM PERDIDA — medida da última leitura', :alerta] if r['st'] == 'perdida'
-            { peca: peca_de(r, model), qtd: r['qtd'].to_i, notas: notas }
+            { peca: peca_de(r, model), qtd: r['qtd'].to_i, notas: notas, obs: r['obs'].to_s }
           end
           { nome: a['nome'], itens: itens }
         end.reject { |q| q[:itens].empty? }
         return notify('Nenhuma peça nos ambientes marcados.', false, dlg) if quadros.empty?
 
-        iniciar_desenho(model, quadros, labels, cfg['cenas'] != false, est['rev_n'].nil? ? 'REV 00' : "REV #{format('%02d', est['rev_n'])}", dlg)
+        rev = est['rev_n'].nil? ? 'REV 00' : "REV #{format('%02d', est['rev_n'])}"
+        pdf = nil
+        if cfg['pdf']
+          pdf = pedir_caminho_pdf(model, rev)
+          return notify('Exportação do PDF cancelada.', true, dlg) unless pdf
+        end
+        iniciar_desenho(model, quadros, labels, cfg['cenas'] != false, rev, dlg, pdf)
       rescue => e
         @job = nil
         notify("Erro: #{e.message}", false, dlg)
@@ -1259,7 +1268,7 @@ module STAND1
         end
       end
 
-      def self.iniciar_desenho(model, quadros, labels, cenas, rev, dlg)
+      def self.iniciar_desenho(model, quadros, labels, cenas, rev, dlg, pdf = nil)
         bb   = model_bounds(model)
         pos  = posicionar_quadros(quadros, labels, rev)
         base = bb.empty? ? [0.0, 0.0, 0.0] : [bb.min.x - 3.0 * M, bb.min.y, bb.min.z]
@@ -1271,7 +1280,8 @@ module STAND1
         pos.each { |q| jobs << [:cena, q] } if cenas
         @job = { model: model, dlg: dlg, labels: labels, jobs: jobs, i: 0, base: base, primeiro: true,
                  cancelar: false, grupos: {}, t0: Time.now, feitos: 0, cenas: [],
-                 total: pos.sum { |q| q[:lay][:itens].size }, n_quadros: pos.size }
+                 total: pos.sum { |q| q[:lay][:itens].size }, n_quadros: pos.size,
+                 pos: pos, rev: rev, pdf: pdf, cam0: (Exporter.clonar_camera(model.active_view.camera) rescue nil) }
         @ignorar_ate = Time.now + 3600
         progresso
         UI.start_timer(0.05, false) { passo }
@@ -1303,6 +1313,7 @@ module STAND1
           seg = (Time.now - j[:t0]).round(1)
           cs  = j[:cenas].empty? ? '' : " Cena(s): #{j[:cenas].join(', ')}."
           enviar_estado(model, j[:dlg])
+          return exportar_pdf(j) if j[:pdf]
           notify("Mapa gerado: #{j[:n_quadros]} prancha(s), #{j[:feitos]} peça(s) em #{seg} s.#{cs} Ctrl+Z desfaz.", true, j[:dlg])
         else
           progresso
@@ -1313,6 +1324,87 @@ module STAND1
         @ignorar_ate = Time.now + 1.5
         @job = nil
         notify("Erro ao desenhar: #{e.message}", false, j && j[:dlg])
+      end
+
+      # ══════════════════════════════════════════════════════════════════════
+      # PDF (resumo das peças + uma prancha 16:9 por ambiente)
+      # ══════════════════════════════════════════════════════════════════════
+
+      def self.pedir_caminho_pdf(model, rev)
+        dir  = (File.dirname(model.path) rescue '') if model.path.to_s != ''
+        proj = model.title.to_s.strip
+        nome = "Mapa de Artes#{proj.empty? ? '' : ' - ' + proj} - #{rev}.pdf".gsub(/[\\\/:\*\?"<>\|]/, '_')
+        path = UI.savepanel('Salvar o PDF do Mapa de Artes', dir.to_s, nome)
+        return nil unless path
+        path.downcase.end_with?('.pdf') ? path : path + '.pdf'
+      end
+
+      # Câmera de frente, paralela, 16:9, enquadrando a prancha (a mesma da cena).
+      def self.camera_prancha(g, lay)
+        t = g.transformation.to_a
+        c = [t[12] + lay[:w] / 2.0, t[13], t[14] + lay[:h] / 2.0]
+        cam = Sketchup::Camera.new(Geom::Point3d.new(c[0], c[1] - 40.0 * M, c[2]), Geom::Point3d.new(*c),
+                                   Geom::Vector3d.new(0, 0, 1), false)
+        (cam.height = lay[:h]) rescue nil
+        (cam.aspect_ratio = BOARD_ASPECT) rescue nil
+        cam
+      end
+
+      # Fundo branco, sem céu/chão/sombra só durante a captura; tudo volta como estava.
+      PDF_RO = { 'BackgroundColor' => :branco, 'DrawGround' => false, 'DrawHorizon' => false,
+                 'DrawFog' => false }.freeze
+
+      def self.exportar_pdf(j)
+        model = j[:model]; view = model.active_view; ro = model.rendering_options
+        tmp = Dir.mktmpdir('eva_pdf')
+        salvo = {}
+        PDF_RO.each_key { |k| salvo[k] = (ro[k] rescue nil) }
+        sombra = (model.shadow_info['DisplayShadows'] rescue nil)
+        tag = (model.layers[KV_TAG] rescue nil)
+        tag_vis = tag ? tag.visible? : nil
+        ambs = []
+        begin
+          PDF_RO.each { |k, v| (ro[k] = (v == :branco ? Sketchup::Color.new(255, 255, 255) : v)) rescue nil }
+          (model.shadow_info['DisplayShadows'] = false) rescue nil
+          (tag.visible = true) if tag
+          j[:pos].each_with_index do |q, i|
+            g = j[:grupos][q.object_id]
+            jpg = nil
+            if g && g.valid?
+              view.camera = camera_prancha(g, q[:lay])
+              jpg = File.join(tmp, "prancha_#{i + 1}.jpg")
+              w, h = Exporter.fit_resolution(view, 3200, 1800)
+              view.write_image(filename: jpg, width: w, height: h, antialias: true, compression: 0.92,
+                               transparent: false)
+              jpg = nil unless File.exist?(jpg)
+            end
+            ambs << { nome: q[:quadro][:nome], jpeg: jpg, itens: q[:quadro][:itens].map { |it| item_pdf(it) } }
+          end
+        ensure
+          salvo.each { |k, v| (ro[k] = v) rescue nil unless v.nil? }
+          (model.shadow_info['DisplayShadows'] = sombra) rescue nil unless sombra.nil?
+          (tag.visible = tag_vis) rescue nil if tag
+          (view.camera = j[:cam0]) rescue nil if j[:cam0]
+        end
+        dados = { titulo: 'MAPA DE ARTES', projeto: (model.title.to_s.empty? ? 'Projeto' : model.title.to_s),
+                  rev: j[:rev], data: Time.now.strftime('%d/%m/%Y'), ambientes: ambs }
+        r = PdfMapa.gerar(j[:pdf], dados)
+        faltou = ambs.count { |a| a[:jpeg].nil? }
+        (UI.openURL('file:///' + j[:pdf].tr('\\', '/')) rescue nil)
+        notify("PDF salvo: #{File.basename(j[:pdf])} — #{r[:paginas]} página(s), #{r[:pranchas]} prancha(s)" \
+               "#{faltou > 0 ? " (#{faltou} prancha(s) sem imagem)" : ''}. As pranchas no modelo também foram atualizadas.",
+               faltou.zero?, j[:dlg])
+      rescue => e
+        notify("Erro ao gerar o PDF: #{e.message}", false, j[:dlg])
+      ensure
+        (FileUtils.rm_rf(tmp) rescue nil) if tmp && defined?(FileUtils)
+      end
+
+      def self.item_pdf(it)
+        p = it[:peca]
+        notas = (it[:notas] || []).map(&:first).reject { |t| t.to_s == it[:obs].to_s }
+        { nome: p[:nome], material: p[:material], w: metros(p[:w]), h: metros(p[:h]),
+          qtd: it[:qtd], fv: !!p[:fv], obs: it[:obs].to_s.empty? ? nil : it[:obs], notas: notas }
       end
 
       def self.progresso

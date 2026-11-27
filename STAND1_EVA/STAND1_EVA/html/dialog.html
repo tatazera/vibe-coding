@@ -833,6 +833,16 @@
   <div class="panel-config">
 
     <div class="section">
+      <div class="section-label">Tipo de projeto</div>
+      <div class="toggle-group" id="tipoGroup" style="flex-wrap:wrap">
+        <button class="toggle-btn active" data-tipo="estande" onclick="setTipo('estande')">Estande</button>
+        <button class="toggle-btn" data-tipo="interna" onclick="setTipo('interna')">Interna de estande</button>
+        <button class="toggle-btn" data-tipo="externo" onclick="setTipo('externo')">Estande externo</button>
+        <button class="toggle-btn" data-tipo="cenografia" onclick="setTipo('cenografia')">Cenografia</button>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-label">Iluminação</div>
       <div class="toggle-group">
         <button class="toggle-btn active" id="btn-frio" onclick="setLight('frio')">Branco Frio</button>
@@ -1182,6 +1192,7 @@
     <option value="atual">Só o ambiente atual</option>
   </select>
   <button class="btn-export btn-regen" id="mpCancelar" style="display:none">✕ Cancelar</button>
+  <button class="btn-export btn-regen" id="mpPdf" disabled title="Gera (ou atualiza) as pranchas e salva um PDF: página de resumo com todas as peças + uma prancha 16:9 por ambiente">📄 PDF</button>
   <button class="btn-export" id="mpGerar" disabled>Gerar mapa</button>
 </footer>
 
@@ -1226,6 +1237,7 @@
   var scenes      = [];          // [{name, sid}]
   var lighting    = 'frio';
   var people      = true;
+  var tipo        = 'estande';
   var iaStyle     = false;       // Apresentação: estilo otimizado para IA no export
   var promptByName = {};         // nome da cena => prompt (refeito a cada mudança)
   var sceneStore  = {};          // sid => { subs: [{de, para}] }  (salvo no .skp)
@@ -1264,6 +1276,7 @@
       if (s.pBg)                         setBg('p', s.pBg);
       if (s.lighting)                    setLight(s.lighting);
       if (typeof s.people === 'boolean') setPeople(s.people);
+      if (s.tipo)                        setTipo(s.tipo);
       if (typeof s.pIA === 'boolean')    setIA(s.pIA);
       if (s.pLinhas)                     document.getElementById('pLinhas').value = s.pLinhas;
       if (Array.isArray(s.mapaNomes) && s.mapaNomes.length && typeof mp !== 'undefined') {
@@ -1300,7 +1313,7 @@
     var pRes = readRes('p');
     var s = {
       pBg: st.p.bg, lighting: lighting,
-      people: people,
+      people: people, tipo: tipo,
       pIA: iaStyle, pLinhas: document.getElementById('pLinhas').value,
       mapaNomes: (typeof mp !== 'undefined' ? mp.vocab : undefined),
       pRes: { w: pRes.width, h: pRes.height },
@@ -1610,6 +1623,8 @@
     var btn = $m('mpGerar');
     btn.textContent = pecas ? 'Gerar mapa · ' + ambs.length + ' ambiente(s) · ' + pecas + ' peça(s)' : 'Gerar mapa';
     btn.disabled = mp.ocupado || !pecas;
+    var pdf = $m('mpPdf');
+    if (pdf) { pdf.disabled = mp.ocupado || !pecas; pdf.textContent = '📄 PDF'; }
   }
 
   // ── Toast com "Desfazer" ────────────────────────────────────────────────────
@@ -1707,7 +1722,7 @@
     inp.addEventListener('blur', onb); inp.addEventListener('keydown', onk);
   }
 
-  function mpGerar() {
+  function mpGerar(ev, pdf) {
     mpFlush();
     var a = mpAmbAtivo(), esc = $m('mpEscopo').value;
     var ambs = esc === 'atual' ? (a ? [a] : []) : mp.amb.filter(function(x) { return mpPecasDe(x.id).length > 0; });
@@ -1716,14 +1731,16 @@
     setMapaStatus('Atualizando as medidas do modelo...', 'info');
     su('mapa_gerar', JSON.stringify({
       ambientes: ambs.map(function(x) { return x.id; }), cenas: $m('mpCenas').checked,
-      labels: $m('mpEtiquetas').checked, destaque: $m('mpDestaque').checked
+      labels: $m('mpEtiquetas').checked, destaque: $m('mpDestaque').checked, pdf: !!pdf
     }));
+    if (pdf) setMapaStatus('Escolha onde salvar o PDF...', 'info');
   }
 
   function mpInit() {
     $m('mpNovoAmb').onclick = mpNovoAmbiente;
     $m('mpAdd').onclick = mpAdicionar;
     $m('mpGerar').onclick = mpGerar;
+    $m('mpPdf').onclick = function(e) { mpGerar(e, true); };
     $m('mpCancelar').onclick = function() { su('mapa_cancelar'); };
     $m('mpEscopo').onchange = mpRenderRodape;
     $m('mpAtualizar').onclick = function() { mpFlush(); setMapaStatus('Lendo o modelo...', 'info'); su('mapa_atualizar'); };
@@ -2105,6 +2122,16 @@
     saveSettings();
   }
 
+  function setTipo(t) {
+    if (['estande', 'interna', 'externo', 'cenografia'].indexOf(t) < 0) t = 'estande';
+    tipo = t;
+    document.querySelectorAll('#tipoGroup .toggle-btn').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-tipo') === t);
+    });
+    saveSettings();
+    scheduleBuild();
+  }
+
   function setPeople(v) {
     people = !!v;
     document.getElementById('people-on').classList.toggle('active', people);
@@ -2259,7 +2286,7 @@
     var names = wantedScenes();
     if (!names.length) { promptByName = {}; paintPrompt(); return; }
     su('build_prompts', JSON.stringify({
-      scenes: names, lighting: lighting,
+      scenes: names, lighting: lighting, tipo: tipo,
       people: people, general: generalLines()
     }));
   }

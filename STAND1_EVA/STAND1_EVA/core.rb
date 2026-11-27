@@ -472,6 +472,7 @@ module STAND1
 
       shared = {
         lighting:    config[:lighting] || 'frio',
+        tipo:        config[:tipo]     || 'estande',
         people:      config[:people],
         general:     config[:general]  || [],      # ajustes de todas as cenas
         scene_subs:  scene_subs_map                # substituições por cena

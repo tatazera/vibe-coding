@@ -13,14 +13,30 @@ module STAND1
 
     module PromptBuilder
 
-      # ── Blocos fixos (iguais em todo prompt; todo estande é interno) ─────────
-      # Prompt externo é feito à parte, fora do plugin.
+      # ── Blocos fixos ─────────────────────────────────────────────────────────
+      # Só o tipo muda o início da frase; o pavilhão (teto, luminárias) é o mesmo em
+      # todo projeto. Estande externo não tem pavilhão: sai só o tipo + geometria.
 
-      BASE = 'Imagem foto-realística interna de stand em pavilhão tecnológico de feiras, ' \
-             'teto em grid metálico preto e luminárias LED, sem estruturas aéreas, ' \
-             'sem alterar a geometria.'.freeze
+      TIPOS = {
+        'estande'    => 'de estande',
+        'interna'    => 'interna de estande',
+        'externo'    => 'de estande externo',
+        'cenografia' => 'de cenografia'
+      }.freeze
 
-      LIGHT = 'Luz geral do pavilhão em branco %s.'.freeze
+      PAVILHAO = 'em pavilhão tecnológico de feiras, teto em grid metálico preto e ' \
+                 'luminárias LED, sem estruturas aéreas'.freeze
+
+      BASE = "Imagem foto-realística de estande #{PAVILHAO}, sem alterar a geometria.".freeze
+
+      LIGHT        = 'Luz geral do pavilhão em branco %s.'.freeze
+      LIGHT_EXTERNO = 'Luz geral em branco %s.'.freeze
+
+      def self.base(tipo)
+        t = TIPOS.key?(tipo.to_s) ? tipo.to_s : 'estande'
+        return "Imagem foto-realística #{TIPOS[t]}, sem alterar a geometria." if t == 'externo'
+        "Imagem foto-realística #{TIPOS[t]} #{PAVILHAO}, sem alterar a geometria."
+      end
 
       LIGHT_TONE = { 'frio' => 'frio', 'quente' => 'quente' }.freeze
 
@@ -57,6 +73,7 @@ module STAND1
       # Ordem: base → luz → [pessoas] → ajustes gerais → ajustes da cena.
       #
       # opts:
+      #   tipo     => 'estande' | 'interna' | 'externo' | 'cenografia'  (padrão estande)
       #   lighting => 'frio' | 'quente'
       #   people   => true | false   (padrão true)
       #   general  => array de textos (ajustes de TODAS as cenas do projeto)
@@ -66,7 +83,8 @@ module STAND1
         tone   = LIGHT_TONE[opts[:lighting].to_s] || 'frio'
         people = opts[:people].nil? ? true : !!opts[:people]
 
-        parts = [BASE, format(LIGHT, tone)]
+        externo = opts[:tipo].to_s == 'externo'
+        parts = [base(opts[:tipo]), format(externo ? LIGHT_EXTERNO : LIGHT, tone)]
         parts << PEOPLE if people
         (opts[:general] || []).each { |l| s = sentence(l); parts << s if s }
         (opts[:subs]    || []).each { |i| s = substitution_sentence(i); parts << s if s }
